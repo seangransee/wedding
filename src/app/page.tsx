@@ -2,8 +2,12 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-white flex items-center justify-center">
       <h1
-        className="text-6xl md:text-8xl text-black text-center"
-        style={{ fontFamily: '"Brush Script MT", "Lucida Handwriting", "Comic Sans MS", cursive' }}
+        className="text-6xl md:text-8xl text-black text-center font-bold"
+        style={{
+          fontFamily: 'var(--font-dancing-script)',
+          fontWeight: '700',
+          textShadow: '1px 1px 2px rgba(0,0,0,0.1)'
+        }}
       >
         Sean + Lexi = Sexi
       </h1>
