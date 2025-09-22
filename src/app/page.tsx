@@ -2,7 +2,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-white flex items-center justify-center">
       <h1
-        className="text-6xl md:text-8xl text-black text-center font-bold"
+        className="text-6xl md:text-8xl text-pink-500 text-center font-bold"
         style={{
           fontFamily: 'var(--font-dancing-script)',
           fontWeight: '700',
