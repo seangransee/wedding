@@ -72,7 +72,14 @@ export default function SaveTheDate() {
           <div className="mt-8 flex flex-col gap-6 md:flex-row md:items-start md:justify-center md:gap-16">
             <div>
               <p className="text-2xl font-semibold text-[#b15581] sm:text-3xl">
-                December 12, 2026
+                <a
+                  href="https://www.google.com/calendar/render?action=TEMPLATE&text=Sean%20%26%20Lexi%27s%20Wedding&dates=20261212/20261213&location=The%20Blackstone%2C%20Autograph%20Collection%2C%20636%20South%20Michigan%20Avenue%2C%20Chicago%2C%20IL%2060605%2C%20USA&details=Lexi%20and%20Sean%20are%20finally%20getting%20married."
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-current underline decoration-dashed decoration-1 decoration-[#d48dad]/50 underline-offset-6 hover:text-[#d48dad] hover:decoration-[#d48dad]"
+                >
+                  December 12, 2026
+                </a>
               </p>
             </div>
             <div className="md:hidden text-xs uppercase tracking-[0.4em] text-[#a26786]">
@@ -82,10 +89,10 @@ export default function SaveTheDate() {
             <div>
               <p className="text-2xl font-semibold text-[#b15581] sm:text-3xl">
                 <a
-                  href="https://www.google.com/maps/place/The+Blackstone,+Autograph+Collection/"
+                  href="https://maps.app.goo.gl/UKgUKENz1W4efCC7A"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-current underline underline-offset-4 hover:text-[#d48dad]"
+                  className="text-current underline decoration-dashed decoration-1 decoration-[#d48dad]/50 underline-offset-6 hover:text-[#d48dad] hover:decoration-[#d48dad]"
                 >
                   The Blackstone Hotel
                 </a>
