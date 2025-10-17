@@ -12,7 +12,6 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-  --font-support: var(--font-support-serif);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -25,13 +24,7 @@
 body {
   background: radial-gradient(circle at top left, #ffeaf4 0%, #fff6fa 40%, #fffafd 100%);
   color: var(--foreground);
-  font-family: var(--font-geist-sans), var(--font-support-serif), "Cormorant Garamond", "Libre Baskerville", Georgia, serif;
-}
-
-.font-support-strong {
-  font-family: var(--font-support-serif), "Lora", "Libre Baskerville", Georgia, serif;
-  font-weight: 600;
-  letter-spacing: 0.18em;
+  font-family: var(--font-geist-sans), "Cormorant Garamond", "Libre Baskerville", Georgia, serif;
 }
 
 .hero-card {

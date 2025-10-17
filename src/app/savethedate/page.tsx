@@ -82,12 +82,12 @@ export default function SaveTheDate() {
               <p className="text-2xl font-semibold text-[#b15581] sm:text-3xl">
                 The Blackstone Hotel
               </p>
-              <p className="mt-2 text-base uppercase tracking-[0.25em] text-[#a26786] sm:text-lg font-support-strong">
+              <p className="mt-2 text-base uppercase tracking-[0.25em] text-[#a26786] sm:text-lg">
                 Chicago, IL
               </p>
             </div>
           </div>
-          <div className="mt-8 text-xs uppercase tracking-[0.45em] text-[#c07a9c] sm:mt-10 font-support-strong">
+          <div className="mt-8 text-xs uppercase tracking-[0.45em] text-[#c07a9c] sm:mt-10">
             Invitation to follow
           </div>
         </div>

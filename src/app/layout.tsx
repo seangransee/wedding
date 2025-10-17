@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Cormorant_Garamond, Libre_Baskerville, Lora, Dancing_Script } from "next/font/google";
+import { Cormorant_Garamond, Libre_Baskerville, Dancing_Script } from "next/font/google";
 import "./globals.css";
 
 const primarySerif = Cormorant_Garamond({
@@ -11,12 +11,6 @@ const primarySerif = Cormorant_Garamond({
 const secondarySerif = Libre_Baskerville({
   variable: "--font-geist-mono",
   weight: ["400", "700"],
-  subsets: ["latin"],
-});
-
-const supportSerif = Lora({
-  variable: "--font-support-serif",
-  weight: ["400", "500", "600"],
   subsets: ["latin"],
 });
 
@@ -42,7 +36,7 @@ export default function RootLayout({
         <link rel="shortcut icon" href="/favicon.ico" />
       </head>
       <body
-        className={`${primarySerif.variable} ${secondarySerif.variable} ${supportSerif.variable} ${dancingScript.variable} antialiased`}
+        className={`${primarySerif.variable} ${secondarySerif.variable} ${dancingScript.variable} antialiased`}
       >
         {children}
       </body>

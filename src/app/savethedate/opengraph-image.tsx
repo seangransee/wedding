@@ -78,7 +78,8 @@ export default async function handler() {
               borderRadius: "50%",
               border: "1px solid rgba(255,255,255,0.25)",
               top: "-60%",
-              left: "calc(50% - 600px)",
+              left: "50%",
+              marginLeft: "-600px",
               opacity: 0.4,
             }}
           />
@@ -90,7 +91,8 @@ export default async function handler() {
               borderRadius: "50%",
               border: "1px solid rgba(255,255,255,0.12)",
               top: "-68%",
-              left: "calc(50% - 700px)",
+              left: "50%",
+              marginLeft: "-700px",
               opacity: 0.3,
             }}
           />
