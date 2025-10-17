@@ -2,6 +2,29 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Save The Date! - Sexi Wedding",
+  description: "Lexi and Sean are finally getting married. December 12, 2026 at The Blackstone Hotel in Chicago, IL.",
+  openGraph: {
+    title: "Save The Date! - Sexi Wedding",
+    description:
+      "Lexi and Sean are finally getting married. December 12, 2026 at The Blackstone Hotel in Chicago, IL.",
+    type: "website",
+    locale: "en_US",
+    images: [
+      {
+        url: "/savethedate/opengraph-image",
+        width: 1200,
+        height: 630,
+        alt: "Lexi and Sean are finally getting married. December 12, 2026 at The Blackstone Hotel in Chicago, IL.",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Save The Date! - Sexi Wedding",
+    description:
+      "Lexi and Sean are finally getting married. December 12, 2026 at The Blackstone Hotel in Chicago, IL.",
+    images: ["/savethedate/opengraph-image"],
+  },
 };
 
 export default function SaveTheDate() {
