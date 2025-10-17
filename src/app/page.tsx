@@ -12,7 +12,7 @@ export default function Home() {
       <div className="relative w-full max-w-2xl">
         <div className="flex flex-col items-center justify-center px-10 py-16 text-center sm:px-12 sm:py-20">
           <h1
-            className="text-6xl text-[#ff5c9f] sm:text-7xl md:text-8xl"
+            className="whitespace-nowrap text-[#d48dad] text-[clamp(3rem,10vw,6rem)]"
             style={{
               fontFamily: "var(--font-dancing-script)",
               fontWeight: 600,
