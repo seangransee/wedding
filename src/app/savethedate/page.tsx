@@ -3,11 +3,11 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Save the Date!",
   description:
-    "Sean and Lexi are finally getting married. December 12, 2026 at The Blackstone Hotel in Chicago, IL.",
+    "Sean and Lexi are finally getting married! December 12, 2026 at The Blackstone Hotel in Chicago, IL.",
   openGraph: {
     title: "Save the Date!",
     description:
-      "Sean and Lexi are finally getting married. December 12, 2026 at The Blackstone Hotel in Chicago, IL.",
+      "Sean and Lexi are finally getting married! December 12, 2026 at The Blackstone Hotel in Chicago, IL.",
     type: "website",
     locale: "en_US",
     images: [
@@ -15,7 +15,7 @@ export const metadata: Metadata = {
         url: "/savethedate/opengraph-image",
         width: 1200,
         height: 630,
-        alt: "Sean and Lexi are finally getting married. December 12, 2026 at The Blackstone Hotel in Chicago, IL.",
+        alt: "Sean and Lexi are finally getting married! December 12, 2026 at The Blackstone Hotel in Chicago, IL.",
       },
     ],
   },
@@ -23,7 +23,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Save the Date!",
     description:
-      "Sean and Lexi are finally getting married. December 12, 2026 at The Blackstone Hotel in Chicago, IL.",
+      "Sean and Lexi are finally getting married! December 12, 2026 at The Blackstone Hotel in Chicago, IL.",
     images: ["/savethedate/opengraph-image"],
   },
 };
@@ -67,7 +67,7 @@ export default function SaveTheDate() {
           <h1 className="mt-6 text-3xl font-semibold leading-tight sm:text-4xl md:text-5xl lg:text-6xl">
             <span className="block">Sean and Lexi are</span>
             <span className="font-semibold text-[#d48dad]">finally</span>{" "}
-            getting married.
+            getting married!
           </h1>
           <div className="mt-8 flex flex-col gap-6 md:flex-row md:items-start md:justify-center md:gap-16">
             <div>
