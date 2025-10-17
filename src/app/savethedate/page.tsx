@@ -3,11 +3,11 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Save the Date!",
   description:
-    "Lexi and Sean are finally getting married. December 12, 2026 at The Blackstone Hotel in Chicago, IL.",
+    "Sean and Lexi are finally getting married. December 12, 2026 at The Blackstone Hotel in Chicago, IL.",
   openGraph: {
     title: "Save the Date!",
     description:
-      "Lexi and Sean are finally getting married. December 12, 2026 at The Blackstone Hotel in Chicago, IL.",
+      "Sean and Lexi are finally getting married. December 12, 2026 at The Blackstone Hotel in Chicago, IL.",
     type: "website",
     locale: "en_US",
     images: [
@@ -15,7 +15,7 @@ export const metadata: Metadata = {
         url: "/savethedate/opengraph-image",
         width: 1200,
         height: 630,
-        alt: "Lexi and Sean are finally getting married. December 12, 2026 at The Blackstone Hotel in Chicago, IL.",
+        alt: "Sean and Lexi are finally getting married. December 12, 2026 at The Blackstone Hotel in Chicago, IL.",
       },
     ],
   },
@@ -23,7 +23,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Save the Date!",
     description:
-      "Lexi and Sean are finally getting married. December 12, 2026 at The Blackstone Hotel in Chicago, IL.",
+      "Sean and Lexi are finally getting married. December 12, 2026 at The Blackstone Hotel in Chicago, IL.",
     images: ["/savethedate/opengraph-image"],
   },
 };
@@ -65,10 +65,8 @@ export default function SaveTheDate() {
             Sean + Lexi = Sexi
           </p>
           <h1 className="mt-6 text-3xl font-semibold leading-tight sm:text-4xl md:text-5xl lg:text-6xl">
-            <span className="block">Lexi and Sean are</span>
-            <span className="font-semibold text-[#d48dad]">
-              finally
-            </span>{" "}
+            <span className="block">Sean and Lexi are</span>
+            <span className="font-semibold text-[#d48dad]">finally</span>{" "}
             getting married.
           </h1>
           <div className="mt-8 flex flex-col gap-6 md:flex-row md:items-start md:justify-center md:gap-16">
@@ -83,7 +81,14 @@ export default function SaveTheDate() {
             <div className="hidden md:block h-16 w-px bg-gradient-to-b from-[#f1b9ce]/40 via-[#d48dad]/60 to-[#f1b9ce]/40" />
             <div>
               <p className="text-2xl font-semibold text-[#b15581] sm:text-3xl">
-                The Blackstone Hotel
+                <a
+                  href="https://www.google.com/maps/place/The+Blackstone,+Autograph+Collection/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-current underline underline-offset-4 hover:text-[#d48dad]"
+                >
+                  The Blackstone Hotel
+                </a>
               </p>
               <p className="mt-2 text-base uppercase tracking-[0.25em] text-[#a26786] sm:text-lg">
                 Chicago, IL
