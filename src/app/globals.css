@@ -26,3 +26,112 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+.hero-card {
+  animation: fadeUp 1s ease-out both;
+  box-shadow: 0 40px 90px -35px rgba(79, 33, 50, 0.35);
+}
+
+.hero-halo {
+  animation: haloPulse 14s ease-in-out infinite;
+}
+
+.deco-header {
+  animation: fadeIn 1.4s ease-out both 0.2s;
+}
+
+.deco-line {
+  display: block;
+  height: 1px;
+  flex: 1;
+  background: linear-gradient(to right, transparent, rgba(210, 128, 159, 0.55), transparent);
+}
+
+.deco-badge {
+  letter-spacing: 0.3em;
+  padding: 0.2rem 0.8rem;
+  border: 1px solid rgba(214, 141, 173, 0.4);
+  border-radius: 999px;
+  background: rgba(249, 228, 238, 0.45);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.3);
+}
+
+.art-deco-bg {
+  background-image: radial-gradient(circle at 15% 20%, rgba(255, 214, 231, 0.6), transparent 55%),
+    radial-gradient(circle at 85% 80%, rgba(245, 197, 218, 0.5), transparent 60%),
+    linear-gradient(135deg, rgba(255, 241, 247, 0.9), rgba(247, 215, 229, 0.7));
+  animation: ambientGlow 18s ease-in-out infinite alternate;
+}
+
+.art-deco-beams {
+  background-image: repeating-linear-gradient(
+      90deg,
+      rgba(214, 141, 173, 0.12),
+      rgba(214, 141, 173, 0.12) 2px,
+      transparent 2px,
+      transparent 20px
+    ),
+    repeating-linear-gradient(
+      0deg,
+      rgba(245, 201, 220, 0.1),
+      rgba(245, 201, 220, 0.1) 2px,
+      transparent 2px,
+      transparent 18px
+    ),
+    linear-gradient(120deg, rgba(233, 170, 200, 0.18), transparent 65%);
+  mix-blend-mode: soft-light;
+  animation: decoPan 26s linear infinite;
+  opacity: 0.35;
+}
+
+@keyframes fadeUp {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 32px, 0) scale(0.98);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@keyframes fadeIn {
+  0% {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes haloPulse {
+  0%,
+  100% {
+    transform: translate(-50%, 0) scale(1);
+    opacity: 0.55;
+  }
+  50% {
+    transform: translate(-50%, 0) scale(1.1);
+    opacity: 0.85;
+  }
+}
+
+@keyframes ambientGlow {
+  0% {
+    transform: scale(1.02) translate3d(-2%, -1%, 0);
+  }
+  100% {
+    transform: scale(1.04) translate3d(2%, 1%, 0);
+  }
+}
+
+@keyframes decoPan {
+  0% {
+    background-position: 0 0, 0 0, 0 0;
+  }
+  100% {
+    background-position: 160px 0, 0 160px, 0 0;
+  }
+}
