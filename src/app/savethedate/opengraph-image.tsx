@@ -156,22 +156,16 @@ export default async function handler() {
                 color: "#4a1f2e",
                 display: "flex",
                 flexDirection: "column",
-                gap: "14px",
+                gap: "28px",
+                marginTop: "36px",
               }}
             >
               <div
                 style={{
-                  fontFamily: "'Cormorant Garamond', serif",
-                  fontWeight: 600,
-                  fontSize: "94px",
-                  letterSpacing: "1px",
-                }}
-              >
-                Lexi and Sean are finally getting married.
-              </div>
-              <div
-                style={{
                   fontFamily: "'Libre Baskerville', 'Cormorant Garamond', serif",
+                  display: "flex",
+                  justifyContent: "center",
+                  alignItems: "center",
                   fontSize: "54px",
                   fontWeight: 700,
                   letterSpacing: "8px",
@@ -179,18 +173,7 @@ export default async function handler() {
                   color: "#a26786",
                 }}
               >
-                December 12, 2026 · The Blackstone Hotel · Chicago, IL
-              </div>
-              <div
-                style={{
-                  fontFamily: "'Libre Baskerville', 'Cormorant Garamond', serif",
-                  fontSize: "42px",
-                  letterSpacing: "10px",
-                  textTransform: "uppercase",
-                  color: "#c07a9c",
-                }}
-              >
-                Invitation to follow
+                December 12, 2026
               </div>
             </div>
           </div>

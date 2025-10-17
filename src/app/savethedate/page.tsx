@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Save The Date! - Sexi Wedding",
-  description: "Lexi and Sean are finally getting married. December 12, 2026 at The Blackstone Hotel in Chicago, IL.",
+  title: "Save the Date!",
+  description:
+    "Lexi and Sean are finally getting married. December 12, 2026 at The Blackstone Hotel in Chicago, IL.",
   openGraph: {
-    title: "Save The Date! - Sexi Wedding",
+    title: "Save the Date!",
     description:
       "Lexi and Sean are finally getting married. December 12, 2026 at The Blackstone Hotel in Chicago, IL.",
     type: "website",
@@ -20,7 +21,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Save The Date! - Sexi Wedding",
+    title: "Save the Date!",
     description:
       "Lexi and Sean are finally getting married. December 12, 2026 at The Blackstone Hotel in Chicago, IL.",
     images: ["/savethedate/opengraph-image"],
@@ -76,7 +77,9 @@ export default function SaveTheDate() {
                 December 12, 2026
               </p>
             </div>
-            <div className="md:hidden text-xs uppercase tracking-[0.4em] text-[#a26786]">at</div>
+            <div className="md:hidden text-xs uppercase tracking-[0.4em] text-[#a26786]">
+              at
+            </div>
             <div className="hidden md:block h-16 w-px bg-gradient-to-b from-[#f1b9ce]/40 via-[#d48dad]/60 to-[#f1b9ce]/40" />
             <div>
               <p className="text-2xl font-semibold text-[#b15581] sm:text-3xl">
