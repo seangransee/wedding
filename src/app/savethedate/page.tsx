@@ -66,7 +66,7 @@ export default function SaveTheDate() {
           </p>
           <h1 className="mt-6 text-3xl font-semibold leading-tight sm:text-4xl md:text-5xl lg:text-6xl">
             <span className="block">Lexi and Sean are</span>
-            <span className="finally-shimmer font-semibold text-4xl sm:text-5xl md:text-6xl lg:text-7xl">
+            <span className="font-semibold text-[#d48dad]">
               finally
             </span>{" "}
             getting married.
