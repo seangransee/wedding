@@ -12,6 +12,7 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --font-support: var(--font-support-serif);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -24,7 +25,13 @@
 body {
   background: radial-gradient(circle at top left, #ffeaf4 0%, #fff6fa 40%, #fffafd 100%);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), var(--font-support-serif), "Cormorant Garamond", "Libre Baskerville", Georgia, serif;
+}
+
+.font-support-strong {
+  font-family: var(--font-support-serif), "Lora", "Libre Baskerville", Georgia, serif;
+  font-weight: 600;
+  letter-spacing: 0.18em;
 }
 
 .hero-card {
@@ -54,6 +61,19 @@ body {
   border-radius: 999px;
   background: rgba(249, 228, 238, 0.45);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.3);
+}
+
+.finally-shimmer {
+  display: inline-block;
+  background: linear-gradient(90deg, #7a4054, #c78aa7, #ead0de, #c78aa7, #7a4054);
+  background-size: 160% 100%;
+  color: transparent;
+  background-clip: text;
+  -webkit-background-clip: text;
+  animation: finallyGlow 6s ease-in-out infinite;
+  text-shadow: 0 0.15rem 0.25rem rgba(101, 48, 67, 0.12);
+  line-height: 1.12;
+  padding-bottom: 0.08em;
 }
 
 .art-deco-bg {
@@ -92,6 +112,22 @@ body {
   100% {
     opacity: 1;
     transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@keyframes finallyGlow {
+  0%,
+  100% {
+    background-position: 0% 50%;
+    filter: drop-shadow(0 0.2rem 0.3rem rgba(101, 48, 67, 0.1));
+  }
+  40% {
+    background-position: 70% 50%;
+    filter: drop-shadow(0 0.22rem 0.38rem rgba(101, 48, 67, 0.13));
+  }
+  70% {
+    background-position: 50% 50%;
+    filter: drop-shadow(0 0.12rem 0.22rem rgba(101, 48, 67, 0.08));
   }
 }
 

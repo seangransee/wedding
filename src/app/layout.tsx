@@ -1,14 +1,22 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Dancing_Script } from "next/font/google";
+import { Cormorant_Garamond, Libre_Baskerville, Lora, Dancing_Script } from "next/font/google";
 import "./globals.css";
 
-const geistSans = Geist({
+const primarySerif = Cormorant_Garamond({
   variable: "--font-geist-sans",
+  weight: ["400", "600"],
   subsets: ["latin"],
 });
 
-const geistMono = Geist_Mono({
+const secondarySerif = Libre_Baskerville({
   variable: "--font-geist-mono",
+  weight: ["400", "700"],
+  subsets: ["latin"],
+});
+
+const supportSerif = Lora({
+  variable: "--font-support-serif",
+  weight: ["400", "500", "600"],
   subsets: ["latin"],
 });
 
@@ -35,7 +43,7 @@ export default function RootLayout({
         <link rel="shortcut icon" href="/favicon.ico" />
       </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} ${dancingScript.variable} antialiased`}
+        className={`${primarySerif.variable} ${secondarySerif.variable} ${supportSerif.variable} ${dancingScript.variable} antialiased`}
       >
         {children}
       </body>
