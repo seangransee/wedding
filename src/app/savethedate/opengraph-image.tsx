@@ -9,14 +9,12 @@ export const size = {
 };
 export const contentType = "image/png";
 
-const fontPath = (...segments: string[]) => path.join(process.cwd(), "public", "fonts", ...segments);
+const fontPath = (...segments: string[]) =>
+  path.join(process.cwd(), "public", "fonts", ...segments);
 
 const fontDataCormorant = readFile(fontPath("CormorantGaramond-SemiBold.ttf"));
 const fontDataLibre = readFile(fontPath("LibreBaskerville-Bold.ttf"));
 const fontDataDancing = readFile(fontPath("DancingScript-SemiBold.ttf"));
-
-const toArrayBuffer = (buffer: Buffer) =>
-  buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength);
 
 export default async function handler() {
   const [cormorantFont, libreFont, dancingFont] = await Promise.all([
@@ -43,7 +41,8 @@ export default async function handler() {
             height: "82%",
             borderRadius: "48px",
             border: "1px solid rgba(255,255,255,0.65)",
-            background: "linear-gradient(135deg, rgba(255,255,255,0.86), rgba(255,255,255,0.72))",
+            background:
+              "linear-gradient(135deg, rgba(255,255,255,0.86), rgba(255,255,255,0.72))",
             boxShadow: "0 45px 90px rgba(76, 51, 69, 0.25)",
             display: "flex",
             flexDirection: "column",
@@ -58,7 +57,8 @@ export default async function handler() {
             style={{
               position: "absolute",
               inset: "0",
-              background: "radial-gradient(circle at top center, rgba(245, 201, 220, 0.38), transparent 58%)",
+              background:
+                "radial-gradient(circle at top center, rgba(245, 201, 220, 0.38), transparent 58%)",
             }}
           />
           <div
@@ -104,8 +104,9 @@ export default async function handler() {
               display: "flex",
               flexDirection: "column",
               alignItems: "center",
-              gap: "36px",
               width: "100%",
+              height: "100%",
+              padding: "12px 0 16px",
             }}
           >
             <div
@@ -119,6 +120,7 @@ export default async function handler() {
                 fontSize: "32px",
                 fontFamily: "'Libre Baskerville', 'Cormorant Garamond', serif",
                 fontWeight: 700,
+                marginBottom: "0px",
               }}
             >
               <span
@@ -139,16 +141,18 @@ export default async function handler() {
                 }}
               />
             </div>
-            <div
-              style={{
-                fontFamily: "'Dancing Script', 'Cormorant Garamond', serif",
-                fontSize: "110px",
-                letterSpacing: "6px",
-                color: "#d48dad",
-                fontWeight: 600,
-              }}
-            >
-              Sean + Lexi = Sexi
+            <div style={{ flex: 1, display: "flex", alignItems: "center" }}>
+              <div
+                style={{
+                  fontFamily: "'Dancing Script', 'Cormorant Garamond', serif",
+                  fontSize: "110px",
+                  letterSpacing: "6px",
+                  color: "#d48dad",
+                  fontWeight: 600,
+                }}
+              >
+                Sean + Lexi = Sexi
+              </div>
             </div>
             <div
               style={{
@@ -157,12 +161,14 @@ export default async function handler() {
                 display: "flex",
                 flexDirection: "column",
                 gap: "28px",
-                marginTop: "36px",
+                marginTop: "auto",
+                marginBottom: "-12px",
               }}
             >
               <div
                 style={{
-                  fontFamily: "'Libre Baskerville', 'Cormorant Garamond', serif",
+                  fontFamily:
+                    "'Libre Baskerville', 'Cormorant Garamond', serif",
                   display: "flex",
                   justifyContent: "center",
                   alignItems: "center",
@@ -185,19 +191,19 @@ export default async function handler() {
       fonts: [
         {
           name: "Cormorant Garamond",
-          data: toArrayBuffer(cormorantFont),
+          data: cormorantFont,
           style: "normal",
           weight: 600,
         },
         {
           name: "Libre Baskerville",
-          data: toArrayBuffer(libreFont),
+          data: libreFont,
           style: "normal",
           weight: 700,
         },
         {
           name: "Dancing Script",
-          data: toArrayBuffer(dancingFont),
+          data: dancingFont,
           style: "normal",
           weight: 600,
         },
