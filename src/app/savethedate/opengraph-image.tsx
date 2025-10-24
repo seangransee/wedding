@@ -32,7 +32,7 @@ export default async function handler() {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          background: "#f9eef4",
+          background: "#054f2d",
         }}
       >
         <div
@@ -40,10 +40,10 @@ export default async function handler() {
             width: "92%",
             height: "82%",
             borderRadius: "48px",
-            border: "1px solid rgba(255,255,255,0.65)",
+            border: "1px solid rgba(247, 198, 216, 0.45)",
             background:
-              "linear-gradient(135deg, rgba(255,255,255,0.86), rgba(255,255,255,0.72))",
-            boxShadow: "0 45px 90px rgba(76, 51, 69, 0.25)",
+              "linear-gradient(135deg, rgba(184, 134, 11, 0.9), rgba(184, 134, 11, 0.72))",
+            boxShadow: "0 45px 90px rgba(5, 79, 45, 0.32)",
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
@@ -58,7 +58,7 @@ export default async function handler() {
               position: "absolute",
               inset: "0",
               background:
-                "radial-gradient(circle at top center, rgba(245, 201, 220, 0.38), transparent 58%)",
+                "radial-gradient(circle at top center, rgba(247, 198, 216, 0.32), transparent 58%)",
             }}
           />
           <div
@@ -66,8 +66,8 @@ export default async function handler() {
               position: "absolute",
               inset: "0",
               backgroundImage:
-                "repeating-linear-gradient(120deg, rgba(212, 141, 173, 0.08), rgba(212, 141, 173, 0.08) 2px, transparent 2px, transparent 24px)",
-              opacity: 0.6,
+                "repeating-linear-gradient(120deg, rgba(247, 198, 216, 0.1), rgba(247, 198, 216, 0.1) 2px, transparent 2px, transparent 24px)",
+              opacity: 0.55,
             }}
           />
           <div
@@ -76,7 +76,7 @@ export default async function handler() {
               width: "1200px",
               height: "1200px",
               borderRadius: "50%",
-              border: "1px solid rgba(255,255,255,0.25)",
+              border: "1px solid rgba(247, 198, 216, 0.28)",
               top: "-60%",
               left: "50%",
               marginLeft: "-600px",
@@ -89,7 +89,7 @@ export default async function handler() {
               width: "1400px",
               height: "1400px",
               borderRadius: "50%",
-              border: "1px solid rgba(255,255,255,0.12)",
+              border: "1px solid rgba(247, 198, 216, 0.18)",
               top: "-68%",
               left: "50%",
               marginLeft: "-700px",
@@ -116,7 +116,7 @@ export default async function handler() {
                 gap: "18px",
                 textTransform: "uppercase",
                 letterSpacing: "12px",
-                color: "#a26786",
+                color: "#f7c6d8",
                 fontSize: "32px",
                 fontFamily: "'Libre Baskerville', 'Cormorant Garamond', serif",
                 fontWeight: 700,
@@ -128,7 +128,7 @@ export default async function handler() {
                   display: "block",
                   height: "1px",
                   width: "120px",
-                  background: "rgba(162, 103, 134, 0.4)",
+                  background: "rgba(247, 198, 216, 0.45)",
                 }}
               />
               SAVE THE DATE
@@ -137,7 +137,7 @@ export default async function handler() {
                   display: "block",
                   height: "1px",
                   width: "120px",
-                  background: "rgba(162, 103, 134, 0.4)",
+                  background: "rgba(247, 198, 216, 0.45)",
                 }}
               />
             </div>
@@ -147,8 +147,9 @@ export default async function handler() {
                   fontFamily: "'Dancing Script', 'Cormorant Garamond', serif",
                   fontSize: "110px",
                   letterSpacing: "6px",
-                  color: "#d48dad",
+                  color: "#f7c6d8",
                   fontWeight: 600,
+                  textShadow: "0 6px 18px rgba(5, 79, 45, 0.35)",
                 }}
               >
                 Sean + Lexi = Sexi
@@ -157,7 +158,7 @@ export default async function handler() {
             <div
               style={{
                 textAlign: "center",
-                color: "#4a1f2e",
+                color: "#054f2d",
                 display: "flex",
                 flexDirection: "column",
                 gap: "28px",
@@ -176,7 +177,7 @@ export default async function handler() {
                   fontWeight: 700,
                   letterSpacing: "8px",
                   textTransform: "uppercase",
-                  color: "#a26786",
+                  color: "#054f2d",
                 }}
               >
                 December 12, 2026
