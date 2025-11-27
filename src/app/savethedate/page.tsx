@@ -70,7 +70,7 @@ export default function SaveTheDate() {
         />
         <div className="hero-card relative overflow-hidden rounded-[40px] border border-[#b8860b]/45 bg-[#b8860b]/70 backdrop-blur-md shadow-2xl p-8 text-center text-[#054f2d] sm:p-10 md:p-12">
           <div
-            className="hero-halo absolute -top-32 left-1/2 h-64 w-64 -translate-x-1/2 rounded-full bg-[#f5c9dc]/20 blur-3xl"
+            className="hero-halo absolute -top-32 left-1/2 h-64 w-64 -translate-x-1/2 rounded-full bg-[#f1b3c6]/22 blur-3xl"
             aria-hidden="true"
           />
           <span
@@ -81,11 +81,11 @@ export default function SaveTheDate() {
           </span>
           <div className="deco-header mx-auto flex max-w-md items-center justify-center gap-3 text-[0.65rem] uppercase tracking-[0.55em]">
             <span className="deco-line" aria-hidden="true" />
-            <span className="deco-badge text-[#f7c6d8]">SAVE THE DATE</span>
+            <span className="deco-badge text-[#f1b3c6]">SAVE THE DATE</span>
             <span className="deco-line" aria-hidden="true" />
           </div>
           <p
-            className="mt-3 text-3xl text-[#f7c6d8] sm:text-4xl md:text-5xl"
+            className="mt-3 text-3xl text-[#f1b3c6] sm:text-4xl md:text-5xl"
             style={{
               fontFamily: "var(--font-dancing-script)",
               fontWeight: 600,
@@ -96,7 +96,7 @@ export default function SaveTheDate() {
           </p>
           <h1 className="mt-6 text-3xl font-semibold leading-tight sm:text-4xl md:text-5xl lg:text-6xl">
             <span className="block">Sean and Lexi are</span>
-            <span className="font-semibold text-[#f7c6d8]">finally</span>{" "}
+            <span className="font-semibold text-[#f1b3c6]">finally</span>{" "}
             getting married!
           </h1>
           <div className="mt-8 flex flex-col gap-6 md:flex-row md:items-start md:justify-center md:gap-16">
@@ -112,10 +112,10 @@ export default function SaveTheDate() {
                 </a>
               </p>
             </div>
-            <div className="md:hidden text-xs uppercase tracking-[0.4em] text-[#f7c6d8]">
+            <div className="md:hidden text-xs uppercase tracking-[0.4em] text-[#f1b3c6]">
               at
             </div>
-            <div className="hidden md:block h-16 w-px bg-gradient-to-b from-[#f7c6d8]/35 via-[#054f2d]/60 to-[#f7c6d8]/35" />
+            <div className="hidden md:block h-16 w-px bg-gradient-to-b from-[#f1b3c6]/38 via-[#054f2d]/60 to-[#f1b3c6]/38" />
             <div>
               <p className="text-2xl font-semibold sm:text-3xl">
                 <a
@@ -127,7 +127,7 @@ export default function SaveTheDate() {
                   The Blackstone Hotel
                 </a>
               </p>
-              <p className="mt-2 text-base uppercase tracking-[0.25em] text-[#f7c6d8] sm:text-lg">
+              <p className="mt-2 text-base uppercase tracking-[0.25em] text-[#f1b3c6] sm:text-lg">
                 Chicago, IL
               </p>
             </div>
@@ -135,7 +135,7 @@ export default function SaveTheDate() {
           <div className="mt-8 sm:mt-10">
             <div className="deco-header mx-auto flex max-w-md items-center justify-center gap-3 text-[0.65rem] uppercase tracking-[0.55em]">
               <span className="deco-line" aria-hidden="true" />
-              <span className="deco-badge text-[#f7c6d8]">INVITATION TO FOLLOW</span>
+              <span className="deco-badge text-[#f1b3c6]">INVITATION TO FOLLOW</span>
               <span className="deco-line" aria-hidden="true" />
             </div>
           </div>
