@@ -135,7 +135,9 @@ export default function SaveTheDate() {
           <div className="mt-8 sm:mt-10">
             <div className="deco-header mx-auto flex max-w-md items-center justify-center gap-3 text-[0.65rem] uppercase tracking-[0.55em]">
               <span className="deco-line" aria-hidden="true" />
-              <span className="deco-badge text-[#f1b3c6]">INVITATION TO FOLLOW</span>
+              <span className="deco-badge text-[#f1b3c6]">
+                INVITATION TO FOLLOW
+              </span>
               <span className="deco-line" aria-hidden="true" />
             </div>
           </div>

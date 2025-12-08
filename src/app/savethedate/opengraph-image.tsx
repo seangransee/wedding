@@ -40,7 +40,7 @@ export default async function handler() {
             width: "92%",
             height: "82%",
             borderRadius: "48px",
-            border: "1px solid rgba(247, 198, 216, 0.45)",
+            border: "1px solid rgba(241, 179, 198, 0.45)",
             background:
               "linear-gradient(135deg, rgba(184, 134, 11, 0.9), rgba(184, 134, 11, 0.72))",
             boxShadow: "0 45px 90px rgba(5, 79, 45, 0.32)",
@@ -58,7 +58,7 @@ export default async function handler() {
               position: "absolute",
               inset: "0",
               background:
-                "radial-gradient(circle at top center, rgba(247, 198, 216, 0.32), transparent 58%)",
+                "radial-gradient(circle at top center, rgba(241, 179, 198, 0.32), transparent 58%)",
             }}
           />
           <div
@@ -66,7 +66,7 @@ export default async function handler() {
               position: "absolute",
               inset: "0",
               backgroundImage:
-                "repeating-linear-gradient(120deg, rgba(247, 198, 216, 0.1), rgba(247, 198, 216, 0.1) 2px, transparent 2px, transparent 24px)",
+                "repeating-linear-gradient(120deg, rgba(241, 179, 198, 0.1), rgba(241, 179, 198, 0.1) 2px, transparent 2px, transparent 24px)",
               opacity: 0.55,
             }}
           />
@@ -76,7 +76,7 @@ export default async function handler() {
               width: "1200px",
               height: "1200px",
               borderRadius: "50%",
-              border: "1px solid rgba(247, 198, 216, 0.28)",
+              border: "1px solid rgba(241, 179, 198, 0.28)",
               top: "-60%",
               left: "50%",
               marginLeft: "-600px",
@@ -89,7 +89,7 @@ export default async function handler() {
               width: "1400px",
               height: "1400px",
               borderRadius: "50%",
-              border: "1px solid rgba(247, 198, 216, 0.18)",
+              border: "1px solid rgba(241, 179, 198, 0.18)",
               top: "-68%",
               left: "50%",
               marginLeft: "-700px",
@@ -116,7 +116,7 @@ export default async function handler() {
                 gap: "18px",
                 textTransform: "uppercase",
                 letterSpacing: "12px",
-                color: "#f7c6d8",
+                color: "#f1b3c6",
                 fontSize: "32px",
                 fontFamily: "'Libre Baskerville', 'Cormorant Garamond', serif",
                 fontWeight: 700,
@@ -128,7 +128,7 @@ export default async function handler() {
                   display: "block",
                   height: "1px",
                   width: "120px",
-                  background: "rgba(247, 198, 216, 0.45)",
+                  background: "rgba(241, 179, 198, 0.45)",
                 }}
               />
               SAVE THE DATE
@@ -137,7 +137,7 @@ export default async function handler() {
                   display: "block",
                   height: "1px",
                   width: "120px",
-                  background: "rgba(247, 198, 216, 0.45)",
+                  background: "rgba(241, 179, 198, 0.45)",
                 }}
               />
             </div>
@@ -147,7 +147,7 @@ export default async function handler() {
                   fontFamily: "'Dancing Script', 'Cormorant Garamond', serif",
                   fontSize: "110px",
                   letterSpacing: "6px",
-                  color: "#f7c6d8",
+                  color: "#f1b3c6",
                   fontWeight: 600,
                   textShadow: "0 6px 18px rgba(5, 79, 45, 0.35)",
                 }}
