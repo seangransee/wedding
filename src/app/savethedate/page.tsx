@@ -106,7 +106,7 @@ export default function SaveTheDate() {
                   href="https://www.google.com/calendar/render?action=TEMPLATE&text=Sean%20%26%20Lexi%27s%20Wedding&dates=20261212/20261213&location=The%20Blackstone%2C%20Autograph%20Collection%2C%20636%20South%20Michigan%20Avenue%2C%20Chicago%2C%20IL%2060605%2C%20USA&details=Lexi%20and%20Sean%20are%20finally%20getting%20married."
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-current underline decoration-dashed decoration-1 decoration-[#054f2d]/50 underline-offset-6 hover:text-[#054f2d] hover:decoration-[#054f2d]"
+                  className="text-current underline decoration-dashed decoration-1 decoration-[#054f2d]/50 underline-offset-6 transition-colors hover:text-[#f1b3c6] hover:decoration-[#f1b3c6]"
                 >
                   December 12, 2026
                 </a>
@@ -115,14 +115,13 @@ export default function SaveTheDate() {
             <div className="md:hidden text-xs uppercase tracking-[0.4em] text-[#f1b3c6]">
               at
             </div>
-            <div className="hidden md:block h-16 w-px bg-gradient-to-b from-[#f1b3c6]/38 via-[#054f2d]/60 to-[#f1b3c6]/38" />
             <div>
               <p className="text-2xl font-semibold sm:text-3xl">
                 <a
                   href="https://maps.app.goo.gl/UKgUKENz1W4efCC7A"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-current underline decoration-dashed decoration-1 decoration-[#054f2d]/50 underline-offset-6 hover:text-[#054f2d] hover:decoration-[#054f2d]"
+                  className="text-current underline decoration-dashed decoration-1 decoration-[#054f2d]/50 underline-offset-6 transition-colors hover:text-[#f1b3c6] hover:decoration-[#f1b3c6]"
                 >
                   The Blackstone Hotel
                 </a>
@@ -132,14 +131,15 @@ export default function SaveTheDate() {
               </p>
             </div>
           </div>
-          <div className="mt-8 sm:mt-10">
-            <div className="deco-header mx-auto flex max-w-md items-center justify-center gap-3 text-[0.65rem] uppercase tracking-[0.55em]">
-              <span className="deco-line" aria-hidden="true" />
-              <span className="deco-badge text-[#f1b3c6]">
-                INVITATION TO FOLLOW
-              </span>
-              <span className="deco-line" aria-hidden="true" />
-            </div>
+          <div className="mt-8 sm:mt-10 text-center">
+            <a
+              href="https://www.google.com/calendar/render?action=TEMPLATE&text=Sean%20%26%20Lexi%27s%20Wedding&dates=20261212/20261213&location=The%20Blackstone%2C%20Autograph%20Collection%2C%20636%20South%20Michigan%20Avenue%2C%20Chicago%2C%20IL%2060605%2C%20USA&details=Sean%20%2B%20Lexi%20%3D%20Sexi"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-block text-sm font-semibold uppercase tracking-[0.2em] text-[#054f2d]/80 underline decoration-dashed decoration-1 underline-offset-4 transition-colors hover:text-[#f1b3c6] hover:decoration-[#f1b3c6]"
+            >
+              Add to calendar
+            </a>
           </div>
         </div>
       </div>
