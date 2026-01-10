@@ -161,7 +161,7 @@ export default async function handler() {
                 color: "#054f2d",
                 display: "flex",
                 flexDirection: "column",
-                gap: "28px",
+                gap: "12px",
                 marginTop: "auto",
                 marginBottom: "-12px",
               }}
@@ -181,6 +181,22 @@ export default async function handler() {
                 }}
               >
                 December 12, 2026
+              </div>
+              <div
+                style={{
+                  fontFamily:
+                    "'Libre Baskerville', 'Cormorant Garamond', serif",
+                  display: "flex",
+                  justifyContent: "center",
+                  alignItems: "center",
+                  fontSize: "28px",
+                  fontWeight: 700,
+                  letterSpacing: "6px",
+                  textTransform: "uppercase",
+                  color: "#054f2d",
+                }}
+              >
+                Chicago, IL
               </div>
             </div>
           </div>
