@@ -60,13 +60,13 @@ const COLUMN_KEY_TO_SORT_KEY: Record<string, Exclude<AdminSortKey, "default">> =
 
 const BASE_COLUMN_WIDTHS = {
   rowNumber: 38,
-  name: 182,
+  name: 174,
   slug: 160,
   notes: 170,
   guestCount: 54,
-  inviteSent: 92,
+  inviteSent: 97,
   rsvpStatus: 112,
-  attendingCount: 58,
+  attendingCount: 61,
   attendeeNames: 200,
   actions: 100,
 };
@@ -445,7 +445,7 @@ function SpreadsheetTextEditor({
           onClose(false, true);
         }
       }}
-      className="h-full w-full border-0 bg-white px-2 text-base text-[#4a1027] outline-none md:text-sm"
+      className="h-full w-full border-0 bg-white px-2 text-base text-[#4a1027] outline-none"
     />
   );
 }
@@ -490,7 +490,7 @@ function SpreadsheetNumberEditor({
           onClose(false, true);
         }
       }}
-      className="h-full w-full border-0 bg-white px-2 text-left font-mono text-base tabular-nums text-[#4a1027] outline-none md:text-sm"
+      className="h-full w-full border-0 bg-white px-2 text-left font-mono text-base tabular-nums text-[#4a1027] outline-none"
     />
   );
 }
@@ -807,7 +807,7 @@ export function GuestTable({
                 <GripVertical aria-hidden="true" className="size-4" />
               </button>
             ) : (
-              <span className="font-mono text-[0.7rem] tabular-nums text-[#8f5070]">{rowIdx + 1}</span>
+              <span className="font-mono text-[0.85rem] tabular-nums text-[#8f5070]">{rowIdx + 1}</span>
             )}
           </div>
         );
@@ -855,6 +855,9 @@ export function GuestTable({
       resizable: true,
       editable: true,
       renderEditCell: SpreadsheetNumberEditor,
+      renderCell({ row }) {
+        return <span className="admin-number-cell">{row.guestCount}</span>;
+      },
     },
     {
       key: "inviteSent",
@@ -882,7 +885,7 @@ export function GuestTable({
       sortable: true,
       resizable: true,
       renderCell({ row }) {
-        return row.attendingCount ?? "";
+        return row.attendingCount === null ? "" : <span className="admin-number-cell">{row.attendingCount}</span>;
       },
     },
     {
@@ -984,8 +987,8 @@ export function GuestTable({
         onSortColumnsChange={handleSortColumnsChange}
         onCellClick={handleCellClick}
         defaultColumnOptions={{ resizable: true }}
-        rowHeight={46}
-        headerRowHeight={38}
+        rowHeight={50}
+        headerRowHeight={42}
         enableVirtualization={false}
         renderers={{
           noRowsFallback: (

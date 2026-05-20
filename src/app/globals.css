@@ -37,7 +37,7 @@ body {
   --rdg-row-hover-background-color: #ffd8e8;
   --rdg-selection-color: #be185d;
   --rdg-border-color: #df7fa3;
-  --rdg-font-size: 14px;
+  --rdg-font-size: 16px;
   block-size: min(66vh, 40rem);
   border: 0;
   color: #4a1027;
@@ -45,7 +45,7 @@ body {
 
 .admin-spreadsheet .rdg-header-row {
   color: #651735;
-  font-size: 0.75rem;
+  font-size: 0.8rem;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -78,6 +78,13 @@ body {
 .admin-spreadsheet .admin-cell-locked {
   cursor: not-allowed;
   opacity: 0.72;
+}
+
+.admin-spreadsheet .admin-number-cell {
+  font-family: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 1.05rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
 
 .admin-row-order-header-button {
@@ -136,7 +143,7 @@ body {
 
 @media (max-width: 640px) {
   .admin-spreadsheet {
-    --rdg-font-size: 16px;
+    --rdg-font-size: 17px;
     block-size: 72vh;
   }
 }
