@@ -74,22 +74,6 @@ function errorLocation(message: string, ok: boolean): ErrorLocation {
   return "global";
 }
 
-function successCopy(status: RsvpStatus | "") {
-  if (status === "yes") {
-    return "Your answer is saved, and the place-card list is tucked into the plan.";
-  }
-
-  if (status === "no") {
-    return "Your answer is saved. Thank you for letting us know.";
-  }
-
-  if (status === "deciding") {
-    return "Your maybe is saved. Come back with a final answer by November 1st.";
-  }
-
-  return "Your RSVP is saved.";
-}
-
 export function RsvpForm({
   slug,
   guestName,
@@ -329,9 +313,6 @@ export function RsvpForm({
             >
               The RSVP is in!
             </h3>
-            <p className="mt-3 text-base leading-relaxed text-[#4a1f2e]/75">
-              {successCopy(state.values.status)}
-            </p>
             <button
               type="button"
               onClick={() => setShowSuccessModal(false)}

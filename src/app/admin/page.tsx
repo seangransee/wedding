@@ -178,7 +178,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
   );
   const invitedCount = guests.reduce(
     (total, guest) =>
-      total + (guest.rsvpStatus === null && guest.inviteSent ? guest.guestCount : 0),
+      total + (guest.rsvpStatus === null ? guest.guestCount : 0),
     0,
   );
   const yesMaybeCount = yesCount + maybeCount;

@@ -1,7 +1,7 @@
 "use client";
 
 import clsx from "clsx";
-import { Check, GripVertical } from "lucide-react";
+import { ArrowUpDown, Check, ChevronDown, ChevronUp } from "lucide-react";
 import Link from "next/link";
 import { useActionState, useCallback, useEffect, useMemo, useState, useTransition } from "react";
 import { useFormStatus } from "react-dom";
@@ -55,6 +55,17 @@ const COLUMN_KEY_TO_SORT_KEY: Record<string, Exclude<AdminSortKey, "default">> =
   rsvpStatus: "rsvp",
   attendingCount: "attending",
 };
+
+function slugDraftValue(value: string) {
+  return value
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/&/g, "and")
+    .replace(/\s+/g, "-")
+    .replace(/[^a-z0-9-]/g, "")
+    .replace(/-{2,}/g, "-");
+}
 
 function rsvpLabel(status: string | null) {
   if (status === "yes") {
@@ -159,7 +170,7 @@ export function AddGuestForm() {
             value={slug}
             onChange={(event) => {
               setSlugTouched(true);
-              setSlug(slugify(event.target.value));
+              setSlug(slugDraftValue(event.target.value));
             }}
             className="min-h-9 border border-[#df7fa3] bg-[#fff8fb] px-2 text-base font-normal normal-case tracking-normal text-[#4a1027] outline-none transition placeholder:text-[#4a1027]/35 focus:border-[#be185d] focus:ring-1 focus:ring-[#be185d]/30 md:min-h-7 md:text-sm"
           />
@@ -363,7 +374,7 @@ function SpreadsheetTextEditor({
       autoFocus
       value={value}
       onBlur={commit}
-      onChange={(event) => setValue(key === "slug" ? slugify(event.target.value) : event.target.value)}
+      onChange={(event) => setValue(key === "slug" ? slugDraftValue(event.target.value) : event.target.value)}
       onKeyDown={(event) => {
         if (event.key === "Enter") {
           event.preventDefault();
@@ -524,7 +535,6 @@ export function GuestTable({
   isDefaultSort: boolean;
 }) {
   const [rows, setRows] = useState(guests);
-  const [draggedGuestId, setDraggedGuestId] = useState<number | null>(null);
   const [message, setMessage] = useState("");
   const [isSaving, startTransition] = useTransition();
 
@@ -543,19 +553,18 @@ export function GuestTable({
     }];
   }, [activeDirection, activeSortKey]);
 
-  const handleRowDrop = useCallback((targetGuestId: number) => {
-    if (!isDefaultSort || draggedGuestId === null || draggedGuestId === targetGuestId) {
+  const handleMoveRow = useCallback((rowIndex: number, direction: -1 | 1) => {
+    if (!isDefaultSort || isSaving) {
       return;
     }
 
-    const fromIndex = rows.findIndex((guest) => guest.id === draggedGuestId);
-    const toIndex = rows.findIndex((guest) => guest.id === targetGuestId);
+    const targetIndex = rowIndex + direction;
 
-    if (fromIndex < 0 || toIndex < 0) {
+    if (targetIndex < 0 || targetIndex >= rows.length) {
       return;
     }
 
-    const nextRows = moveRow(rows, fromIndex, toIndex);
+    const nextRows = moveRow(rows, rowIndex, targetIndex);
     const previousRows = rows;
 
     setRows(nextRows);
@@ -575,7 +584,13 @@ export function GuestTable({
           setMessage("Row order could not be saved.");
         });
     });
-  }, [draggedGuestId, isDefaultSort, rows]);
+  }, [isDefaultSort, isSaving, rows]);
+
+  const handleDefaultSort = useCallback(() => {
+    if (!isDefaultSort) {
+      window.location.href = "/admin";
+    }
+  }, [isDefaultSort]);
 
   const columns = useMemo<Column<GuestWithRsvp>[]>(() => [
     {
@@ -585,37 +600,46 @@ export function GuestTable({
       minWidth: 38,
       resizable: true,
       frozen: true,
-      renderCell({ row, rowIdx }) {
+      renderHeaderCell() {
         return (
-          <div
-            className="flex h-full items-center justify-center"
-            onDragOver={(event) => {
-              if (isDefaultSort && draggedGuestId !== null) {
-                event.preventDefault();
-              }
-            }}
-            onDrop={(event) => {
-              event.preventDefault();
-              handleRowDrop(row.id);
-              setDraggedGuestId(null);
-            }}
+          <button
+            type="button"
+            aria-label="Show default guest order"
+            title="Default order"
+            disabled={isDefaultSort}
+            onClick={handleDefaultSort}
+            className="admin-row-order-header-button"
           >
+            <ArrowUpDown aria-hidden="true" className="size-3.5" />
+          </button>
+        );
+      },
+      renderCell({ rowIdx }) {
+        return (
+          <div className="flex h-full items-center justify-center">
             {isDefaultSort ? (
-              <button
-                type="button"
-                draggable={!isSaving}
-                aria-label={`Drag row ${rowIdx + 1}`}
-                title="Drag to reorder"
-                onDragStart={(event) => {
-                  setDraggedGuestId(row.id);
-                  event.dataTransfer.effectAllowed = "move";
-                  event.dataTransfer.setData("text/plain", String(row.id));
-                }}
-                onDragEnd={() => setDraggedGuestId(null)}
-                className="admin-row-handle"
-              >
-                <GripVertical aria-hidden="true" className="size-4" />
-              </button>
+              <div className="admin-row-order-controls">
+                <button
+                  type="button"
+                  aria-label={`Move row ${rowIdx + 1} up`}
+                  title="Move up"
+                  disabled={isSaving || rowIdx === 0}
+                  onClick={() => handleMoveRow(rowIdx, -1)}
+                  className="admin-row-order-button"
+                >
+                  <ChevronUp aria-hidden="true" className="size-3" />
+                </button>
+                <button
+                  type="button"
+                  aria-label={`Move row ${rowIdx + 1} down`}
+                  title="Move down"
+                  disabled={isSaving || rowIdx === rows.length - 1}
+                  onClick={() => handleMoveRow(rowIdx, 1)}
+                  className="admin-row-order-button"
+                >
+                  <ChevronDown aria-hidden="true" className="size-3" />
+                </button>
+              </div>
             ) : (
               <span className="font-mono text-[0.7rem] tabular-nums text-[#8f5070]">{rowIdx + 1}</span>
             )}
@@ -711,7 +735,7 @@ export function GuestTable({
       resizable: true,
       renderCell: ActionsCell,
     },
-  ], [draggedGuestId, handleRowDrop, isDefaultSort, isSaving]);
+  ], [handleDefaultSort, handleMoveRow, isDefaultSort, isSaving, rows.length]);
 
   function handleRowsChange(
     nextRows: GuestWithRsvp[],

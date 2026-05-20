@@ -75,23 +75,56 @@ body {
   text-align: right;
 }
 
-.admin-row-handle {
+.admin-row-order-header-button {
   display: grid;
-  inline-size: 1.75rem;
-  block-size: 1.75rem;
+  block-size: 100%;
+  inline-size: 100%;
   place-items: center;
+  color: #7a1239;
+  transition: background-color 140ms ease, color 140ms ease, opacity 140ms ease;
+}
+
+.admin-row-order-header-button:hover:not(:disabled) {
+  background: #ffd4e5;
+  color: #4a1027;
+}
+
+.admin-row-order-header-button:disabled {
+  color: #8f5070;
+  cursor: default;
+  opacity: 0.55;
+}
+
+.admin-row-order-controls {
+  display: grid;
+  inline-size: 1.5rem;
+  grid-template-rows: 1fr 1fr;
+  overflow: hidden;
   border: 1px solid #be185d;
   background: #ffe0ec;
+}
+
+.admin-row-order-button {
+  display: grid;
+  min-block-size: 0;
+  place-items: center;
   color: #7a1239;
-  cursor: grab;
+  transition: background-color 140ms ease, color 140ms ease, opacity 140ms ease;
 }
 
-.admin-row-handle:hover {
+.admin-row-order-button:first-child {
+  border-block-end: 1px solid #efb5c9;
+}
+
+.admin-row-order-button:hover:not(:disabled) {
   background: #ffd4e5;
+  color: #4a1027;
 }
 
-.admin-row-handle:active {
-  cursor: grabbing;
+.admin-row-order-button:disabled {
+  color: #b8899b;
+  cursor: not-allowed;
+  opacity: 0.42;
 }
 
 @media (max-width: 640px) {
