@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Cormorant_Garamond, Libre_Baskerville, Dancing_Script } from "next/font/google";
+import "react-data-grid/lib/styles.css";
 import "./globals.css";
 
 const primarySerif = Cormorant_Garamond({

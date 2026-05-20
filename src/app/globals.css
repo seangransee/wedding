@@ -27,6 +27,70 @@ body {
   font-family: var(--font-geist-sans), "Cormorant Garamond", "Libre Baskerville", Georgia, serif;
 }
 
+.admin-spreadsheet-shell {
+  min-block-size: 22rem;
+}
+
+.admin-spreadsheet {
+  --rdg-background-color: #fff8fb;
+  --rdg-header-background-color: #eca8c0;
+  --rdg-row-hover-background-color: #ffd8e8;
+  --rdg-selection-color: #be185d;
+  --rdg-border-color: #df7fa3;
+  --rdg-font-size: 12px;
+  block-size: min(66vh, 40rem);
+  border: 0;
+  color: #4a1027;
+}
+
+.admin-spreadsheet .rdg-header-row {
+  color: #651735;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.admin-spreadsheet .rdg-row:nth-child(even) {
+  background-color: #ffeaf2;
+}
+
+.admin-spreadsheet .rdg-cell {
+  align-content: center;
+  border-color: #efb5c9;
+  padding-inline: 0.5rem;
+}
+
+.admin-spreadsheet .rdg-cell-right {
+  text-align: right;
+}
+
+.admin-row-handle {
+  display: grid;
+  inline-size: 1.75rem;
+  block-size: 1.75rem;
+  place-items: center;
+  border: 1px solid #be185d;
+  background: #ffe0ec;
+  color: #7a1239;
+  cursor: grab;
+}
+
+.admin-row-handle:hover {
+  background: #ffd4e5;
+}
+
+.admin-row-handle:active {
+  cursor: grabbing;
+}
+
+@media (max-width: 640px) {
+  .admin-spreadsheet {
+    --rdg-font-size: 16px;
+    block-size: 72vh;
+  }
+}
+
 .hero-card {
   animation: fadeUp 1s ease-out both;
   box-shadow: 0 40px 90px -35px rgba(79, 33, 50, 0.35);

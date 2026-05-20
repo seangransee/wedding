@@ -1,29 +1,22 @@
 "use client";
 
-import {
-  closestCenter,
-  DndContext,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  type DragEndEvent,
-} from "@dnd-kit/core";
-import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
-import {
-  arrayMove,
-  SortableContext,
-  sortableKeyboardCoordinates,
-  useSortable,
-  verticalListSortingStrategy,
-} from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
 import clsx from "clsx";
-import { ArrowUp, Check, GripVertical } from "lucide-react";
+import { Check, GripVertical } from "lucide-react";
 import Link from "next/link";
-import { useActionState, useEffect, useState, useTransition } from "react";
+import { useActionState, useCallback, useEffect, useMemo, useState, useTransition } from "react";
 import { useFormStatus } from "react-dom";
+import {
+  DataGrid,
+  type CellClickArgs,
+  type CellMouseEvent,
+  type Column,
+  type RenderCellProps,
+  type RenderEditCellProps,
+  type RowsChangeData,
+  type SortColumn,
+} from "react-data-grid";
 import type { GuestWithRsvp } from "@/lib/db";
+import { slugify } from "@/lib/slug";
 import {
   addGuest,
   deleteGuest,
@@ -36,18 +29,32 @@ import {
   setInviteSent,
   type AdminActionState,
 } from "./actions";
-import { slugify } from "@/lib/slug";
 
 const initialState: AdminActionState = {
   ok: false,
   message: "",
 };
 
-type SortableAttributes = ReturnType<typeof useSortable>["attributes"];
-type SortableListeners = ReturnType<typeof useSortable>["listeners"];
-type SortableActivatorRef = ReturnType<typeof useSortable>["setActivatorNodeRef"];
 export type AdminSortKey = "default" | "name" | "max" | "invite" | "rsvp" | "attending";
 export type AdminSortDirection = "asc" | "desc";
+
+type EditableColumnKey = "name" | "slug" | "notes" | "guestCount";
+
+const SORT_KEY_TO_COLUMN_KEY: Record<Exclude<AdminSortKey, "default">, string> = {
+  name: "name",
+  max: "guestCount",
+  invite: "inviteSent",
+  rsvp: "rsvpStatus",
+  attending: "attendingCount",
+};
+
+const COLUMN_KEY_TO_SORT_KEY: Record<string, Exclude<AdminSortKey, "default">> = {
+  name: "name",
+  guestCount: "max",
+  inviteSent: "invite",
+  rsvpStatus: "rsvp",
+  attendingCount: "attending",
+};
 
 function rsvpLabel(status: string | null) {
   if (status === "yes") {
@@ -73,63 +80,6 @@ function rsvpClassName(status: string | null) {
     return "border-[#d78a3d] bg-[#ffe6c8] text-[#8a4a0f]";
   }
   return "border-[#e7a1ba] bg-[#fff1f7] text-[#7d3150]";
-}
-
-function sortHref(sortKey: AdminSortKey, activeSortKey: AdminSortKey, activeDirection: AdminSortDirection) {
-  if (sortKey === "default") {
-    return "/admin";
-  }
-
-  const nextDirection = activeSortKey === sortKey && activeDirection === "asc" ? "desc" : "asc";
-  return `/admin?sort=${sortKey}&dir=${nextDirection}`;
-}
-
-function SortArrowIcon({ direction }: { direction: AdminSortDirection }) {
-  return (
-    <ArrowUp
-      aria-hidden="true"
-      className={clsx("size-3 transition-transform", direction === "desc" && "rotate-180")}
-      strokeWidth={3}
-    />
-  );
-}
-
-function SortHeader({
-  label,
-  sortKey,
-  activeSortKey,
-  activeDirection,
-  className,
-}: {
-  label: string;
-  sortKey: AdminSortKey;
-  activeSortKey: AdminSortKey;
-  activeDirection: AdminSortDirection;
-  className?: string;
-}) {
-  const isActive = activeSortKey === sortKey;
-
-  return (
-    <Link
-      href={sortHref(sortKey, activeSortKey, activeDirection)}
-      className={clsx(
-        "group inline-flex min-h-6 items-center gap-1.5 rounded-sm px-1.5 py-0.5 transition hover:bg-[#fff1f7] hover:text-[#8f2448]",
-        className,
-      )}
-    >
-      <span>{label}</span>
-      <span
-        className={clsx(
-          "inline-grid size-5 place-items-center rounded-full border transition",
-          isActive
-            ? "border-[#be185d] bg-[#8f2448] text-[#fff8fb] shadow-[0_1px_4px_rgba(143,36,72,0.22)]"
-            : "border-[#d65b8a]/45 bg-[#fff8fb]/60 text-[#8f5070] opacity-55 group-hover:opacity-100",
-        )}
-      >
-        <SortArrowIcon direction={isActive ? activeDirection : "asc"} />
-      </span>
-    </Link>
-  );
 }
 
 function SubmitButton({
@@ -199,7 +149,7 @@ export function AddGuestForm() {
             name="name"
             value={name}
             onChange={(event) => setName(event.target.value)}
-            className="min-h-7 border border-[#df7fa3] bg-[#fff8fb] px-2 text-sm font-normal normal-case tracking-normal text-[#4a1027] outline-none transition placeholder:text-[#4a1027]/35 focus:border-[#be185d] focus:ring-1 focus:ring-[#be185d]/30"
+            className="min-h-9 border border-[#df7fa3] bg-[#fff8fb] px-2 text-base font-normal normal-case tracking-normal text-[#4a1027] outline-none transition placeholder:text-[#4a1027]/35 focus:border-[#be185d] focus:ring-1 focus:ring-[#be185d]/30 md:min-h-7 md:text-sm"
           />
         </label>
         <label className="grid gap-1 border-b border-[#efb5c9] px-2 py-1.5 text-[0.65rem] font-semibold uppercase tracking-[0.08em] text-[#8f2448] md:border-r md:border-b-0">
@@ -211,7 +161,7 @@ export function AddGuestForm() {
               setSlugTouched(true);
               setSlug(slugify(event.target.value));
             }}
-            className="min-h-7 border border-[#df7fa3] bg-[#fff8fb] px-2 text-sm font-normal normal-case tracking-normal text-[#4a1027] outline-none transition placeholder:text-[#4a1027]/35 focus:border-[#be185d] focus:ring-1 focus:ring-[#be185d]/30"
+            className="min-h-9 border border-[#df7fa3] bg-[#fff8fb] px-2 text-base font-normal normal-case tracking-normal text-[#4a1027] outline-none transition placeholder:text-[#4a1027]/35 focus:border-[#be185d] focus:ring-1 focus:ring-[#be185d]/30 md:min-h-7 md:text-sm"
           />
         </label>
         <label className="grid gap-1 border-b border-[#efb5c9] px-2 py-1.5 text-[0.65rem] font-semibold uppercase tracking-[0.08em] text-[#8f2448] md:border-r md:border-b-0">
@@ -222,14 +172,14 @@ export function AddGuestForm() {
             min="1"
             max="10"
             defaultValue="2"
-            className="min-h-7 border border-[#df7fa3] bg-[#fff8fb] px-2 text-sm font-normal normal-case tracking-normal text-[#4a1027] outline-none transition focus:border-[#be185d] focus:ring-1 focus:ring-[#be185d]/30"
+            className="min-h-9 border border-[#df7fa3] bg-[#fff8fb] px-2 text-base font-normal normal-case tracking-normal text-[#4a1027] outline-none transition focus:border-[#be185d] focus:ring-1 focus:ring-[#be185d]/30 md:min-h-7 md:text-sm"
           />
         </label>
         <label className="grid gap-1 border-b border-[#efb5c9] px-2 py-1.5 text-[0.65rem] font-semibold uppercase tracking-[0.08em] text-[#8f2448] md:border-r md:border-b-0">
           Notes
           <input
             name="notes"
-            className="min-h-7 border border-[#df7fa3] bg-[#fff8fb] px-2 text-sm font-normal normal-case tracking-normal text-[#4a1027] outline-none transition placeholder:text-[#4a1027]/35 focus:border-[#be185d] focus:ring-1 focus:ring-[#be185d]/30"
+            className="min-h-9 border border-[#df7fa3] bg-[#fff8fb] px-2 text-base font-normal normal-case tracking-normal text-[#4a1027] outline-none transition placeholder:text-[#4a1027]/35 focus:border-[#be185d] focus:ring-1 focus:ring-[#be185d]/30 md:min-h-7 md:text-sm"
           />
         </label>
         <div className="border-b border-[#efb5c9] px-2 py-1.5 text-[0.65rem] font-semibold uppercase tracking-[0.08em] text-[#8f2448] md:border-r md:border-b-0">
@@ -283,7 +233,7 @@ export function DeleteGuestButton({ guestId, guestName }: { guestId: number; gue
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="min-h-6 border border-[#e7a1ba] bg-[#fff1f7] px-2 font-semibold text-[#be123c] transition hover:border-[#be123c] hover:bg-[#ffe0ec]"
+        className="min-h-7 border border-[#e7a1ba] bg-[#fff1f7] px-2 font-semibold text-[#be123c] transition hover:border-[#be123c] hover:bg-[#ffe0ec]"
       >
         Delete
       </button>
@@ -300,7 +250,8 @@ export function DeleteGuestButton({ guestId, guestName }: { guestId: number; gue
             </div>
             <div className="grid gap-3 px-3 py-3 text-sm text-[#4a1027]">
               <p>
-                Delete <span className="font-semibold text-[#7f1d1d]">{guestName}</span> and any RSVP/place-card rows for this guest.
+                Delete <span className="font-semibold text-[#7f1d1d]">{guestName}</span> and
+                any RSVP/place-card rows for this guest.
               </p>
               <label className="grid gap-1 text-[0.65rem] font-semibold uppercase tracking-[0.08em] text-[#be123c]">
                 Type delete
@@ -346,17 +297,12 @@ export function InviteSentToggle({
   inviteSent: boolean;
 }) {
   const [state, formAction] = useActionState(setInviteSent, initialState);
-  const [checked, setChecked] = useState(inviteSent);
-
-  useEffect(() => {
-    setChecked(inviteSent);
-  }, [inviteSent]);
 
   return (
     <form action={formAction} className="flex items-center justify-center">
       <input type="hidden" name="guestId" value={guestId} />
-      <input type="hidden" name="inviteSent" value={checked ? "false" : "true"} />
-      <InviteSentSubmitButton checked={checked} message={state.message} />
+      <input type="hidden" name="inviteSent" value={inviteSent ? "false" : "true"} />
+      <InviteSentSubmitButton checked={inviteSent} message={state.message} />
     </form>
   );
 }
@@ -371,7 +317,7 @@ function InviteSentSubmitButton({ checked, message }: { checked: boolean; messag
       aria-label={checked ? "Mark invite not sent" : "Mark invite sent"}
       title={message || (checked ? "Invite sent" : "Invite not sent")}
       className={clsx(
-        "grid size-5 place-items-center border transition disabled:cursor-wait disabled:opacity-65",
+        "grid size-6 place-items-center border transition disabled:cursor-wait disabled:opacity-65",
         checked
           ? "border-[#d65b8a] bg-[#ffe0ec] text-[#7a1239] hover:bg-[#ffd4e5]"
           : "border-[#df7fa3] bg-white text-transparent hover:border-[#be185d] hover:bg-[#fff1f7]",
@@ -382,389 +328,188 @@ function InviteSentSubmitButton({ checked, message }: { checked: boolean; messag
   );
 }
 
-function SaveNameButton({ disabled, label = "Save" }: { disabled: boolean; label?: string }) {
-  const { pending } = useFormStatus();
-
-  return (
-    <button
-      type="submit"
-      aria-label={label}
-      disabled={disabled || pending}
-      className="min-h-7 border border-[#d65b8a] bg-[#fff1f7] px-2 text-[0.68rem] font-semibold uppercase tracking-[0.08em] text-[#8f2448] transition hover:border-[#be185d] hover:bg-[#ffe0ec] disabled:cursor-not-allowed disabled:border-[#efb5c9] disabled:bg-[#fff8fb] disabled:text-[#b8899b]"
-    >
-      {pending ? "Saving" : "Save"}
-    </button>
-  );
+function rowKeyGetter(row: GuestWithRsvp) {
+  return row.id;
 }
 
-export function GuestNameEditor({
-  guestId,
-  slug,
-  name,
-}: {
-  guestId: number;
-  slug: string;
-  name: string;
-}) {
-  const [state, formAction] = useActionState(editGuestName, initialState);
-  const [value, setValue] = useState(name);
+function moveRow<T>(rows: T[], fromIndex: number, toIndex: number) {
+  const nextRows = [...rows];
+  const [movedRow] = nextRows.splice(fromIndex, 1);
 
-  useEffect(() => {
-    setValue(name);
-  }, [name]);
+  if (movedRow === undefined) {
+    return rows;
+  }
 
-  const trimmedValue = value.trim();
-  const hasChanged = trimmedValue !== name;
-
-  return (
-    <form action={formAction} className="grid min-w-0 grid-cols-[minmax(12rem,1fr)_auto] items-center gap-1.5">
-      <input type="hidden" name="guestId" value={guestId} />
-      <input type="hidden" name="slug" value={slug} />
-      <input
-        name="name"
-        value={value}
-        onChange={(event) => setValue(event.target.value)}
-        aria-label={`Guest name for ${name}`}
-        className="min-h-7 min-w-0 border border-transparent bg-transparent px-1 text-xs font-semibold text-[#4a1027] outline-none transition hover:border-[#efb5c9] hover:bg-white focus:border-[#be185d] focus:bg-white focus:ring-1 focus:ring-[#be185d]/25"
-      />
-      <SaveNameButton disabled={!hasChanged || !trimmedValue} label={`Save name for ${name}`} />
-      {state.message ? (
-        <p
-          className={`col-span-2 text-[0.68rem] font-semibold ${state.ok ? "text-[#8f2448]" : "text-[#be123c]"}`}
-          role="status"
-        >
-          {state.message}
-        </p>
-      ) : null}
-    </form>
-  );
+  nextRows.splice(toIndex, 0, movedRow);
+  return nextRows;
 }
 
-export function GuestNotesEditor({
-  guestId,
-  name,
-  notes,
-}: {
-  guestId: number;
-  name: string;
-  notes: string;
-}) {
-  const [state, formAction] = useActionState(editGuestNotes, initialState);
-  const [value, setValue] = useState(notes);
+function SpreadsheetTextEditor({
+  row,
+  column,
+  onRowChange,
+  onClose,
+}: RenderEditCellProps<GuestWithRsvp>) {
+  const key = column.key as EditableColumnKey;
+  const [value, setValue] = useState(String(row[key] ?? ""));
 
-  useEffect(() => {
-    setValue(notes);
-  }, [notes]);
-
-  const trimmedValue = value.trim();
-  const hasChanged = trimmedValue !== notes;
-
-  return (
-    <form action={formAction} className="grid min-w-0 grid-cols-[minmax(12rem,1fr)_auto] items-center gap-1.5">
-      <input type="hidden" name="guestId" value={guestId} />
-      <input
-        name="notes"
-        value={value}
-        onChange={(event) => setValue(event.target.value)}
-        aria-label={`Admin notes for ${name}`}
-        className="min-h-7 min-w-0 border border-transparent bg-transparent px-1 text-xs text-[#4a1027] outline-none transition hover:border-[#efb5c9] hover:bg-white focus:border-[#be185d] focus:bg-white focus:ring-1 focus:ring-[#be185d]/25"
-      />
-      <SaveNameButton disabled={!hasChanged} label={`Save notes for ${name}`} />
-      {state.message ? (
-        <p
-          className={`col-span-2 text-[0.68rem] font-semibold ${state.ok ? "text-[#8f2448]" : "text-[#be123c]"}`}
-          role="status"
-        >
-          {state.message}
-        </p>
-      ) : null}
-    </form>
-  );
-}
-
-export function GuestCountEditor({
-  guestId,
-  slug,
-  name,
-  guestCount,
-}: {
-  guestId: number;
-  slug: string;
-  name: string;
-  guestCount: number;
-}) {
-  const [state, formAction] = useActionState(editGuestCount, initialState);
-  const [value, setValue] = useState(String(guestCount));
-
-  useEffect(() => {
-    setValue(String(guestCount));
-  }, [guestCount]);
-
-  const numericValue = Number(value);
-  const hasChanged = numericValue !== guestCount;
-  const isValid = Number.isInteger(numericValue) && numericValue >= 1 && numericValue <= 10;
-
-  return (
-    <form action={formAction} className="grid min-w-0 grid-cols-[3rem_auto] items-center justify-end gap-1">
-      <input type="hidden" name="guestId" value={guestId} />
-      <input type="hidden" name="slug" value={slug} />
-      <input
-        name="guestCount"
-        type="number"
-        min="1"
-        max="10"
-        value={value}
-        onChange={(event) => setValue(event.target.value)}
-        aria-label={`Max guests for ${name}`}
-        className="min-h-7 min-w-0 border border-transparent bg-transparent px-1 text-right font-mono text-xs tabular-nums text-[#4a1027] outline-none transition hover:border-[#efb5c9] hover:bg-white focus:border-[#be185d] focus:bg-white focus:ring-1 focus:ring-[#be185d]/25"
-      />
-      <SaveNameButton
-        disabled={!hasChanged || !isValid}
-        label={`Save max guests for ${name}`}
-      />
-      {state.message ? (
-        <p
-          className={`col-span-2 text-right text-[0.68rem] font-semibold ${state.ok ? "text-[#8f2448]" : "text-[#be123c]"}`}
-          role="status"
-        >
-          {state.message}
-        </p>
-      ) : null}
-    </form>
-  );
-}
-
-export function GuestSlugEditor({
-  guestId,
-  slug,
-}: {
-  guestId: number;
-  slug: string;
-}) {
-  const [state, formAction] = useActionState(editGuestSlug, initialState);
-  const [value, setValue] = useState(slug);
-
-  useEffect(() => {
-    setValue(slug);
-  }, [slug]);
-
-  const hasChanged = value !== slug;
-
-  return (
-    <form action={formAction} className="grid min-w-0 grid-cols-[auto_minmax(9rem,1fr)_auto] items-center gap-1">
-      <input type="hidden" name="guestId" value={guestId} />
-      <input type="hidden" name="oldSlug" value={slug} />
-      <span className="font-mono text-[0.7rem] text-[#be185d]">/</span>
-      <input
-        name="slug"
-        value={value}
-        onChange={(event) => setValue(slugify(event.target.value))}
-        aria-label={`URL slug for ${slug}`}
-        className="min-h-7 min-w-0 border border-transparent bg-transparent px-1 font-mono text-[0.7rem] text-[#be185d] outline-none transition hover:border-[#efb5c9] hover:bg-white focus:border-[#be185d] focus:bg-white focus:ring-1 focus:ring-[#be185d]/25"
-      />
-      <SaveNameButton disabled={!hasChanged || !value} label={`Save URL slug for ${slug}`} />
-      {state.message ? (
-        <p
-          className={`col-span-3 text-[0.68rem] font-semibold ${state.ok ? "text-[#8f2448]" : "text-[#be123c]"}`}
-          role="status"
-        >
-          {state.message}
-        </p>
-      ) : null}
-    </form>
-  );
-}
-
-function RowOrderHandle({
-  rowNumber,
-  enabled,
-  isSaving,
-  attributes,
-  listeners,
-  setActivatorNodeRef,
-}: {
-  rowNumber: number;
-  enabled: boolean;
-  isSaving: boolean;
-  attributes?: SortableAttributes;
-  listeners?: SortableListeners;
-  setActivatorNodeRef?: SortableActivatorRef;
-}) {
-  if (!enabled) {
-    return (
-      <span className="font-mono text-[0.7rem] tabular-nums text-[#8f5070]">
-        {rowNumber}
-      </span>
-    );
+  function commit() {
+    const nextValue = key === "slug" ? slugify(value) : value;
+    onRowChange({ ...row, [key]: nextValue }, true);
   }
 
   return (
-    <div className="grid grid-cols-[1.4rem_1.75rem] items-center gap-1">
-      <span className="font-mono text-[0.7rem] tabular-nums text-[#8f5070]">{rowNumber}</span>
-      <button
-        type="button"
-        ref={setActivatorNodeRef}
-        {...attributes}
-        {...listeners}
-        data-rsvp-drag-handle="true"
-        disabled={isSaving}
-        aria-label="Drag to reorder row"
-        title="Drag to reorder"
-        className="grid size-7 cursor-grab place-items-center border border-[#be185d] bg-[#ffe0ec] text-[#7a1239] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.55)] transition hover:bg-[#ffd4e5] active:cursor-grabbing disabled:cursor-wait disabled:border-[#efb5c9] disabled:bg-[#ffeaf2] disabled:text-[#b8899b]"
+    <input
+      autoFocus
+      value={value}
+      onBlur={commit}
+      onChange={(event) => setValue(key === "slug" ? slugify(event.target.value) : event.target.value)}
+      onKeyDown={(event) => {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          commit();
+        }
+
+        if (event.key === "Escape") {
+          event.preventDefault();
+          onClose(false, true);
+        }
+      }}
+      className="h-full w-full border-0 bg-white px-2 text-base text-[#4a1027] outline-none md:text-xs"
+    />
+  );
+}
+
+function SpreadsheetNumberEditor({
+  row,
+  column,
+  onRowChange,
+  onClose,
+}: RenderEditCellProps<GuestWithRsvp>) {
+  const [value, setValue] = useState(String(row.guestCount));
+
+  function commit() {
+    const numericValue = Number(value);
+
+    if (!Number.isInteger(numericValue) || numericValue < 1 || numericValue > 10) {
+      onClose(false, true);
+      return;
+    }
+
+    onRowChange({ ...row, [column.key]: numericValue }, true);
+  }
+
+  return (
+    <input
+      autoFocus
+      inputMode="numeric"
+      type="number"
+      min="1"
+      max="10"
+      value={value}
+      onBlur={commit}
+      onChange={(event) => setValue(event.target.value)}
+      onKeyDown={(event) => {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          commit();
+        }
+
+        if (event.key === "Escape") {
+          event.preventDefault();
+          onClose(false, true);
+        }
+      }}
+      className="h-full w-full border-0 bg-white px-2 text-right font-mono text-base tabular-nums text-[#4a1027] outline-none md:text-xs"
+    />
+  );
+}
+
+function SlugCell({ row }: RenderCellProps<GuestWithRsvp>) {
+  return <span className="font-mono text-[#be185d]">/{row.slug}</span>;
+}
+
+function RsvpCell({ row }: RenderCellProps<GuestWithRsvp>) {
+  return (
+    <span
+      className={`inline-flex min-w-24 justify-center border px-1.5 py-0.5 font-semibold ${rsvpClassName(row.rsvpStatus)}`}
+    >
+      {rsvpLabel(row.rsvpStatus)}
+    </span>
+  );
+}
+
+function PlaceCardsCell({ row }: RenderCellProps<GuestWithRsvp>) {
+  return row.attendeeNames.length > 0 ? row.attendeeNames.join("; ") : "";
+}
+
+function ActionsCell({ row }: RenderCellProps<GuestWithRsvp>) {
+  return (
+    <div className="flex items-center gap-1.5">
+      <Link
+        href={`/${row.slug}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="min-h-7 border border-[#d65b8a] bg-[#fff1f7] px-2 py-1 font-semibold text-[#8f2448] transition hover:border-[#be185d] hover:bg-[#ffe0ec]"
       >
-        <GripVertical aria-hidden="true" className="size-4 stroke-[2.5]" />
-      </button>
+        View invitation
+      </Link>
+      <DeleteGuestButton guestId={row.id} guestName={row.name} />
     </div>
   );
 }
 
-function GuestRowCells({
-  attributes,
-  guest,
-  isSaving,
-  listeners,
-  rowNumber,
-  setActivatorNodeRef,
-  sortable,
-}: {
-  attributes?: SortableAttributes;
-  guest: GuestWithRsvp;
-  isSaving: boolean;
-  listeners?: SortableListeners;
-  rowNumber: number;
-  setActivatorNodeRef?: SortableActivatorRef;
-  sortable: boolean;
-}) {
-  return (
-    <>
-      <td className="border-r border-b border-[#efb5c9] px-2 py-1">
-        <RowOrderHandle
-          rowNumber={rowNumber}
-          enabled={sortable}
-          isSaving={isSaving}
-          attributes={attributes}
-          listeners={listeners}
-          setActivatorNodeRef={setActivatorNodeRef}
-        />
-      </td>
-      <td className="border-r border-b border-[#efb5c9] px-1 py-1">
-        <GuestNameEditor guestId={guest.id} slug={guest.slug} name={guest.name} />
-      </td>
-      <td className="border-r border-b border-[#efb5c9] px-1 py-1">
-        <GuestSlugEditor guestId={guest.id} slug={guest.slug} />
-      </td>
-      <td className="border-r border-b border-[#efb5c9] px-1 py-1">
-        <GuestNotesEditor guestId={guest.id} name={guest.name} notes={guest.notes} />
-      </td>
-      <td className="border-r border-b border-[#efb5c9] px-1 py-1">
-        <GuestCountEditor
-          guestId={guest.id}
-          slug={guest.slug}
-          name={guest.name}
-          guestCount={guest.guestCount}
-        />
-      </td>
-      <td className="border-r border-b border-[#efb5c9] px-2 py-1 text-center">
-        <InviteSentToggle guestId={guest.id} inviteSent={guest.inviteSent} />
-      </td>
-      <td className="border-r border-b border-[#efb5c9] px-2 py-1">
-        <span className={`inline-flex min-w-24 justify-center border px-1.5 py-0.5 font-semibold ${rsvpClassName(guest.rsvpStatus)}`}>
-          {rsvpLabel(guest.rsvpStatus)}
-        </span>
-      </td>
-      <td className="border-r border-b border-[#efb5c9] px-2 py-1 text-right font-mono tabular-nums">
-        {guest.attendingCount ?? ""}
-      </td>
-      <td className="border-r border-b border-[#efb5c9] px-2 py-1 text-[#4a1027]">
-        {guest.attendeeNames.length > 0 ? guest.attendeeNames.join("; ") : ""}
-      </td>
-      <td className="border-b border-[#efb5c9] px-2 py-1">
-        <div className="flex items-center gap-1.5">
-          <Link
-            href={`/${guest.slug}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="min-h-6 border border-[#d65b8a] bg-[#fff1f7] px-2 py-0.5 font-semibold text-[#8f2448] transition hover:border-[#be185d] hover:bg-[#ffe0ec]"
-          >
-            View invitation
-          </Link>
-          <DeleteGuestButton guestId={guest.id} guestName={guest.name} />
-        </div>
-      </td>
-    </>
-  );
+function InviteCell({ row }: RenderCellProps<GuestWithRsvp>) {
+  return <InviteSentToggle guestId={row.id} inviteSent={row.inviteSent} />;
 }
 
-function GuestRow({
-  guest,
-  rowNumber,
-}: {
-  guest: GuestWithRsvp;
-  rowNumber: number;
-}) {
-  return (
-    <tr
-      data-guest-id={guest.id}
-      className={clsx(
-        "hover:bg-[#ffd8e8]",
-        rowNumber % 2 === 1 ? "bg-[#fff8fb]" : "bg-[#ffeaf2]",
-      )}
-    >
-      <GuestRowCells
-        guest={guest}
-        rowNumber={rowNumber}
-        isSaving={false}
-        sortable={false}
-      />
-    </tr>
-  );
+function makeFormData(values: Record<string, string | number | boolean>) {
+  const formData = new FormData();
+
+  for (const [key, value] of Object.entries(values)) {
+    formData.set(key, String(value));
+  }
+
+  return formData;
 }
 
-function SortableGuestRow({
-  guest,
-  rowNumber,
-  isSaving,
-}: {
-  guest: GuestWithRsvp;
-  rowNumber: number;
-  isSaving: boolean;
-}) {
-  const {
-    attributes,
-    isDragging,
-    listeners,
-    setActivatorNodeRef,
-    setNodeRef,
-    transform,
-    transition,
-  } = useSortable({ id: guest.id, disabled: isSaving });
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-  };
+async function saveCellChange(
+  previousRow: GuestWithRsvp,
+  nextRow: GuestWithRsvp,
+  columnKey: string,
+) {
+  if (columnKey === "name") {
+    return editGuestName(initialState, makeFormData({
+      guestId: previousRow.id,
+      slug: previousRow.slug,
+      name: nextRow.name,
+    }));
+  }
 
-  return (
-    <tr
-      ref={setNodeRef}
-      style={style}
-      data-guest-id={guest.id}
-      className={clsx(
-        "hover:bg-[#ffd8e8]",
-        rowNumber % 2 === 1 ? "bg-[#fff8fb]" : "bg-[#ffeaf2]",
-        isDragging && "relative z-20 opacity-75 shadow-[0_10px_28px_-18px_rgba(143,36,72,0.9)]",
-      )}
-    >
-      <GuestRowCells
-        attributes={attributes}
-        guest={guest}
-        isSaving={isSaving}
-        listeners={listeners}
-        rowNumber={rowNumber}
-        setActivatorNodeRef={setActivatorNodeRef}
-        sortable
-      />
-    </tr>
-  );
+  if (columnKey === "slug") {
+    return editGuestSlug(initialState, makeFormData({
+      guestId: previousRow.id,
+      oldSlug: previousRow.slug,
+      slug: nextRow.slug,
+    }));
+  }
+
+  if (columnKey === "notes") {
+    return editGuestNotes(initialState, makeFormData({
+      guestId: previousRow.id,
+      notes: nextRow.notes,
+    }));
+  }
+
+  if (columnKey === "guestCount") {
+    return editGuestCount(initialState, makeFormData({
+      guestId: previousRow.id,
+      slug: previousRow.slug,
+      guestCount: nextRow.guestCount,
+    }));
+  }
+
+  return { ok: true, message: "" };
 }
 
 export function GuestTable({
@@ -778,178 +523,288 @@ export function GuestTable({
   guests: GuestWithRsvp[];
   isDefaultSort: boolean;
 }) {
-  const [orderedGuests, setOrderedGuests] = useState(guests);
+  const [rows, setRows] = useState(guests);
+  const [draggedGuestId, setDraggedGuestId] = useState<number | null>(null);
   const [message, setMessage] = useState("");
   const [isSaving, startTransition] = useTransition();
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
-  );
 
   useEffect(() => {
-    setOrderedGuests(guests);
+    setRows(guests);
   }, [guests]);
 
-  function handleDragEnd(event: DragEndEvent) {
-    const { active, over } = event;
+  const sortColumns = useMemo<SortColumn[]>(() => {
+    if (activeSortKey === "default") {
+      return [];
+    }
 
-    if (!isDefaultSort || isSaving || !over || active.id === over.id) {
+    return [{
+      columnKey: SORT_KEY_TO_COLUMN_KEY[activeSortKey],
+      direction: activeDirection === "asc" ? "ASC" : "DESC",
+    }];
+  }, [activeDirection, activeSortKey]);
+
+  const handleRowDrop = useCallback((targetGuestId: number) => {
+    if (!isDefaultSort || draggedGuestId === null || draggedGuestId === targetGuestId) {
       return;
     }
 
-    const oldIndex = orderedGuests.findIndex((guest) => guest.id === active.id);
-    const newIndex = orderedGuests.findIndex((guest) => guest.id === over.id);
+    const fromIndex = rows.findIndex((guest) => guest.id === draggedGuestId);
+    const toIndex = rows.findIndex((guest) => guest.id === targetGuestId);
 
-    if (oldIndex < 0 || newIndex < 0) {
+    if (fromIndex < 0 || toIndex < 0) {
       return;
     }
 
-    const nextGuests = arrayMove(orderedGuests, oldIndex, newIndex);
+    const nextRows = moveRow(rows, fromIndex, toIndex);
+    const previousRows = rows;
 
-    setOrderedGuests(nextGuests);
+    setRows(nextRows);
     setMessage("Saving row order...");
 
     startTransition(() => {
-      void reorderGuestRows(nextGuests.map((guest) => guest.id))
+      void reorderGuestRows(nextRows.map((guest) => guest.id))
         .then((result) => {
           setMessage(result.message);
 
           if (!result.ok) {
-            setOrderedGuests(guests);
+            setRows(previousRows);
           }
         })
         .catch(() => {
-          setOrderedGuests(guests);
+          setRows(previousRows);
           setMessage("Row order could not be saved.");
         });
     });
+  }, [draggedGuestId, isDefaultSort, rows]);
+
+  const columns = useMemo<Column<GuestWithRsvp>[]>(() => [
+    {
+      key: "rowNumber",
+      name: "",
+      width: 42,
+      minWidth: 38,
+      resizable: true,
+      frozen: true,
+      renderCell({ row, rowIdx }) {
+        return (
+          <div
+            className="flex h-full items-center justify-center"
+            onDragOver={(event) => {
+              if (isDefaultSort && draggedGuestId !== null) {
+                event.preventDefault();
+              }
+            }}
+            onDrop={(event) => {
+              event.preventDefault();
+              handleRowDrop(row.id);
+              setDraggedGuestId(null);
+            }}
+          >
+            {isDefaultSort ? (
+              <button
+                type="button"
+                draggable={!isSaving}
+                aria-label={`Drag row ${rowIdx + 1}`}
+                title="Drag to reorder"
+                onDragStart={(event) => {
+                  setDraggedGuestId(row.id);
+                  event.dataTransfer.effectAllowed = "move";
+                  event.dataTransfer.setData("text/plain", String(row.id));
+                }}
+                onDragEnd={() => setDraggedGuestId(null)}
+                className="admin-row-handle"
+              >
+                <GripVertical aria-hidden="true" className="size-4" />
+              </button>
+            ) : (
+              <span className="font-mono text-[0.7rem] tabular-nums text-[#8f5070]">{rowIdx + 1}</span>
+            )}
+          </div>
+        );
+      },
+    },
+    {
+      key: "name",
+      name: "Name",
+      width: 210,
+      minWidth: 150,
+      sortable: true,
+      resizable: true,
+      editable: true,
+      renderEditCell: SpreadsheetTextEditor,
+      renderCell({ row }) {
+        return <span className="font-semibold text-[#4a1027]">{row.name}</span>;
+      },
+    },
+    {
+      key: "slug",
+      name: "URL",
+      width: 190,
+      minWidth: 140,
+      resizable: true,
+      editable: true,
+      renderEditCell: SpreadsheetTextEditor,
+      renderCell: SlugCell,
+    },
+    {
+      key: "notes",
+      name: "Notes",
+      width: 220,
+      minWidth: 150,
+      resizable: true,
+      editable: true,
+      renderEditCell: SpreadsheetTextEditor,
+    },
+    {
+      key: "guestCount",
+      name: "Max",
+      width: 76,
+      minWidth: 64,
+      sortable: true,
+      resizable: true,
+      editable: true,
+      renderEditCell: SpreadsheetNumberEditor,
+      cellClass: "rdg-cell-right",
+    },
+    {
+      key: "inviteSent",
+      name: "Invite sent",
+      width: 104,
+      minWidth: 88,
+      sortable: true,
+      resizable: true,
+      renderCell: InviteCell,
+    },
+    {
+      key: "rsvpStatus",
+      name: "RSVP",
+      width: 140,
+      minWidth: 116,
+      sortable: true,
+      resizable: true,
+      renderCell: RsvpCell,
+    },
+    {
+      key: "attendingCount",
+      name: "Attending",
+      width: 96,
+      minWidth: 84,
+      sortable: true,
+      resizable: true,
+      cellClass: "rdg-cell-right",
+      renderCell({ row }) {
+        return row.attendingCount ?? "";
+      },
+    },
+    {
+      key: "attendeeNames",
+      name: "Place cards",
+      width: 260,
+      minWidth: 170,
+      resizable: true,
+      renderCell: PlaceCardsCell,
+    },
+    {
+      key: "actions",
+      name: "Actions",
+      width: 190,
+      minWidth: 170,
+      resizable: true,
+      renderCell: ActionsCell,
+    },
+  ], [draggedGuestId, handleRowDrop, isDefaultSort, isSaving]);
+
+  function handleRowsChange(
+    nextRows: GuestWithRsvp[],
+    { indexes, column }: RowsChangeData<GuestWithRsvp>,
+  ) {
+    const previousRows = rows;
+    setRows(nextRows);
+
+    startTransition(() => {
+      void Promise.all(
+        indexes.map(async (rowIndex) => {
+          const previousRow = previousRows[rowIndex];
+          const nextRow = nextRows[rowIndex];
+
+          if (!previousRow || !nextRow) {
+            return { ok: false, message: "Row changed before it could be saved." };
+          }
+
+          return saveCellChange(previousRow, nextRow, column.key);
+        }),
+      ).then((results) => {
+        const failedResult = results.find((result) => !result.ok);
+
+        if (failedResult) {
+          setRows(previousRows);
+          setMessage(failedResult.message);
+          return;
+        }
+
+        const successMessage = results.find((result) => result.message)?.message;
+        setMessage(successMessage ?? "Cell saved.");
+      }).catch(() => {
+        setRows(previousRows);
+        setMessage("Cell could not be saved.");
+      });
+    });
   }
 
-  const table = (
-    <table className="w-full min-w-[92rem] border-collapse text-left text-xs">
-      <thead className="sticky top-0 z-10 bg-[#eca8c0] text-[0.65rem] uppercase tracking-[0.08em] text-[#651735]">
-        <tr>
-          <th className="w-28 border-r border-b border-[#df7fa3] px-2 py-1.5 font-semibold">
-            <SortHeader
-              label="Order"
-              sortKey="default"
-              activeSortKey={activeSortKey}
-              activeDirection={activeDirection}
-            />
-          </th>
-          <th className="border-r border-b border-[#df7fa3] px-2 py-1.5 font-semibold">
-            <SortHeader
-              label="Name"
-              sortKey="name"
-              activeSortKey={activeSortKey}
-              activeDirection={activeDirection}
-            />
-          </th>
-          <th className="border-r border-b border-[#df7fa3] px-2 py-1.5 font-semibold">URL</th>
-          <th className="border-r border-b border-[#df7fa3] px-2 py-1.5 font-semibold">Notes</th>
-          <th className="w-16 border-r border-b border-[#df7fa3] px-2 py-1.5 text-right font-semibold">
-            <SortHeader
-              label="Max"
-              sortKey="max"
-              activeSortKey={activeSortKey}
-              activeDirection={activeDirection}
-              className="justify-end"
-            />
-          </th>
-          <th className="w-24 border-r border-b border-[#df7fa3] px-2 py-1.5 text-center font-semibold">
-            <SortHeader
-              label="Invite sent"
-              sortKey="invite"
-              activeSortKey={activeSortKey}
-              activeDirection={activeDirection}
-              className="justify-center"
-            />
-          </th>
-          <th className="w-36 border-r border-b border-[#df7fa3] px-2 py-1.5 font-semibold">
-            <SortHeader
-              label="RSVP"
-              sortKey="rsvp"
-              activeSortKey={activeSortKey}
-              activeDirection={activeDirection}
-            />
-          </th>
-          <th className="w-24 border-r border-b border-[#df7fa3] px-2 py-1.5 text-right font-semibold">
-            <SortHeader
-              label="Attending"
-              sortKey="attending"
-              activeSortKey={activeSortKey}
-              activeDirection={activeDirection}
-              className="justify-end"
-            />
-          </th>
-          <th className="border-r border-b border-[#df7fa3] px-2 py-1.5 font-semibold">Place cards</th>
-          <th className="w-40 border-b border-[#df7fa3] px-2 py-1.5 font-semibold">Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        {orderedGuests.length === 0 ? (
-          <tr>
-            <td className="border-r border-b border-[#efb5c9] px-2 py-1 font-mono text-[0.7rem] text-[#8f5070]">
-              1
-            </td>
-            <td colSpan={9} className="border-b border-[#efb5c9] px-2 py-6 text-center text-sm text-[#8f5070]">
-              No guests have been added yet.
-            </td>
-          </tr>
-        ) : (
-          <>
-            {message ? (
-              <tr>
-                <td
-                  colSpan={10}
-                  className={clsx(
-                    "border-b border-[#efb5c9] px-2 py-1 text-[0.68rem] font-semibold",
-                    message.includes("could not") || message.includes("Refresh")
-                      ? "text-[#be123c]"
-                      : "text-[#8f2448]",
-                  )}
-                  role="status"
-                >
-                  {message}
-                </td>
-              </tr>
-            ) : null}
-            {orderedGuests.map((guest, index) =>
-              isDefaultSort ? (
-                <SortableGuestRow
-                  key={guest.id}
-                  guest={guest}
-                  rowNumber={index + 1}
-                  isSaving={isSaving}
-                />
-              ) : (
-                <GuestRow key={guest.id} guest={guest} rowNumber={index + 1} />
-              ),
-            )}
-          </>
-        )}
-      </tbody>
-    </table>
-  );
+  function handleSortColumnsChange(nextSortColumns: SortColumn[]) {
+    const sortColumn = nextSortColumns[0];
 
-  if (!isDefaultSort) {
-    return table;
+    if (!sortColumn) {
+      window.location.href = "/admin";
+      return;
+    }
+
+    const sortKey = COLUMN_KEY_TO_SORT_KEY[sortColumn.columnKey];
+
+    if (!sortKey) {
+      return;
+    }
+
+    window.location.href = `/admin?sort=${sortKey}&dir=${sortColumn.direction === "DESC" ? "desc" : "asc"}`;
+  }
+
+  function handleCellClick(
+    args: CellClickArgs<GuestWithRsvp>,
+    event: CellMouseEvent,
+  ) {
+    if (args.column.editable) {
+      args.selectCell(true);
+      event.preventGridDefault();
+    }
   }
 
   return (
-    <DndContext
-      id="admin-guest-reorder"
-      collisionDetection={closestCenter}
-      modifiers={[restrictToVerticalAxis]}
-      sensors={sensors}
-      onDragEnd={handleDragEnd}
-    >
-      <SortableContext
-        items={orderedGuests.map((guest) => guest.id)}
-        strategy={verticalListSortingStrategy}
-      >
-        {table}
-      </SortableContext>
-    </DndContext>
+    <div className="admin-spreadsheet-shell">
+      <DataGrid
+        aria-label="Guest RSVP spreadsheet"
+        className="rdg-light admin-spreadsheet"
+        columns={columns}
+        rows={rows}
+        rowKeyGetter={rowKeyGetter}
+        onRowsChange={handleRowsChange}
+        sortColumns={sortColumns}
+        onSortColumnsChange={handleSortColumnsChange}
+        onCellClick={handleCellClick}
+        defaultColumnOptions={{ resizable: true }}
+        rowHeight={42}
+        headerRowHeight={34}
+        enableVirtualization={false}
+        renderers={{
+          noRowsFallback: (
+            <div className="grid h-full place-items-center px-3 py-8 text-sm text-[#8f5070]">
+              No guests have been added yet.
+            </div>
+          ),
+        }}
+      />
+      <div className="flex min-h-7 items-center border-t border-[#df7fa3] bg-[#fff1f7] px-2 text-xs font-semibold text-[#8f2448]">
+        {isSaving ? "Saving cell..." : message}
+      </div>
+    </div>
   );
 }
