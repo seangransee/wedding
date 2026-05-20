@@ -546,7 +546,7 @@ function CopyInvitationLinkButton({ slug }: { slug: string }) {
       return;
     }
 
-    const timeout = window.setTimeout(() => setCopyStatus("idle"), 1800);
+    const timeout = window.setTimeout(() => setCopyStatus("idle"), 2200);
     return () => window.clearTimeout(timeout);
   }, [copyStatus]);
 
@@ -560,9 +560,23 @@ function CopyInvitationLinkButton({ slug }: { slug: string }) {
           .then(() => setCopyStatus("copied"))
           .catch(() => setCopyStatus("failed"));
       }}
-      className="grid size-7 place-items-center border border-[#d65b8a] bg-white font-semibold text-[#8f2448] transition hover:border-[#be185d] hover:bg-[#fff1f7]"
+      className={clsx(
+        "admin-copy-button grid size-7 place-items-center border bg-white font-semibold transition hover:border-[#be185d] hover:bg-[#fff1f7]",
+        copyStatus === "copied"
+          ? "admin-copy-button-copied border-[#047857] text-[#047857]"
+          : copyStatus === "failed"
+            ? "admin-copy-button-failed border-[#dc2626] text-[#dc2626]"
+            : "border-[#d65b8a] text-[#8f2448]",
+      )}
     >
-      <Copy aria-hidden="true" className="size-3.5" />
+      {copyStatus === "copied" ? (
+        <Check aria-hidden="true" className="size-4 stroke-[3]" />
+      ) : (
+        <Copy aria-hidden="true" className="size-3.5" />
+      )}
+      <span className="sr-only" aria-live="polite">
+        {copyStatus === "copied" ? "Copied invitation link" : copyStatus === "failed" ? "Copy failed" : ""}
+      </span>
     </button>
   );
 }
