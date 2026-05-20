@@ -58,7 +58,17 @@ body {
 .admin-spreadsheet .rdg-cell {
   align-content: center;
   border-color: #efb5c9;
+  border-inline-end: 1px solid #d65b8a;
   padding-inline: 0.5rem;
+}
+
+.admin-spreadsheet .rdg-cell:last-child {
+  border-inline-end: 0;
+}
+
+.admin-spreadsheet .rdg-header-row .rdg-cell {
+  border-inline-end-color: #be185d;
+  box-shadow: inset -1px 0 0 rgba(122, 18, 57, 0.18);
 }
 
 .admin-spreadsheet .rdg-cell-right {

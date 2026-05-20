@@ -1,4 +1,5 @@
 import { neon } from "@neondatabase/serverless";
+import pg from "pg";
 import { readdir, readFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import path from "node:path";
@@ -113,7 +114,30 @@ if (!process.env.DATABASE_URL) {
   throw new Error("DATABASE_URL is required. Add it to .env.local or pass it in the environment.");
 }
 
-const sql = neon(process.env.DATABASE_URL);
+function shouldUseLocalPostgres(connectionString) {
+  const { hostname } = new URL(connectionString);
+  return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1";
+}
+
+function createSqlClient(connectionString) {
+  if (shouldUseLocalPostgres(connectionString)) {
+    const pool = new pg.Pool({ connectionString });
+    return {
+      query: async (queryText, values) => {
+        await pool.query(queryText, values);
+      },
+      end: () => pool.end(),
+    };
+  }
+
+  const neonClient = neon(connectionString);
+  return {
+    query: (queryText, values) => neonClient.query(queryText, values),
+    end: async () => {},
+  };
+}
+
+const sql = createSqlClient(process.env.DATABASE_URL);
 const migrationsDir = path.join(root, "migrations");
 const migrationFiles = (await readdir(migrationsDir))
   .filter((fileName) => fileName.endsWith(".sql"))
@@ -121,15 +145,19 @@ const migrationFiles = (await readdir(migrationsDir))
 
 let statementCount = 0;
 
-for (const migrationFile of migrationFiles) {
-  const migrationPath = path.join(migrationsDir, migrationFile);
-  const migrationSql = await readFile(migrationPath, "utf8");
-  const statements = splitSqlStatements(migrationSql);
+try {
+  for (const migrationFile of migrationFiles) {
+    const migrationPath = path.join(migrationsDir, migrationFile);
+    const migrationSql = await readFile(migrationPath, "utf8");
+    const statements = splitSqlStatements(migrationSql);
 
-  for (const statement of statements) {
-    await sql.query(statement);
-    statementCount += 1;
+    for (const statement of statements) {
+      await sql.query(statement);
+      statementCount += 1;
+    }
   }
+} finally {
+  await sql.end();
 }
 
 console.log(`Applied ${statementCount} migration statements from ${migrationFiles.length} file(s).`);

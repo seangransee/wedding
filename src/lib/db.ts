@@ -1,4 +1,5 @@
 import { neon } from "@neondatabase/serverless";
+import { Pool, type QueryResultRow } from "pg";
 
 export type RsvpStatus = "yes" | "no" | "deciding";
 export type RsvpAuditEventType = "rsvp" | "guest_name";
@@ -105,7 +106,15 @@ type RsvpAuditEventRow = {
   created_at: string;
 };
 
-let sqlClient: ReturnType<typeof neon> | null = null;
+type SqlClient = {
+  query<T extends QueryResultRow = QueryResultRow>(
+    queryText: string,
+    values?: unknown[],
+  ): Promise<T[]>;
+};
+
+let sqlClient: SqlClient | null = null;
+let pgPool: Pool | null = null;
 
 function databaseUrl() {
   return (
@@ -116,6 +125,32 @@ function databaseUrl() {
   );
 }
 
+function shouldUseLocalPostgres(connectionString: string) {
+  const { hostname } = new URL(connectionString);
+  return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1";
+}
+
+function createSqlClient(connectionString: string): SqlClient {
+  if (shouldUseLocalPostgres(connectionString)) {
+    pgPool ??= new Pool({ connectionString });
+
+    return {
+      async query<T extends QueryResultRow = QueryResultRow>(queryText: string, values?: unknown[]) {
+        const result = await pgPool!.query<T>(queryText, values);
+        return result.rows;
+      },
+    };
+  }
+
+  const neonClient = neon(connectionString);
+
+  return {
+    query<T extends QueryResultRow = QueryResultRow>(queryText: string, values?: unknown[]) {
+      return neonClient.query(queryText, values) as Promise<T[]>;
+    },
+  };
+}
+
 function sql() {
   const connectionString = databaseUrl();
 
@@ -123,7 +158,7 @@ function sql() {
     throw new Error("DATABASE_URL is required.");
   }
 
-  sqlClient ??= neon(connectionString);
+  sqlClient ??= createSqlClient(connectionString);
   return sqlClient;
 }
 

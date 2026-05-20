@@ -56,8 +56,11 @@ export function RsvpForm({
   );
   const [state, formAction] = useActionState(submitRsvp, initialState);
   const [status, setStatus] = useState<RsvpStatus | "">(initialStatus);
-  const [attendingCount, setAttendingCount] = useState<number | null>(initialAttendingCount);
-  const [attendeeNames, setAttendeeNames] = useState<string[]>(initialAttendeeNames);
+  const [attendingCount, setAttendingCount] = useState<number | null>(
+    initialAttendingCount,
+  );
+  const [attendeeNames, setAttendeeNames] =
+    useState<string[]>(initialAttendeeNames);
 
   useEffect(() => {
     if (state.values.status) {
@@ -69,7 +72,10 @@ export function RsvpForm({
 
   const visibleNames = useMemo(() => {
     const count = attendingCount ?? 0;
-    return Array.from({ length: count }, (_, index) => attendeeNames[index] ?? "");
+    return Array.from(
+      { length: count },
+      (_, index) => attendeeNames[index] ?? "",
+    );
   }, [attendeeNames, attendingCount]);
 
   return (
@@ -91,10 +97,12 @@ export function RsvpForm({
       </div>
 
       <div className="grid gap-3">
-        <p className="text-base font-semibold text-[#4a1f2e]">Will you be attending?</p>
+        <p className="text-base font-semibold text-[#4a1f2e]">
+          Will you be attending?
+        </p>
         <p className="text-sm leading-relaxed text-[#4a1f2e]/72">
-          If you&apos;re not sure, select &quot;Still deciding&quot; so we know you saw this.
-          RSVP with a final answer by November 1st.
+          If you&apos;re not sure, select &quot;Still deciding&quot; so we know
+          you saw this. Please RSVP with a final answer by November 1st.
         </p>
         <div className="grid gap-2 sm:grid-cols-3 sm:gap-3">
           {RSVP_OPTIONS.map((option) => {
@@ -127,42 +135,53 @@ export function RsvpForm({
       {status === "yes" ? (
         <div className="grid gap-5">
           <div className="grid gap-3">
-            <p className="text-base font-semibold text-[#4a1f2e]">How many attending?</p>
+            <p className="text-base font-semibold text-[#4a1f2e]">
+              How many attending?
+            </p>
             <div className="grid grid-cols-5 gap-2 sm:grid-cols-10">
-              {Array.from({ length: guestCount }, (_, index) => index + 1).map((count) => {
-                const selected = attendingCount === count;
-                return (
-                  <button
-                    key={count}
-                    type="button"
-                    onClick={() => {
-                      setAttendingCount(count);
-                      setAttendeeNames((current) =>
-                        Array.from({ length: count }, (_, nameIndex) => current[nameIndex] ?? ""),
-                      );
-                    }}
-                    aria-pressed={selected}
-                    className={`min-h-12 rounded-md border text-base font-semibold transition sm:aspect-square ${
-                      selected
-                        ? "border-[#054f2d] bg-[#054f2d] text-[#fff6fa]"
-                        : "border-[#b8860b]/35 bg-white/78 text-[#054f2d] hover:border-[#054f2d]"
-                    }`}
-                    aria-label={`${count} attending`}
-                  >
-                    {count}
-                  </button>
-                );
-              })}
+              {Array.from({ length: guestCount }, (_, index) => index + 1).map(
+                (count) => {
+                  const selected = attendingCount === count;
+                  return (
+                    <button
+                      key={count}
+                      type="button"
+                      onClick={() => {
+                        setAttendingCount(count);
+                        setAttendeeNames((current) =>
+                          Array.from(
+                            { length: count },
+                            (_, nameIndex) => current[nameIndex] ?? "",
+                          ),
+                        );
+                      }}
+                      aria-pressed={selected}
+                      className={`min-h-12 rounded-md border text-base font-semibold transition sm:aspect-square ${
+                        selected
+                          ? "border-[#054f2d] bg-[#054f2d] text-[#fff6fa]"
+                          : "border-[#b8860b]/35 bg-white/78 text-[#054f2d] hover:border-[#054f2d]"
+                      }`}
+                      aria-label={`${count} attending`}
+                    >
+                      {count}
+                    </button>
+                  );
+                },
+              )}
             </div>
           </div>
 
           {visibleNames.length > 0 ? (
             <div className="grid gap-3">
               <p className="text-sm text-[#4a1f2e]/70">
-                Enter each full name exactly as it should appear on the place card.
+                Enter each full name exactly as it should appear on the place
+                card.
               </p>
               {visibleNames.map((name, index) => (
-                <label key={index} className="grid gap-2 text-sm font-semibold text-[#054f2d]">
+                <label
+                  key={index}
+                  className="grid gap-2 text-sm font-semibold text-[#054f2d]"
+                >
                   Full name {index + 1}
                   <input
                     name="attendeeNames"

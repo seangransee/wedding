@@ -420,7 +420,7 @@ function SpreadsheetNumberEditor({
           onClose(false, true);
         }
       }}
-      className="h-full w-full border-0 bg-white px-2 text-right font-mono text-base tabular-nums text-[#4a1027] outline-none md:text-xs"
+      className="h-full w-full border-0 bg-white px-2 text-left font-mono text-base tabular-nums text-[#4a1027] outline-none md:text-xs"
     />
   );
 }
@@ -664,7 +664,6 @@ export function GuestTable({
       resizable: true,
       editable: true,
       renderEditCell: SpreadsheetNumberEditor,
-      cellClass: "rdg-cell-right",
     },
     {
       key: "inviteSent",
