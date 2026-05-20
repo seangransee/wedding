@@ -164,7 +164,7 @@ export function RsvpForm({
 
       <div className="min-w-0">
         <h2 className="break-words text-3xl font-semibold leading-tight text-[#054f2d] sm:text-4xl">
-          {guestName}, You&apos;re invited!
+          {guestName}, you&apos;re invited!
         </h2>
       </div>
 
@@ -261,8 +261,9 @@ export function RsvpForm({
           {visibleNames.length > 0 ? (
             <div className="grid gap-3">
               <p className="text-sm text-[#4a1f2e]/70">
-                Enter each full name exactly as it should appear on the place
-                card.
+                {visibleNames.length === 1
+                  ? "Enter your full name exactly as it should appear on the place card."
+                  : "Enter each full name exactly as it should appear on the place card."}
               </p>
               {currentErrorLocation === "names" ? (
                 <ErrorNote>{displayedError}</ErrorNote>
@@ -272,7 +273,7 @@ export function RsvpForm({
                   key={index}
                   className="grid gap-2 text-sm font-semibold text-[#054f2d]"
                 >
-                  Full name {index + 1}
+                  {visibleNames.length === 1 ? "Full name" : `Full name ${index + 1}`}
                   <input
                     name="attendeeNames"
                     value={name}
