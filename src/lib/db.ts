@@ -348,15 +348,32 @@ export async function updateGuestNotes(id: number, notes: string) {
 
 export async function updateGuestSlug(id: number, slug: string) {
   const rows = (await sql().query(
-    `UPDATE wedding_guests
-     SET slug = $2,
-         updated_at = now()
-     WHERE id = $1
-     RETURNING id`,
+    `WITH updated AS (
+       UPDATE wedding_guests
+       SET slug = $2,
+           updated_at = now()
+       WHERE id = $1
+         AND invite_sent = false
+       RETURNING id
+     )
+     SELECT
+       EXISTS(SELECT 1 FROM updated) AS updated,
+       EXISTS(SELECT 1 FROM wedding_guests WHERE id = $1) AS exists,
+       EXISTS(SELECT 1 FROM wedding_guests WHERE id = $1 AND invite_sent = true) AS invite_sent`,
     [id, slug],
-  )) as Array<{ id: number }>;
+  )) as Array<{ updated: boolean; exists: boolean; invite_sent: boolean }>;
 
-  return rows.length > 0;
+  const result = rows[0];
+
+  if (result?.updated) {
+    return "updated";
+  }
+
+  if (result?.exists && result.invite_sent) {
+    return "invite_sent";
+  }
+
+  return "not_found";
 }
 
 export async function deleteGuestById(id: number) {

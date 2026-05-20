@@ -1,9 +1,9 @@
 "use client";
 
 import clsx from "clsx";
-import { ArrowUpDown, Check, ChevronDown, ChevronUp, Copy } from "lucide-react";
+import { ArrowUpDown, Check, Copy, Eye, GripVertical, Trash2 } from "lucide-react";
 import Link from "next/link";
-import { useActionState, useCallback, useEffect, useMemo, useState, useTransition } from "react";
+import { useActionState, useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useFormStatus } from "react-dom";
 import {
   DataGrid,
@@ -58,6 +58,37 @@ const COLUMN_KEY_TO_SORT_KEY: Record<string, Exclude<AdminSortKey, "default">> =
   attendingCount: "attending",
 };
 
+const BASE_COLUMN_WIDTHS = {
+  rowNumber: 38,
+  name: 182,
+  slug: 160,
+  notes: 170,
+  guestCount: 54,
+  inviteSent: 92,
+  rsvpStatus: 112,
+  attendingCount: 58,
+  attendeeNames: 200,
+  actions: 100,
+};
+
+const BASE_GRID_WIDTH = Object.values(BASE_COLUMN_WIDTHS).reduce((total, width) => total + width, 0);
+
+function getExpandedColumnWidths(gridWidth: number) {
+  const extraWidth = Math.max(0, Math.floor(gridWidth) - BASE_GRID_WIDTH);
+  const nameExtra = Math.floor(extraWidth * 0.4);
+  const slugExtra = Math.floor(extraWidth * 0.15);
+  const notesExtra = Math.floor(extraWidth * 0.25);
+  const attendeeNamesExtra = extraWidth - nameExtra - slugExtra - notesExtra;
+
+  return {
+    ...BASE_COLUMN_WIDTHS,
+    name: BASE_COLUMN_WIDTHS.name + nameExtra,
+    slug: BASE_COLUMN_WIDTHS.slug + slugExtra,
+    notes: BASE_COLUMN_WIDTHS.notes + notesExtra,
+    attendeeNames: BASE_COLUMN_WIDTHS.attendeeNames + attendeeNamesExtra,
+  };
+}
+
 function slugDraftValue(value: string) {
   return value
     .normalize("NFKD")
@@ -93,6 +124,30 @@ function rsvpClassName(status: string | null) {
     return "border-[#d97706] bg-[#fef3c7] text-[#92400e]";
   }
   return "border-[#64748b] bg-[#e2e8f0] text-[#334155]";
+}
+
+export function LocalAuditTimestamp({ value }: { value: string }) {
+  const [formattedTimestamp, setFormattedTimestamp] = useState("");
+  const date = new Date(value);
+  const dateTime = Number.isNaN(date.getTime()) ? value : date.toISOString();
+
+  useEffect(() => {
+    setFormattedTimestamp(new Intl.DateTimeFormat(navigator.language || "en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      second: "2-digit",
+      timeZoneName: "short",
+    }).format(new Date(value)));
+  }, [value]);
+
+  return (
+    <time dateTime={dateTime} suppressHydrationWarning>
+      {formattedTimestamp || "Loading..."}
+    </time>
+  );
 }
 
 function SubmitButton({
@@ -246,9 +301,11 @@ export function DeleteGuestButton({ guestId, guestName }: { guestId: number; gue
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="min-h-7 border border-[#e7a1ba] bg-[#fff1f7] px-2 font-semibold text-[#be123c] transition hover:border-[#be123c] hover:bg-[#ffe0ec]"
+        aria-label={`Delete ${guestName}`}
+        title="Delete"
+        className="grid size-7 place-items-center border border-[#e7a1ba] bg-[#fff1f7] text-[#be123c] transition hover:border-[#be123c] hover:bg-[#ffe0ec]"
       >
-        Delete
+        <Trash2 aria-hidden="true" className="size-4" />
       </button>
 
       {open ? (
@@ -388,7 +445,7 @@ function SpreadsheetTextEditor({
           onClose(false, true);
         }
       }}
-      className="h-full w-full border-0 bg-white px-2 text-base text-[#4a1027] outline-none md:text-xs"
+      className="h-full w-full border-0 bg-white px-2 text-base text-[#4a1027] outline-none md:text-sm"
     />
   );
 }
@@ -433,13 +490,20 @@ function SpreadsheetNumberEditor({
           onClose(false, true);
         }
       }}
-      className="h-full w-full border-0 bg-white px-2 text-left font-mono text-base tabular-nums text-[#4a1027] outline-none md:text-xs"
+      className="h-full w-full border-0 bg-white px-2 text-left font-mono text-base tabular-nums text-[#4a1027] outline-none md:text-sm"
     />
   );
 }
 
 function SlugCell({ row }: RenderCellProps<GuestWithRsvp>) {
-  return <span className="font-mono text-[#be185d]">/{row.slug}</span>;
+  return (
+    <span
+      title={row.inviteSent ? "URL locked after invite sent" : undefined}
+      className={clsx("font-mono text-[#be185d]", row.inviteSent && "text-[#8f5070]")}
+    >
+      /{row.slug}
+    </span>
+  );
 }
 
 function RsvpCell({ row }: RenderCellProps<GuestWithRsvp>) {
@@ -489,15 +553,16 @@ function CopyInvitationLinkButton({ slug }: { slug: string }) {
   return (
     <button
       type="button"
+      aria-label={copyStatus === "copied" ? "Copied invitation link" : "Copy invitation link"}
+      title={copyStatus === "failed" ? "Copy failed" : copyStatus === "copied" ? "Copied" : "Copy link"}
       onClick={() => {
         void copyText(invitationUrl)
           .then(() => setCopyStatus("copied"))
           .catch(() => setCopyStatus("failed"));
       }}
-      className="inline-flex min-h-7 items-center gap-1 border border-[#d65b8a] bg-white px-2 py-1 font-semibold text-[#8f2448] transition hover:border-[#be185d] hover:bg-[#fff1f7]"
+      className="grid size-7 place-items-center border border-[#d65b8a] bg-white font-semibold text-[#8f2448] transition hover:border-[#be185d] hover:bg-[#fff1f7]"
     >
       <Copy aria-hidden="true" className="size-3.5" />
-      {copyStatus === "copied" ? "Copied" : copyStatus === "failed" ? "Copy failed" : "Copy link"}
     </button>
   );
 }
@@ -510,9 +575,11 @@ function ActionsCell({ row }: RenderCellProps<GuestWithRsvp>) {
         href={`/${row.slug}`}
         target="_blank"
         rel="noopener noreferrer"
-        className="min-h-7 border border-[#d65b8a] bg-[#fff1f7] px-2 py-1 font-semibold text-[#8f2448] transition hover:border-[#be185d] hover:bg-[#ffe0ec]"
+        aria-label={`View invitation for ${row.name}`}
+        title="View invitation"
+        className="grid size-7 place-items-center border border-[#d65b8a] bg-[#fff1f7] font-semibold text-[#8f2448] transition hover:border-[#be185d] hover:bg-[#ffe0ec]"
       >
-        View invitation
+        <Eye aria-hidden="true" className="size-4" />
       </Link>
       <DeleteGuestButton guestId={row.id} guestName={row.name} />
     </div>
@@ -547,6 +614,10 @@ async function saveCellChange(
   }
 
   if (columnKey === "slug") {
+    if (previousRow.inviteSent) {
+      return { ok: false, message: "URL cannot be changed after invite sent is checked." };
+    }
+
     return editGuestSlug(initialState, makeFormData({
       guestId: previousRow.id,
       oldSlug: previousRow.slug,
@@ -583,13 +654,35 @@ export function GuestTable({
   guests: GuestWithRsvp[];
   isDefaultSort: boolean;
 }) {
+  const spreadsheetShellRef = useRef<HTMLDivElement>(null);
   const [rows, setRows] = useState(guests);
+  const [draggedGuestId, setDraggedGuestId] = useState<number | null>(null);
+  const [gridWidth, setGridWidth] = useState(BASE_GRID_WIDTH);
   const [message, setMessage] = useState("");
   const [isSaving, startTransition] = useTransition();
 
   useEffect(() => {
     setRows(guests);
   }, [guests]);
+
+  useEffect(() => {
+    const spreadsheetShell = spreadsheetShellRef.current;
+
+    if (!spreadsheetShell) {
+      return;
+    }
+
+    function updateGridWidth() {
+      setGridWidth(Math.max(BASE_GRID_WIDTH, Math.floor(spreadsheetShell?.clientWidth ?? BASE_GRID_WIDTH)));
+    }
+
+    updateGridWidth();
+
+    const resizeObserver = new ResizeObserver(updateGridWidth);
+    resizeObserver.observe(spreadsheetShell);
+
+    return () => resizeObserver.disconnect();
+  }, []);
 
   const sortColumns = useMemo<SortColumn[]>(() => {
     if (activeSortKey === "default") {
@@ -602,18 +695,19 @@ export function GuestTable({
     }];
   }, [activeDirection, activeSortKey]);
 
-  const handleMoveRow = useCallback((rowIndex: number, direction: -1 | 1) => {
-    if (!isDefaultSort || isSaving) {
+  const handleRowDrop = useCallback((targetGuestId: number, sourceGuestId: number | null) => {
+    if (!isDefaultSort || isSaving || sourceGuestId === null || sourceGuestId === targetGuestId) {
       return;
     }
 
-    const targetIndex = rowIndex + direction;
+    const fromIndex = rows.findIndex((guest) => guest.id === sourceGuestId);
+    const toIndex = rows.findIndex((guest) => guest.id === targetGuestId);
 
-    if (targetIndex < 0 || targetIndex >= rows.length) {
+    if (fromIndex < 0 || toIndex < 0) {
       return;
     }
 
-    const nextRows = moveRow(rows, rowIndex, targetIndex);
+    const nextRows = moveRow(rows, fromIndex, toIndex);
     const previousRows = rows;
 
     setRows(nextRows);
@@ -641,12 +735,14 @@ export function GuestTable({
     }
   }, [isDefaultSort]);
 
+  const columnWidths = useMemo(() => getExpandedColumnWidths(gridWidth), [gridWidth]);
+
   const columns = useMemo<Column<GuestWithRsvp>[]>(() => [
     {
       key: "rowNumber",
       name: "",
-      width: 42,
-      minWidth: 38,
+      width: columnWidths.rowNumber,
+      minWidth: 34,
       resizable: true,
       frozen: true,
       renderHeaderCell() {
@@ -663,32 +759,39 @@ export function GuestTable({
           </button>
         );
       },
-      renderCell({ rowIdx }) {
+      renderCell({ row, rowIdx }) {
         return (
-          <div className="flex h-full items-center justify-center">
+          <div
+            className="flex h-full items-center justify-center"
+            onDragOver={(event) => {
+              if (isDefaultSort && draggedGuestId !== null) {
+                event.preventDefault();
+                event.dataTransfer.dropEffect = "move";
+              }
+            }}
+            onDrop={(event) => {
+              event.preventDefault();
+              const sourceGuestId = Number(event.dataTransfer.getData("text/plain"));
+              handleRowDrop(row.id, Number.isInteger(sourceGuestId) ? sourceGuestId : draggedGuestId);
+              setDraggedGuestId(null);
+            }}
+          >
             {isDefaultSort ? (
-              <div className="admin-row-order-controls">
-                <button
-                  type="button"
-                  aria-label={`Move row ${rowIdx + 1} up`}
-                  title="Move up"
-                  disabled={isSaving || rowIdx === 0}
-                  onClick={() => handleMoveRow(rowIdx, -1)}
-                  className="admin-row-order-button"
-                >
-                  <ChevronUp aria-hidden="true" className="size-3" />
-                </button>
-                <button
-                  type="button"
-                  aria-label={`Move row ${rowIdx + 1} down`}
-                  title="Move down"
-                  disabled={isSaving || rowIdx === rows.length - 1}
-                  onClick={() => handleMoveRow(rowIdx, 1)}
-                  className="admin-row-order-button"
-                >
-                  <ChevronDown aria-hidden="true" className="size-3" />
-                </button>
-              </div>
+              <button
+                type="button"
+                draggable={!isSaving}
+                aria-label={`Drag row ${rowIdx + 1}`}
+                title="Drag to reorder"
+                onDragStart={(event) => {
+                  setDraggedGuestId(row.id);
+                  event.dataTransfer.effectAllowed = "move";
+                  event.dataTransfer.setData("text/plain", String(row.id));
+                }}
+                onDragEnd={() => setDraggedGuestId(null)}
+                className="admin-row-handle"
+              >
+                <GripVertical aria-hidden="true" className="size-4" />
+              </button>
             ) : (
               <span className="font-mono text-[0.7rem] tabular-nums text-[#8f5070]">{rowIdx + 1}</span>
             )}
@@ -699,8 +802,8 @@ export function GuestTable({
     {
       key: "name",
       name: "Name",
-      width: 210,
-      minWidth: 150,
+      width: columnWidths.name,
+      minWidth: 132,
       sortable: true,
       resizable: true,
       editable: true,
@@ -712,18 +815,19 @@ export function GuestTable({
     {
       key: "slug",
       name: "URL",
-      width: 190,
-      minWidth: 140,
+      width: columnWidths.slug,
+      minWidth: 126,
       resizable: true,
-      editable: true,
+      editable: (row) => !row.inviteSent,
+      cellClass: (row) => row.inviteSent ? "admin-cell-locked" : undefined,
       renderEditCell: SpreadsheetTextEditor,
       renderCell: SlugCell,
     },
     {
       key: "notes",
       name: "Notes",
-      width: 220,
-      minWidth: 150,
+      width: columnWidths.notes,
+      minWidth: 120,
       resizable: true,
       editable: true,
       renderEditCell: SpreadsheetTextEditor,
@@ -731,8 +835,8 @@ export function GuestTable({
     {
       key: "guestCount",
       name: "Max",
-      width: 76,
-      minWidth: 64,
+      width: columnWidths.guestCount,
+      minWidth: 48,
       sortable: true,
       resizable: true,
       editable: true,
@@ -741,8 +845,8 @@ export function GuestTable({
     {
       key: "inviteSent",
       name: "Invite sent",
-      width: 104,
-      minWidth: 88,
+      width: columnWidths.inviteSent,
+      minWidth: 72,
       sortable: true,
       resizable: true,
       renderCell: InviteCell,
@@ -750,20 +854,19 @@ export function GuestTable({
     {
       key: "rsvpStatus",
       name: "RSVP",
-      width: 140,
-      minWidth: 116,
+      width: columnWidths.rsvpStatus,
+      minWidth: 96,
       sortable: true,
       resizable: true,
       renderCell: RsvpCell,
     },
     {
       key: "attendingCount",
-      name: "Attending",
-      width: 96,
-      minWidth: 84,
+      name: "Count",
+      width: columnWidths.attendingCount,
+      minWidth: 52,
       sortable: true,
       resizable: true,
-      cellClass: "rdg-cell-right",
       renderCell({ row }) {
         return row.attendingCount ?? "";
       },
@@ -771,20 +874,20 @@ export function GuestTable({
     {
       key: "attendeeNames",
       name: "Place cards",
-      width: 260,
-      minWidth: 170,
+      width: columnWidths.attendeeNames,
+      minWidth: 140,
       resizable: true,
       renderCell: PlaceCardsCell,
     },
     {
       key: "actions",
       name: "Actions",
-      width: 290,
-      minWidth: 250,
+      width: columnWidths.actions,
+      minWidth: 94,
       resizable: true,
       renderCell: ActionsCell,
     },
-  ], [handleDefaultSort, handleMoveRow, isDefaultSort, isSaving, rows.length]);
+  ], [columnWidths, draggedGuestId, handleDefaultSort, handleRowDrop, isDefaultSort, isSaving]);
 
   function handleRowsChange(
     nextRows: GuestWithRsvp[],
@@ -844,14 +947,18 @@ export function GuestTable({
     args: CellClickArgs<GuestWithRsvp>,
     event: CellMouseEvent,
   ) {
-    if (args.column.editable) {
+    const editable = typeof args.column.editable === "function"
+      ? args.column.editable(args.row)
+      : Boolean(args.column.editable);
+
+    if (editable) {
       args.selectCell(true);
       event.preventGridDefault();
     }
   }
 
   return (
-    <div className="admin-spreadsheet-shell">
+    <div ref={spreadsheetShellRef} className="admin-spreadsheet-shell">
       <DataGrid
         aria-label="Guest RSVP spreadsheet"
         className="rdg-light admin-spreadsheet"
@@ -863,8 +970,8 @@ export function GuestTable({
         onSortColumnsChange={handleSortColumnsChange}
         onCellClick={handleCellClick}
         defaultColumnOptions={{ resizable: true }}
-        rowHeight={42}
-        headerRowHeight={34}
+        rowHeight={46}
+        headerRowHeight={38}
         enableVirtualization={false}
         renderers={{
           noRowsFallback: (

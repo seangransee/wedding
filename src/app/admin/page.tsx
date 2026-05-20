@@ -5,6 +5,7 @@ import {
   AddGuestForm,
   AdminLoginForm,
   GuestTable,
+  LocalAuditTimestamp,
   type AdminSortDirection,
   type AdminSortKey,
 } from "./admin-client";
@@ -118,18 +119,6 @@ function sortGuests<T extends { name: string; guestCount: number; inviteSent: bo
 
     return multiplier * ((a.attendingCount ?? 0) - (b.attendingCount ?? 0) || a.sortOrder - b.sortOrder);
   });
-}
-
-function formatAuditTimestamp(value: string) {
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-    second: "2-digit",
-    timeZoneName: "short",
-  }).format(new Date(value));
 }
 
 export default async function AdminPage({ searchParams }: AdminPageProps) {
@@ -249,8 +238,8 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                   <th className="w-32 border-r border-b border-[#df7fa3] px-2 py-1.5 font-semibold">Change</th>
                   <th className="border-r border-b border-[#df7fa3] px-2 py-1.5 font-semibold">Guest</th>
                   <th className="w-36 border-r border-b border-[#df7fa3] px-2 py-1.5 font-semibold">RSVP</th>
-                  <th className="w-24 border-r border-b border-[#df7fa3] px-2 py-1.5 text-right font-semibold">
-                    Attending
+                  <th className="w-16 border-r border-b border-[#df7fa3] px-2 py-1.5 text-right font-semibold">
+                    Count
                   </th>
                   <th className="border-b border-[#df7fa3] px-2 py-1.5 font-semibold">Place cards</th>
                 </tr>
@@ -266,7 +255,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                   auditEvents.map((event) => (
                     <tr key={event.id} className="odd:bg-[#fff8fb] even:bg-[#ffeaf2] hover:bg-[#ffd8e8]">
                       <td className="border-r border-b border-[#efb5c9] px-2 py-1 font-mono text-[0.7rem] tabular-nums text-[#7d3150]">
-                        {formatAuditTimestamp(event.createdAt)}
+                        <LocalAuditTimestamp value={event.createdAt} />
                       </td>
                       <td className="border-r border-b border-[#efb5c9] px-2 py-1 font-semibold text-[#8f2448]">
                         RSVP changed

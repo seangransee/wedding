@@ -37,7 +37,7 @@ body {
   --rdg-row-hover-background-color: #ffd8e8;
   --rdg-selection-color: #be185d;
   --rdg-border-color: #df7fa3;
-  --rdg-font-size: 12px;
+  --rdg-font-size: 14px;
   block-size: min(66vh, 40rem);
   border: 0;
   color: #4a1027;
@@ -45,7 +45,7 @@ body {
 
 .admin-spreadsheet .rdg-header-row {
   color: #651735;
-  font-size: 0.65rem;
+  font-size: 0.75rem;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -75,6 +75,11 @@ body {
   text-align: right;
 }
 
+.admin-spreadsheet .admin-cell-locked {
+  cursor: not-allowed;
+  opacity: 0.72;
+}
+
 .admin-row-order-header-button {
   display: grid;
   block-size: 100%;
@@ -95,36 +100,25 @@ body {
   opacity: 0.55;
 }
 
-.admin-row-order-controls {
+.admin-row-handle {
   display: grid;
-  inline-size: 1.5rem;
-  grid-template-rows: 1fr 1fr;
-  overflow: hidden;
+  inline-size: 1.75rem;
+  block-size: 1.75rem;
+  place-items: center;
   border: 1px solid #be185d;
   background: #ffe0ec;
-}
-
-.admin-row-order-button {
-  display: grid;
-  min-block-size: 0;
-  place-items: center;
   color: #7a1239;
+  cursor: grab;
   transition: background-color 140ms ease, color 140ms ease, opacity 140ms ease;
 }
 
-.admin-row-order-button:first-child {
-  border-block-end: 1px solid #efb5c9;
-}
-
-.admin-row-order-button:hover:not(:disabled) {
+.admin-row-handle:hover {
   background: #ffd4e5;
   color: #4a1027;
 }
 
-.admin-row-order-button:disabled {
-  color: #b8899b;
-  cursor: not-allowed;
-  opacity: 0.42;
+.admin-row-handle:active {
+  cursor: grabbing;
 }
 
 @media (max-width: 640px) {

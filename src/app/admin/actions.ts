@@ -264,9 +264,13 @@ export async function editGuestSlug(
   }
 
   try {
-    const updated = await updateGuestSlug(guestId, slug);
+    const result = await updateGuestSlug(guestId, slug);
 
-    if (!updated) {
+    if (result === "invite_sent") {
+      return { ok: false, message: "URL cannot be changed after invite sent is checked." };
+    }
+
+    if (result === "not_found") {
       return { ok: false, message: "Guest was not found." };
     }
   } catch (error) {
