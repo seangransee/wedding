@@ -1,0 +1,303 @@
+import { cookies } from "next/headers";
+import { ADMIN_COOKIE_NAME, ADMIN_PASSWORD } from "@/lib/cookies";
+import { listGuestsWithRsvps, listRsvpAuditEvents } from "@/lib/db";
+import {
+  AddGuestForm,
+  AdminLoginForm,
+  GuestTable,
+  type AdminSortDirection,
+  type AdminSortKey,
+} from "./admin-client";
+
+export const dynamic = "force-dynamic";
+
+type AdminPageProps = {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+};
+
+async function getIsAdminLoggedIn() {
+  const cookieStore = await cookies();
+  return cookieStore.get(ADMIN_COOKIE_NAME)?.value === ADMIN_PASSWORD;
+}
+
+function rsvpLabel(status: string | null) {
+  if (status === "yes") {
+    return "Yes";
+  }
+  if (status === "no") {
+    return "No";
+  }
+  if (status === "deciding") {
+    return "Still deciding";
+  }
+  return "No response";
+}
+
+function rsvpClassName(status: string | null) {
+  if (status === "yes") {
+    return "border-[#d65b8a] bg-[#ffe0ec] text-[#7a1239]";
+  }
+  if (status === "no") {
+    return "border-[#b85d73] bg-[#f8d5dd] text-[#701a32]";
+  }
+  if (status === "deciding") {
+    return "border-[#d78a3d] bg-[#ffe6c8] text-[#8a4a0f]";
+  }
+  return "border-[#e7a1ba] bg-[#fff1f7] text-[#7d3150]";
+}
+
+function getSearchParam(
+  params: Record<string, string | string[] | undefined>,
+  key: string,
+) {
+  const value = params[key];
+  return Array.isArray(value) ? value[0] : value;
+}
+
+function getSortKey(value: string | undefined): AdminSortKey {
+  if (
+    value === "name" ||
+    value === "max" ||
+    value === "invite" ||
+    value === "rsvp" ||
+    value === "attending"
+  ) {
+    return value;
+  }
+
+  return "default";
+}
+
+function getSortDirection(value: string | undefined): AdminSortDirection {
+  return value === "desc" ? "desc" : "asc";
+}
+
+function sortDirectionMultiplier(direction: AdminSortDirection) {
+  return direction === "asc" ? 1 : -1;
+}
+
+function rsvpSortValue(status: string | null) {
+  if (status === "yes") {
+    return 1;
+  }
+  if (status === "deciding") {
+    return 2;
+  }
+  if (status === "no") {
+    return 3;
+  }
+  return 4;
+}
+
+function sortGuests<T extends { name: string; guestCount: number; inviteSent: boolean; rsvpStatus: string | null; attendingCount: number | null; sortOrder: number; id: number }>(
+  guests: T[],
+  sortKey: AdminSortKey,
+  sortDirection: AdminSortDirection,
+) {
+  const sortedGuests = [...guests];
+
+  if (sortKey === "default") {
+    return sortedGuests.sort((a, b) => a.sortOrder - b.sortOrder || a.id - b.id);
+  }
+
+  const multiplier = sortDirectionMultiplier(sortDirection);
+
+  return sortedGuests.sort((a, b) => {
+    if (sortKey === "name") {
+      return multiplier * (a.name.localeCompare(b.name) || a.sortOrder - b.sortOrder);
+    }
+    if (sortKey === "max") {
+      return multiplier * (a.guestCount - b.guestCount || a.sortOrder - b.sortOrder);
+    }
+    if (sortKey === "invite") {
+      return multiplier * (Number(a.inviteSent) - Number(b.inviteSent) || a.sortOrder - b.sortOrder);
+    }
+    if (sortKey === "rsvp") {
+      return multiplier * (rsvpSortValue(a.rsvpStatus) - rsvpSortValue(b.rsvpStatus) || a.sortOrder - b.sortOrder);
+    }
+
+    return multiplier * ((a.attendingCount ?? 0) - (b.attendingCount ?? 0) || a.sortOrder - b.sortOrder);
+  });
+}
+
+function formatAuditTimestamp(value: string) {
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    second: "2-digit",
+    timeZoneName: "short",
+  }).format(new Date(value));
+}
+
+export default async function AdminPage({ searchParams }: AdminPageProps) {
+  const isAdmin = await getIsAdminLoggedIn();
+
+  if (!isAdmin) {
+    return (
+      <main className="min-h-screen bg-[#fde8f1] px-6 py-12 text-[#4a1027]">
+        <section className="mx-auto flex min-h-[calc(100vh-6rem)] max-w-xl flex-col items-center justify-center text-center">
+          <p
+            className="text-4xl text-[#be185d] sm:text-5xl"
+            style={{ fontFamily: "var(--font-dancing-script)", fontWeight: 600 }}
+          >
+            Sean + Lexi
+          </p>
+          <h1 className="mt-5 text-4xl font-semibold text-[#8f2448] sm:text-5xl">
+            Wedding admin
+          </h1>
+          <p className="mt-4 max-w-md text-base text-[#4a1027]/75">
+            Enter the admin password to manage invitation links and RSVP responses.
+          </p>
+          <div className="mt-8 w-full rounded-lg border border-[#df7fa3] bg-[#fff8fb]/85 p-6 shadow-[0_30px_80px_-50px_rgba(143,36,72,0.9)]">
+            <AdminLoginForm />
+          </div>
+        </section>
+      </main>
+    );
+  }
+
+  const [guests, auditEvents] = await Promise.all([
+    listGuestsWithRsvps(),
+    listRsvpAuditEvents(),
+  ]);
+  const resolvedSearchParams = (await searchParams) ?? {};
+  const activeSortKey = getSortKey(getSearchParam(resolvedSearchParams, "sort"));
+  const activeDirection = getSortDirection(getSearchParam(resolvedSearchParams, "dir"));
+  const sortedGuests = sortGuests(guests, activeSortKey, activeDirection);
+  const isDefaultSort = activeSortKey === "default";
+  const yesCount = guests.reduce(
+    (total, guest) => total + (guest.rsvpStatus === "yes" ? guest.attendingCount ?? 0 : 0),
+    0,
+  );
+  const maybeCount = guests.reduce(
+    (total, guest) => total + (guest.rsvpStatus === "deciding" ? guest.guestCount : 0),
+    0,
+  );
+  const invitedCount = guests.reduce(
+    (total, guest) =>
+      total + (guest.rsvpStatus === null && guest.inviteSent ? guest.guestCount : 0),
+    0,
+  );
+  const yesMaybeCount = yesCount + maybeCount;
+  const yesMaybeInvitedCount = yesMaybeCount + invitedCount;
+
+  return (
+    <main className="min-h-screen bg-[#f9d8e6] px-3 py-3 text-[#4a1027] sm:px-4">
+      <section className="mx-auto max-w-[96rem] border border-[#df7fa3] bg-[#fff1f7] shadow-[0_18px_50px_-38px_rgba(143,36,72,0.8)]">
+        <div className="flex flex-col gap-2 border-b border-[#df7fa3] bg-[#f4bfd2] px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p
+              className="text-xl leading-none text-[#be185d]"
+              style={{ fontFamily: "var(--font-dancing-script)", fontWeight: 600 }}
+            >
+              Sean + Lexi = Sexi
+            </p>
+            <h1 className="mt-1 text-xl font-semibold leading-none text-[#7a1239]">
+              RSVP admin
+            </h1>
+          </div>
+          <div className="grid grid-cols-1 overflow-hidden border border-[#df7fa3] bg-[#fff8fb] text-xs sm:grid-cols-3">
+            <div className="border-r border-[#efb5c9] px-2 py-1">
+              <span className="text-[#8f5070]">Yes</span>
+              <span className="ml-2 font-semibold tabular-nums text-[#8f2448]">
+                {yesCount}
+              </span>
+            </div>
+            <div className="border-r border-[#efb5c9] px-2 py-1">
+              <span className="text-[#8f5070]">Yes+Maybe</span>
+              <span className="ml-2 font-semibold tabular-nums text-[#a33a62]">
+                {yesMaybeCount}
+              </span>
+            </div>
+            <div className="px-2 py-1">
+              <span className="text-[#8f5070]">Yes+Maybe+No Response</span>
+              <span className="ml-2 font-semibold tabular-nums text-[#7a1239]">
+                {yesMaybeInvitedCount}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <AddGuestForm />
+
+        <div className="overflow-auto bg-[#fff8fb]">
+          <GuestTable
+            activeDirection={activeDirection}
+            activeSortKey={activeSortKey}
+            guests={sortedGuests}
+            isDefaultSort={isDefaultSort}
+          />
+        </div>
+
+        <div className="border-t border-[#df7fa3] bg-[#fff1f7]">
+          <div className="flex items-center justify-between border-b border-[#df7fa3] bg-[#f4bfd2] px-3 py-2">
+            <h2 className="text-sm font-semibold uppercase tracking-[0.12em] text-[#7a1239]">
+              RSVP edit history
+            </h2>
+            <span className="text-xs tabular-nums text-[#8f5070]">
+              {auditEvents.length} event{auditEvents.length === 1 ? "" : "s"}
+            </span>
+          </div>
+          <div className="max-h-[28rem] overflow-auto bg-[#fff8fb]">
+            <table className="w-full min-w-[68rem] border-collapse text-left text-xs">
+              <thead className="sticky top-0 z-10 bg-[#eca8c0] text-[0.65rem] uppercase tracking-[0.08em] text-[#651735]">
+                <tr>
+                  <th className="w-52 border-r border-b border-[#df7fa3] px-2 py-1.5 font-semibold">Timestamp</th>
+                  <th className="w-32 border-r border-b border-[#df7fa3] px-2 py-1.5 font-semibold">Change</th>
+                  <th className="border-r border-b border-[#df7fa3] px-2 py-1.5 font-semibold">Guest</th>
+                  <th className="w-36 border-r border-b border-[#df7fa3] px-2 py-1.5 font-semibold">RSVP</th>
+                  <th className="w-24 border-r border-b border-[#df7fa3] px-2 py-1.5 text-right font-semibold">
+                    Attending
+                  </th>
+                  <th className="border-b border-[#df7fa3] px-2 py-1.5 font-semibold">Place cards</th>
+                </tr>
+              </thead>
+              <tbody>
+                {auditEvents.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="border-b border-[#efb5c9] px-2 py-6 text-center text-sm text-[#8f5070]">
+                      No RSVP edits have been saved yet.
+                    </td>
+                  </tr>
+                ) : (
+                  auditEvents.map((event) => (
+                    <tr key={event.id} className="odd:bg-[#fff8fb] even:bg-[#ffeaf2] hover:bg-[#ffd8e8]">
+                      <td className="border-r border-b border-[#efb5c9] px-2 py-1 font-mono text-[0.7rem] tabular-nums text-[#7d3150]">
+                        {formatAuditTimestamp(event.createdAt)}
+                      </td>
+                      <td className="border-r border-b border-[#efb5c9] px-2 py-1 font-semibold text-[#8f2448]">
+                        RSVP changed
+                      </td>
+                      <td className="border-r border-b border-[#efb5c9] px-2 py-1">
+                        <div className="flex flex-col gap-0.5">
+                          <span className="font-semibold text-[#4a1027]">{event.guestNameCurrent}</span>
+                          <span className="font-mono text-[0.68rem] text-[#be185d]">/{event.guestSlug}</span>
+                        </div>
+                      </td>
+                      <td className="border-r border-b border-[#efb5c9] px-2 py-1">
+                        {event.status ? (
+                          <span className={`inline-flex min-w-24 justify-center border px-1.5 py-0.5 font-semibold ${rsvpClassName(event.status)}`}>
+                            {rsvpLabel(event.status)}
+                          </span>
+                        ) : null}
+                      </td>
+                      <td className="border-r border-b border-[#efb5c9] px-2 py-1 text-right font-mono tabular-nums">
+                        {event.attendingCount ?? ""}
+                      </td>
+                      <td className="border-b border-[#efb5c9] px-2 py-1 text-[#4a1027]">
+                        {event.attendeeNames.length > 0 ? event.attendeeNames.join("; ") : ""}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </main>
+  );
+}

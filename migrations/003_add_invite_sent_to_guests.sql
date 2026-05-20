@@ -1,0 +1,2 @@
+ALTER TABLE wedding_guests
+ADD COLUMN IF NOT EXISTS invite_sent BOOLEAN NOT NULL DEFAULT false;

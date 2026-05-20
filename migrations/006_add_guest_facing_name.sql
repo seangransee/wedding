@@ -1,0 +1,2 @@
+-- Intentionally left as a no-op.
+-- Guest-facing names were removed before shipping; `name` is the only guest name.
