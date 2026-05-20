@@ -103,6 +103,9 @@ export function RsvpForm({
     useState<string[]>(initialAttendeeNames);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [localError, setLocalError] = useState("");
+  const effectiveAttendingCount = status === "yes" && guestCount === 1
+    ? 1
+    : attendingCount;
 
   useEffect(() => {
     if (state.values.status) {
@@ -118,12 +121,12 @@ export function RsvpForm({
   }, [state]);
 
   const visibleNames = useMemo(() => {
-    const count = attendingCount ?? 0;
+    const count = effectiveAttendingCount ?? 0;
     return Array.from(
       { length: count },
       (_, index) => attendeeNames[index] ?? "",
     );
-  }, [attendeeNames, attendingCount]);
+  }, [attendeeNames, effectiveAttendingCount]);
   const displayedError = localError || (!state.ok ? state.message : "");
   const currentErrorLocation = errorLocation(displayedError, false);
 
@@ -135,7 +138,7 @@ export function RsvpForm({
     }
 
     if (status === "yes") {
-      if (!attendingCount || attendingCount < 1 || attendingCount > guestCount) {
+      if (!effectiveAttendingCount || effectiveAttendingCount < 1 || effectiveAttendingCount > guestCount) {
         event.preventDefault();
         setLocalError(`Choose a count from 1 to ${guestCount}.`);
         return;
@@ -143,7 +146,7 @@ export function RsvpForm({
 
       const submittedNames = visibleNames.map((name) => name.trim());
 
-      if (submittedNames.length !== attendingCount || submittedNames.some((name) => !name)) {
+      if (submittedNames.length !== effectiveAttendingCount || submittedNames.some((name) => !name)) {
         event.preventDefault();
         setLocalError("Enter the full name for each place card.");
         return;
@@ -157,7 +160,7 @@ export function RsvpForm({
     <form action={formAction} onSubmit={handleSubmit} className="grid gap-5 sm:gap-6">
       <input type="hidden" name="slug" value={slug} />
       <input type="hidden" name="status" value={status} />
-      <input type="hidden" name="attendingCount" value={attendingCount ?? ""} />
+      <input type="hidden" name="attendingCount" value={effectiveAttendingCount ?? ""} />
 
       <div className="min-w-0">
         <h2 className="break-words text-3xl font-semibold leading-tight text-[#054f2d] sm:text-4xl">
@@ -184,6 +187,10 @@ export function RsvpForm({
                 onClick={() => {
                   setLocalError("");
                   setStatus(option.value);
+                  if (option.value === "yes" && guestCount === 1) {
+                    setAttendingCount(1);
+                    setAttendeeNames((current) => [current[0] ?? ""]);
+                  }
                   if (option.value !== "yes") {
                     setAttendingCount(null);
                     setAttendeeNames([]);
@@ -208,46 +215,48 @@ export function RsvpForm({
 
       {status === "yes" ? (
         <div className="grid gap-5">
-          <div className="grid gap-3">
-            <p className="text-base font-semibold text-[#4a1f2e]">
-              How many attending?
-            </p>
-            <div className="grid grid-cols-5 gap-2 sm:grid-cols-10">
-              {Array.from({ length: guestCount }, (_, index) => index + 1).map(
-                (count) => {
-                  const selected = attendingCount === count;
-                  return (
-                    <button
-                      key={count}
-                      type="button"
-                      onClick={() => {
-                        setLocalError("");
-                        setAttendingCount(count);
-                        setAttendeeNames((current) =>
-                          Array.from(
-                            { length: count },
-                            (_, nameIndex) => current[nameIndex] ?? "",
-                          ),
-                        );
-                      }}
-                      aria-pressed={selected}
-                      className={`min-h-12 rounded-md border text-base font-semibold transition sm:aspect-square ${
-                        selected
-                          ? "border-[#054f2d] bg-[#054f2d] text-[#fff6fa]"
-                          : "border-[#b8860b]/35 bg-white/78 text-[#054f2d] hover:border-[#054f2d]"
-                      }`}
-                      aria-label={`${count} attending`}
-                    >
-                      {count}
-                    </button>
-                  );
-                },
-              )}
+          {guestCount > 1 ? (
+            <div className="grid gap-3">
+              <p className="text-base font-semibold text-[#4a1f2e]">
+                How many attending?
+              </p>
+              <div className="grid grid-cols-5 gap-2 sm:grid-cols-10">
+                {Array.from({ length: guestCount }, (_, index) => index + 1).map(
+                  (count) => {
+                    const selected = attendingCount === count;
+                    return (
+                      <button
+                        key={count}
+                        type="button"
+                        onClick={() => {
+                          setLocalError("");
+                          setAttendingCount(count);
+                          setAttendeeNames((current) =>
+                            Array.from(
+                              { length: count },
+                              (_, nameIndex) => current[nameIndex] ?? "",
+                            ),
+                          );
+                        }}
+                        aria-pressed={selected}
+                        className={`min-h-12 rounded-md border text-base font-semibold transition sm:aspect-square ${
+                          selected
+                            ? "border-[#054f2d] bg-[#054f2d] text-[#fff6fa]"
+                            : "border-[#b8860b]/35 bg-white/78 text-[#054f2d] hover:border-[#054f2d]"
+                        }`}
+                        aria-label={`${count} attending`}
+                      >
+                        {count}
+                      </button>
+                    );
+                  },
+                )}
+              </div>
+              {currentErrorLocation === "count" ? (
+                <ErrorNote>{displayedError}</ErrorNote>
+              ) : null}
             </div>
-            {currentErrorLocation === "count" ? (
-              <ErrorNote>{displayedError}</ErrorNote>
-            ) : null}
-          </div>
+          ) : null}
 
           {visibleNames.length > 0 ? (
             <div className="grid gap-3">
