@@ -106,6 +106,8 @@ type RsvpAuditEventRow = {
   created_at: string;
 };
 
+const HIDDEN_RSVP_AUDIT_GUEST_NAME = "Sean and Lexi";
+
 type SqlClient = {
   query<T extends QueryResultRow = QueryResultRow>(
     queryText: string,
@@ -483,10 +485,15 @@ export async function listRsvpAuditEvents(): Promise<RsvpAuditEvent[]> {
          FILTER (WHERE attendee.id IS NOT NULL) AS attendee_names
      FROM wedding_rsvp_audit_events audit
      LEFT JOIN wedding_rsvp_audit_attendees attendee ON attendee.audit_event_id = audit.id
+     LEFT JOIN wedding_guests current_guest ON current_guest.id = audit.guest_id
      WHERE audit.soft_deleted_at IS NULL
        AND audit.event_type = 'rsvp'
+       AND lower(btrim(COALESCE(current_guest.name, audit.guest_name_current, audit.guest_name))) <> lower($1)
+       AND lower(btrim(audit.guest_name_current)) <> lower($1)
+       AND lower(btrim(audit.guest_name)) <> lower($1)
      GROUP BY audit.id
      ORDER BY audit.created_at DESC, audit.id DESC`,
+    [HIDDEN_RSVP_AUDIT_GUEST_NAME],
   )) as RsvpAuditEventRow[];
 
   return rows.map((row) => ({
