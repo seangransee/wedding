@@ -71,15 +71,15 @@ function rsvpLabel(status: string | null) {
 
 function rsvpClassName(status: string | null) {
   if (status === "yes") {
-    return "border-[#d65b8a] bg-[#ffe0ec] text-[#7a1239]";
+    return "border-[#047857] bg-[#d1fae5] text-[#065f46]";
   }
   if (status === "no") {
-    return "border-[#b85d73] bg-[#f8d5dd] text-[#701a32]";
+    return "border-[#dc2626] bg-[#fee2e2] text-[#991b1b]";
   }
   if (status === "deciding") {
-    return "border-[#d78a3d] bg-[#ffe6c8] text-[#8a4a0f]";
+    return "border-[#d97706] bg-[#fef3c7] text-[#92400e]";
   }
-  return "border-[#e7a1ba] bg-[#fff1f7] text-[#7d3150]";
+  return "border-[#64748b] bg-[#e2e8f0] text-[#334155]";
 }
 
 function SubmitButton({
