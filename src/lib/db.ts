@@ -107,12 +107,23 @@ type RsvpAuditEventRow = {
 
 let sqlClient: ReturnType<typeof neon> | null = null;
 
+function databaseUrl() {
+  return (
+    process.env.DATABASE_URL ??
+    process.env.POSTGRES_URL ??
+    process.env.POSTGRES_PRISMA_URL ??
+    process.env.POSTGRES_URL_NON_POOLING
+  );
+}
+
 function sql() {
-  if (!process.env.DATABASE_URL) {
+  const connectionString = databaseUrl();
+
+  if (!connectionString) {
     throw new Error("DATABASE_URL is required.");
   }
 
-  sqlClient ??= neon(process.env.DATABASE_URL);
+  sqlClient ??= neon(connectionString);
   return sqlClient;
 }
 
