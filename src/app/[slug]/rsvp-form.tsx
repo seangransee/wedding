@@ -332,9 +332,6 @@ export function RsvpForm({
             <p className="mt-3 text-base leading-relaxed text-[#4a1f2e]/75">
               {successCopy(state.values.status)}
             </p>
-            <p className="mt-3 text-sm font-semibold uppercase tracking-[0.16em] text-[#8f2448]">
-              Saved with sparkle
-            </p>
             <button
               type="button"
               onClick={() => setShowSuccessModal(false)}
