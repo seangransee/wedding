@@ -1,7 +1,7 @@
 "use client";
 
 import clsx from "clsx";
-import { ArrowUpDown, Check, ChevronDown, ChevronUp } from "lucide-react";
+import { ArrowUpDown, Check, ChevronDown, ChevronUp, Copy } from "lucide-react";
 import Link from "next/link";
 import { useActionState, useCallback, useEffect, useMemo, useState, useTransition } from "react";
 import { useFormStatus } from "react-dom";
@@ -39,6 +39,8 @@ export type AdminSortKey = "default" | "name" | "max" | "invite" | "rsvp" | "att
 export type AdminSortDirection = "asc" | "desc";
 
 type EditableColumnKey = "name" | "slug" | "notes" | "guestCount";
+
+const INVITATION_BASE_URL = "https://sexiwedding.com";
 
 const SORT_KEY_TO_COLUMN_KEY: Record<Exclude<AdminSortKey, "default">, string> = {
   name: "name",
@@ -454,9 +456,56 @@ function PlaceCardsCell({ row }: RenderCellProps<GuestWithRsvp>) {
   return row.attendeeNames.length > 0 ? row.attendeeNames.join("; ") : "";
 }
 
+async function copyText(text: string) {
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(text);
+    return;
+  }
+
+  const textArea = document.createElement("textarea");
+  textArea.value = text;
+  textArea.setAttribute("readonly", "");
+  textArea.style.position = "fixed";
+  textArea.style.inset = "-9999px auto auto -9999px";
+  document.body.append(textArea);
+  textArea.select();
+  document.execCommand("copy");
+  textArea.remove();
+}
+
+function CopyInvitationLinkButton({ slug }: { slug: string }) {
+  const [copyStatus, setCopyStatus] = useState<"idle" | "copied" | "failed">("idle");
+  const invitationUrl = `${INVITATION_BASE_URL}/${slug}`;
+
+  useEffect(() => {
+    if (copyStatus === "idle") {
+      return;
+    }
+
+    const timeout = window.setTimeout(() => setCopyStatus("idle"), 1800);
+    return () => window.clearTimeout(timeout);
+  }, [copyStatus]);
+
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        void copyText(invitationUrl)
+          .then(() => setCopyStatus("copied"))
+          .catch(() => setCopyStatus("failed"));
+      }}
+      className="inline-flex min-h-7 items-center gap-1 border border-[#d65b8a] bg-white px-2 py-1 font-semibold text-[#8f2448] transition hover:border-[#be185d] hover:bg-[#fff1f7]"
+    >
+      <Copy aria-hidden="true" className="size-3.5" />
+      {copyStatus === "copied" ? "Copied" : copyStatus === "failed" ? "Copy failed" : "Copy link"}
+    </button>
+  );
+}
+
 function ActionsCell({ row }: RenderCellProps<GuestWithRsvp>) {
   return (
     <div className="flex items-center gap-1.5">
+      <CopyInvitationLinkButton slug={row.slug} />
       <Link
         href={`/${row.slug}`}
         target="_blank"
@@ -730,8 +779,8 @@ export function GuestTable({
     {
       key: "actions",
       name: "Actions",
-      width: 190,
-      minWidth: 170,
+      width: 290,
+      minWidth: 250,
       resizable: true,
       renderCell: ActionsCell,
     },
