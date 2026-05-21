@@ -72,9 +72,9 @@ body {
 }
 
 .guest-double-happiness-frame {
-  position: fixed;
+  position: absolute;
   inset: 0;
-  z-index: 2147483647;
+  z-index: 20;
   pointer-events: none;
 }
 
@@ -193,8 +193,8 @@ body {
 
 @media (max-width: 640px) {
   .guest-invitation-page {
-    background-size: auto calc(100% + 17rem);
-    background-position: 38% -17rem;
+    background-size: auto calc(100% + 12rem);
+    background-position: 38% -12rem;
   }
 
   .admin-spreadsheet {

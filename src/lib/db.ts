@@ -554,8 +554,9 @@ export async function saveRsvp(input: {
        FROM upserted, (SELECT count(*) FROM deleted) AS deleted_count
      ),
      input_attendees AS (
-       SELECT ordinality::integer AS position, attendee_name
+       SELECT ordinality::integer AS position, btrim(attendee_name) AS attendee_name
        FROM unnest($4::text[]) WITH ORDINALITY AS attendees(attendee_name, ordinality)
+       WHERE length(btrim(attendee_name)) > 0
      ),
      inserted_attendees AS (
        INSERT INTO wedding_rsvp_attendees (rsvp_id, position, full_name)

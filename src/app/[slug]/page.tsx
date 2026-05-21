@@ -54,7 +54,12 @@ export default async function GuestPage({ params }: PageProps) {
     notFound();
   }
 
-  const attendeeNames = data.attendees.map((attendee) => attendee.fullName);
+  const attendeeNames = Array.from(
+    { length: data.rsvp?.attendingCount ?? 0 },
+    (_, index) =>
+      data.attendees.find((attendee) => attendee.position === index + 1)
+        ?.fullName ?? "",
+  );
 
   return (
     <main
@@ -76,7 +81,7 @@ export default async function GuestPage({ params }: PageProps) {
         </span>
       </div>
 
-      <section className="relative z-10 mx-auto grid max-w-6xl items-start gap-4 sm:gap-6 lg:min-h-[calc(100vh-4rem)] lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
+      <section className="relative z-10 mx-auto grid max-w-6xl items-start gap-4 pt-16 sm:gap-6 sm:pt-0 lg:min-h-[calc(100vh-4rem)] lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
         <div className="px-1 text-center text-[#fff6fa] lg:px-0 lg:text-left">
           <p
             className="text-3xl leading-none text-[#f1b3c6] sm:text-5xl"
@@ -84,7 +89,7 @@ export default async function GuestPage({ params }: PageProps) {
           >
             Sean + Lexi = Sexi
           </p>
-          <h1 className="mt-3 text-4xl font-semibold leading-none text-[#b8860b] sm:mt-6 sm:text-6xl lg:text-7xl">
+          <h1 className="mt-3 text-4xl font-semibold leading-none text-[#ffd86e] sm:mt-6 sm:text-6xl lg:text-7xl">
             December 12, 2026
           </h1>
           <div className="mt-4 grid gap-2 text-lg font-semibold sm:mt-7 sm:gap-3 sm:text-2xl">

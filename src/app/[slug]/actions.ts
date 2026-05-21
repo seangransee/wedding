@@ -32,8 +32,7 @@ async function canSubmitForSlug(slug: string) {
   return isAdmin || guestSlug === slug;
 }
 
-export async function submitRsvp(
-  previousState: RsvpActionState,
+export async function autosaveRsvp(
   formData: FormData,
 ): Promise<RsvpActionState> {
   const slug = String(formData.get("slug") ?? "");
@@ -41,9 +40,7 @@ export async function submitRsvp(
   const rawCount = String(formData.get("attendingCount") ?? "");
   const submittedNames = formData
     .getAll("attendeeNames")
-    .map((value) => String(value).trim())
-    .filter(Boolean);
-
+    .map((value) => String(value));
   const values: RsvpActionState["values"] = {
     status: status === "yes" || status === "no" || status === "deciding" ? status : "",
     attendingCount: rawCount ? Number(rawCount) : null,
@@ -51,7 +48,7 @@ export async function submitRsvp(
   };
 
   if (!isValidSlug(slug)) {
-    return stateWithValues("This invitation link is not valid.", false, previousState.values);
+    return stateWithValues("This invitation link is not valid.", false, values);
   }
 
   if (!(await canSubmitForSlug(slug))) {
@@ -60,7 +57,7 @@ export async function submitRsvp(
 
   const guest = await getGuestBySlug(slug);
   if (!guest) {
-    return stateWithValues("This invitation link was not found.", false, previousState.values);
+    return stateWithValues("This invitation link was not found.", false, values);
   }
 
   if (status !== "yes" && status !== "no" && status !== "deciding") {
@@ -84,7 +81,7 @@ export async function submitRsvp(
     });
 
     revalidatePath(`/${slug}`);
-    return stateWithValues("RSVP saved.", true, {
+    return stateWithValues("Saved.", true, {
       status,
       attendingCount: null,
       attendeeNames: [],
@@ -98,28 +95,22 @@ export async function submitRsvp(
     return stateWithValues(`Choose a count from 1 to ${guest.guestCount}.`, false, values);
   }
 
-  const allNames = formData
-    .getAll("attendeeNames")
-    .map((value) => String(value).trim())
-    .slice(0, attendingCount);
-
-  values.attendeeNames = allNames;
-
-  if (allNames.length !== attendingCount || allNames.some((name) => !name)) {
-    return stateWithValues("Enter the full name for each place card.", false, values);
-  }
+  const attendeeNames = Array.from(
+    { length: attendingCount },
+    (_, index) => String(submittedNames[index] ?? ""),
+  );
 
   await saveRsvp({
     guestId: guest.id,
     status: "yes",
     attendingCount,
-    attendeeNames: allNames,
+    attendeeNames,
   });
 
   revalidatePath(`/${slug}`);
-  return stateWithValues("RSVP saved.", true, {
+  return stateWithValues("Saved.", true, {
     status: "yes",
     attendingCount,
-    attendeeNames: allNames,
+    attendeeNames,
   });
 }
