@@ -4,7 +4,7 @@ import clsx from "clsx";
 import { ArrowUpDown, Check, Copy, Eye, GripVertical, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useActionState, useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
-import { useFormStatus } from "react-dom";
+import { createPortal, useFormStatus } from "react-dom";
 import {
   DataGrid,
   type CellClickArgs,
@@ -288,13 +288,73 @@ function DeleteSubmitButton({ disabled }: { disabled: boolean }) {
 
 export function DeleteGuestButton({ guestId, guestName }: { guestId: number; guestName: string }) {
   const [open, setOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const [confirmation, setConfirmation] = useState("");
   const [state, formAction] = useActionState(deleteGuest, initialState);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   function closeDialog() {
     setOpen(false);
     setConfirmation("");
   }
+
+  const dialog =
+    open && mounted
+      ? createPortal(
+          <div
+            data-admin-delete-modal="true"
+            className="fixed inset-0 z-[100] grid place-items-center bg-[#4a1027]/35 px-4"
+          >
+            <form
+              action={formAction}
+              className="w-full max-w-md border border-[#be123c] bg-[#fff8fb] shadow-[0_24px_70px_-34px_rgba(143,36,72,0.8)]"
+            >
+              <input type="hidden" name="guestId" value={guestId} />
+              <div className="border-b border-[#efb5c9] bg-[#ffe0ec] px-3 py-2">
+                <h2 className="text-sm font-semibold text-[#7f1d1d]">Confirm guest deletion</h2>
+              </div>
+              <div className="grid gap-3 px-3 py-3 text-sm text-[#4a1027]">
+                <p>
+                  Delete <span className="font-semibold text-[#7f1d1d]">{guestName}</span> and
+                  any RSVP/place-card rows for this guest.
+                </p>
+                <label className="grid gap-1 text-[0.65rem] font-semibold uppercase tracking-[0.08em] text-[#be123c]">
+                  Type delete
+                  <input
+                    name="confirmation"
+                    value={confirmation}
+                    onChange={(event) => setConfirmation(event.target.value)}
+                    autoFocus
+                    className="min-h-8 border border-[#df7fa3] bg-white px-2 text-sm font-normal normal-case tracking-normal text-[#4a1027] outline-none focus:border-[#be123c] focus:ring-1 focus:ring-[#be123c]/25"
+                  />
+                </label>
+                {state.message ? (
+                  <p
+                    className={`text-xs font-semibold ${state.ok ? "text-[#8f2448]" : "text-[#be123c]"}`}
+                    role="status"
+                  >
+                    {state.message}
+                  </p>
+                ) : null}
+              </div>
+              <div className="flex justify-end gap-2 border-t border-[#efb5c9] px-3 py-2">
+                <button
+                  type="button"
+                  onClick={closeDialog}
+                  className="min-h-8 border border-[#df7fa3] bg-white px-3 text-xs font-semibold uppercase tracking-[0.1em] text-[#8f2448] transition hover:bg-[#fff1f7]"
+                >
+                  Cancel
+                </button>
+                <DeleteSubmitButton disabled={confirmation !== "delete"} />
+              </div>
+            </form>
+          </div>,
+          document.body,
+        )
+      : null;
 
   return (
     <>
@@ -308,53 +368,7 @@ export function DeleteGuestButton({ guestId, guestName }: { guestId: number; gue
         <Trash2 aria-hidden="true" className="size-4" />
       </button>
 
-      {open ? (
-        <div className="fixed inset-0 z-50 grid place-items-center bg-[#4a1027]/35 px-4">
-          <form
-            action={formAction}
-            className="w-full max-w-md border border-[#be123c] bg-[#fff8fb] shadow-[0_24px_70px_-34px_rgba(143,36,72,0.8)]"
-          >
-            <input type="hidden" name="guestId" value={guestId} />
-            <div className="border-b border-[#efb5c9] bg-[#ffe0ec] px-3 py-2">
-              <h2 className="text-sm font-semibold text-[#7f1d1d]">Confirm guest deletion</h2>
-            </div>
-            <div className="grid gap-3 px-3 py-3 text-sm text-[#4a1027]">
-              <p>
-                Delete <span className="font-semibold text-[#7f1d1d]">{guestName}</span> and
-                any RSVP/place-card rows for this guest.
-              </p>
-              <label className="grid gap-1 text-[0.65rem] font-semibold uppercase tracking-[0.08em] text-[#be123c]">
-                Type delete
-                <input
-                  name="confirmation"
-                  value={confirmation}
-                  onChange={(event) => setConfirmation(event.target.value)}
-                  autoFocus
-                  className="min-h-8 border border-[#df7fa3] bg-white px-2 text-sm font-normal normal-case tracking-normal text-[#4a1027] outline-none focus:border-[#be123c] focus:ring-1 focus:ring-[#be123c]/25"
-                />
-              </label>
-              {state.message ? (
-                <p
-                  className={`text-xs font-semibold ${state.ok ? "text-[#8f2448]" : "text-[#be123c]"}`}
-                  role="status"
-                >
-                  {state.message}
-                </p>
-              ) : null}
-            </div>
-            <div className="flex justify-end gap-2 border-t border-[#efb5c9] px-3 py-2">
-              <button
-                type="button"
-                onClick={closeDialog}
-                className="min-h-8 border border-[#df7fa3] bg-white px-3 text-xs font-semibold uppercase tracking-[0.1em] text-[#8f2448] transition hover:bg-[#fff1f7]"
-              >
-                Cancel
-              </button>
-              <DeleteSubmitButton disabled={confirmation !== "delete"} />
-            </div>
-          </form>
-        </div>
-      ) : null}
+      {dialog}
     </>
   );
 }
