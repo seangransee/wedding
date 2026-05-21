@@ -9,6 +9,7 @@ import {
   deleteGuestById,
   reorderGuestsInDefaultSort,
   updateGuestCount,
+  updateGuestFuckYes,
   updateGuestInviteSent,
   updateGuestName,
   updateGuestNotes,
@@ -143,6 +144,29 @@ export async function setInviteSent(
 
   revalidatePath("/admin");
   return { ok: true, message: inviteSent ? "Invite marked sent." : "Invite marked unsent." };
+}
+
+export async function setFuckYes(
+  _previousState: AdminActionState,
+  formData: FormData,
+): Promise<AdminActionState> {
+  await requireAdmin();
+
+  const guestId = Number(formData.get("guestId"));
+  const fuckYes = String(formData.get("fuckYes") ?? "") === "true";
+
+  if (!Number.isInteger(guestId) || guestId < 1) {
+    return { ok: false, message: "Guest id is invalid." };
+  }
+
+  const updated = await updateGuestFuckYes(guestId, fuckYes);
+
+  if (!updated) {
+    return { ok: false, message: "Guest was not found." };
+  }
+
+  revalidatePath("/admin");
+  return { ok: true, message: fuckYes ? "Fuck yes mode on." : "Fuck yes mode off." };
 }
 
 export async function editGuestName(

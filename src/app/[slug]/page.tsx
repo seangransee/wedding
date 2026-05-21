@@ -77,6 +77,7 @@ export default async function GuestPage({ params }: PageProps) {
             slug={slug}
             guestName={data.guest.name}
             guestCount={data.guest.guestCount}
+            fuckYes={data.guest.fuckYes}
             initialStatus={data.rsvp?.status ?? ""}
             initialAttendingCount={data.rsvp?.attendingCount ?? null}
             initialAttendeeNames={attendeeNames}

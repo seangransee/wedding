@@ -67,6 +67,14 @@ export async function submitRsvp(
     return stateWithValues("Choose an RSVP option.", false, values);
   }
 
+  if (guest.fuckYes && status !== "yes") {
+    return stateWithValues("Choose an RSVP option.", false, {
+      status: "",
+      attendingCount: null,
+      attendeeNames: [],
+    });
+  }
+
   if (status !== "yes") {
     await saveRsvp({
       guestId: guest.id,

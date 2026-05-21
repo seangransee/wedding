@@ -26,6 +26,7 @@ import {
   editGuestSlug,
   loginAdmin,
   reorderGuestRows,
+  setFuckYes,
   setInviteSent,
   type AdminActionState,
 } from "./actions";
@@ -69,6 +70,7 @@ const BASE_COLUMN_WIDTHS = {
   attendingCount: 61,
   attendeeNames: 200,
   actions: 100,
+  fuckYes: 82,
 };
 
 const BASE_GRID_WIDTH = Object.values(BASE_COLUMN_WIDTHS).reduce((total, width) => total + width, 0);
@@ -412,6 +414,64 @@ function InviteSentSubmitButton({ checked, message }: { checked: boolean; messag
   );
 }
 
+export function FuckYesToggle({
+  guestId,
+  fuckYes,
+}: {
+  guestId: number;
+  fuckYes: boolean;
+}) {
+  const [checked, setChecked] = useState(fuckYes);
+  const [message, setMessage] = useState("");
+  const [isSaving, startTransition] = useTransition();
+
+  useEffect(() => {
+    setChecked(fuckYes);
+  }, [fuckYes]);
+
+  function toggle() {
+    const nextChecked = !checked;
+    setChecked(nextChecked);
+    setMessage("Saving...");
+
+    startTransition(() => {
+      void setFuckYes(initialState, makeFormData({
+        guestId,
+        fuckYes: nextChecked,
+      })).then((result) => {
+        setMessage(result.message);
+
+        if (!result.ok) {
+          setChecked(checked);
+        }
+      }).catch(() => {
+        setChecked(checked);
+        setMessage("Fuck yes mode could not be saved.");
+      });
+    });
+  }
+
+  return (
+    <div className="flex items-center justify-center">
+      <button
+        type="button"
+        disabled={isSaving}
+        onClick={toggle}
+        aria-label={checked ? "Turn off fuck yes options" : "Turn on fuck yes options"}
+        title={message || (checked ? "Fuck yes options on" : "Fuck yes options off")}
+        className={clsx(
+          "grid size-6 place-items-center border transition disabled:cursor-wait disabled:opacity-65",
+          checked
+            ? "border-[#be185d] bg-[#f9a8d4] text-[#7a1239] hover:bg-[#f472b6]"
+            : "border-[#df7fa3] bg-white text-transparent hover:border-[#be185d] hover:bg-[#fff1f7]",
+        )}
+      >
+        <Check aria-hidden="true" className="size-3.5 stroke-[3]" />
+      </button>
+    </div>
+  );
+}
+
 function rowKeyGetter(row: GuestWithRsvp) {
   return row.id;
 }
@@ -616,6 +676,10 @@ function ActionsCell({ row }: RenderCellProps<GuestWithRsvp>) {
 
 function InviteCell({ row }: RenderCellProps<GuestWithRsvp>) {
   return <InviteSentToggle guestId={row.id} inviteSent={row.inviteSent} />;
+}
+
+function FuckYesCell({ row }: RenderCellProps<GuestWithRsvp>) {
+  return <FuckYesToggle guestId={row.id} fuckYes={row.fuckYes} />;
 }
 
 function makeFormData(values: Record<string, string | number | boolean>) {
@@ -917,6 +981,14 @@ export function GuestTable({
       minWidth: 94,
       resizable: true,
       renderCell: ActionsCell,
+    },
+    {
+      key: "fuckYes",
+      name: "Fuck yes",
+      width: columnWidths.fuckYes,
+      minWidth: 74,
+      resizable: true,
+      renderCell: FuckYesCell,
     },
   ], [columnWidths, draggedGuestId, handleDefaultSort, handleRowDrop, isDefaultSort, isSaving]);
 

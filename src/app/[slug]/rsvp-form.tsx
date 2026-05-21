@@ -16,15 +16,27 @@ type RsvpFormProps = {
   slug: string;
   guestName: string;
   guestCount: number;
+  fuckYes: boolean;
   initialStatus: RsvpStatus | "";
   initialAttendingCount: number | null;
   initialAttendeeNames: string[];
 };
 
-const RSVP_OPTIONS: Array<{ value: RsvpStatus; label: string }> = [
-  { value: "yes", label: "Yes" },
-  { value: "no", label: "No" },
-  { value: "deciding", label: "Still deciding" },
+type RsvpOption = {
+  id: string;
+  value: RsvpStatus;
+  label: string;
+};
+
+const RSVP_OPTIONS: RsvpOption[] = [
+  { id: "yes", value: "yes", label: "Yes" },
+  { id: "no", value: "no", label: "No" },
+  { id: "deciding", value: "deciding", label: "Still deciding" },
+];
+
+const FUCK_YES_RSVP_OPTIONS: RsvpOption[] = [
+  { id: "yes", value: "yes", label: "Yes" },
+  { id: "fuck-yes", value: "yes", label: "Fuck yes" },
 ];
 
 type ErrorLocation = "status" | "count" | "names" | "global" | null;
@@ -78,24 +90,28 @@ export function RsvpForm({
   slug,
   guestName,
   guestCount,
+  fuckYes,
   initialStatus,
   initialAttendingCount,
   initialAttendeeNames,
 }: RsvpFormProps) {
+  const visibleInitialStatus = fuckYes && initialStatus !== "yes" ? "" : initialStatus;
+  const rsvpOptions = fuckYes ? FUCK_YES_RSVP_OPTIONS : RSVP_OPTIONS;
   const initialState: RsvpActionState = useMemo(
     () => ({
       ok: false,
       message: "",
       values: {
-        status: initialStatus,
+        status: visibleInitialStatus,
         attendingCount: initialAttendingCount,
         attendeeNames: initialAttendeeNames,
       },
     }),
-    [initialAttendeeNames, initialAttendingCount, initialStatus],
+    [initialAttendeeNames, initialAttendingCount, visibleInitialStatus],
   );
   const [state, formAction] = useActionState(submitRsvp, initialState);
-  const [status, setStatus] = useState<RsvpStatus | "">(initialStatus);
+  const [status, setStatus] = useState<RsvpStatus | "">(visibleInitialStatus);
+  const [selectedOptionId, setSelectedOptionId] = useState<string>(visibleInitialStatus);
   const [attendingCount, setAttendingCount] = useState<number | null>(
     initialAttendingCount,
   );
@@ -108,8 +124,11 @@ export function RsvpForm({
     : attendingCount;
 
   useEffect(() => {
-    if (state.values.status) {
-      setStatus(state.values.status);
+    const visibleStatus = fuckYes && state.values.status !== "yes" ? "" : state.values.status;
+
+    if (visibleStatus) {
+      setStatus(visibleStatus);
+      setSelectedOptionId(visibleStatus);
       setAttendingCount(state.values.attendingCount);
       setAttendeeNames(state.values.attendeeNames);
     }
@@ -118,7 +137,7 @@ export function RsvpForm({
       setLocalError("");
       setShowSuccessModal(true);
     }
-  }, [state]);
+  }, [fuckYes, state]);
 
   const visibleNames = useMemo(() => {
     const count = effectiveAttendingCount ?? 0;
@@ -173,19 +192,29 @@ export function RsvpForm({
           Will you be attending?
         </p>
         <p className="text-sm leading-relaxed text-[#4a1f2e]/72">
-          If you&apos;re not sure, select &quot;Still deciding&quot; so we know
-          you saw this. Please RSVP with a final answer by{" "}
-          <strong className="font-semibold text-[#4a1f2e]">November 1st</strong>.
+          {fuckYes ? (
+            <>
+              Please RSVP with a final answer by{" "}
+              <strong className="font-semibold text-[#4a1f2e]">November 1st</strong>.
+            </>
+          ) : (
+            <>
+              If you&apos;re not sure, select &quot;Still deciding&quot; so we know
+              you saw this. Please RSVP with a final answer by{" "}
+              <strong className="font-semibold text-[#4a1f2e]">November 1st</strong>.
+            </>
+          )}
         </p>
-        <div className="grid gap-2 sm:grid-cols-3 sm:gap-3">
-          {RSVP_OPTIONS.map((option) => {
-            const selected = status === option.value;
+        <div className={`grid gap-2 sm:gap-3 ${fuckYes ? "sm:grid-cols-2" : "sm:grid-cols-3"}`}>
+          {rsvpOptions.map((option) => {
+            const selected = selectedOptionId === option.id;
             return (
               <button
-                key={option.value}
+                key={option.id}
                 type="button"
                 onClick={() => {
                   setLocalError("");
+                  setSelectedOptionId(option.id);
                   setStatus(option.value);
                   if (option.value === "yes" && guestCount === 1) {
                     setAttendingCount(1);
