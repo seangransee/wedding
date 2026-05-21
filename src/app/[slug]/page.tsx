@@ -12,6 +12,7 @@ type PageProps = {
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;
   const data = await getGuestPageData(slug);
+  const imageUrl = `/${slug}/opengraph-image`;
 
   if (!data) {
     return {
@@ -22,6 +23,26 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   return {
     title: `${data.guest.name} | Sexi Wedding`,
     description: "RSVP for Sean and Lexi's wedding.",
+    openGraph: {
+      title: `${data.guest.name}, you're invited!`,
+      description: "RSVP for Sean and Lexi's wedding.",
+      type: "website",
+      locale: "en_US",
+      images: [
+        {
+          url: imageUrl,
+          width: 1200,
+          height: 630,
+          alt: `${data.guest.name}, you're invited to Sean and Lexi's wedding.`,
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${data.guest.name}, you're invited!`,
+      description: "RSVP for Sean and Lexi's wedding.",
+      images: [imageUrl],
+    },
   };
 }
 
@@ -36,11 +57,26 @@ export default async function GuestPage({ params }: PageProps) {
   const attendeeNames = data.attendees.map((attendee) => attendee.fullName);
 
   return (
-    <main className="relative min-h-screen overflow-x-hidden bg-[#054f2d] px-3 py-4 pb-[calc(1rem+env(safe-area-inset-bottom))] text-[#4a1f2e] sm:px-6 sm:py-8 lg:px-8">
-      <div className="art-deco-bg pointer-events-none absolute inset-0 -z-20" aria-hidden="true" />
-      <div className="art-deco-beams pointer-events-none absolute inset-0 -z-10" aria-hidden="true" />
+    <main
+      className="guest-invitation-page relative min-h-screen overflow-x-hidden bg-[#054f2d] bg-cover bg-no-repeat px-3 py-4 pb-[calc(1rem+env(safe-area-inset-bottom))] text-[#4a1f2e] sm:px-6 sm:py-8 lg:px-8"
+    >
+      <div className="pointer-events-none absolute inset-0 bg-[#031b12]/50" aria-hidden="true" />
+      <div className="guest-double-happiness-frame" aria-hidden="true">
+        <span className="guest-double-happiness guest-double-happiness-top-left">
+          囍
+        </span>
+        <span className="guest-double-happiness guest-double-happiness-top-right">
+          囍
+        </span>
+        <span className="guest-double-happiness guest-double-happiness-bottom-left">
+          囍
+        </span>
+        <span className="guest-double-happiness guest-double-happiness-bottom-right">
+          囍
+        </span>
+      </div>
 
-      <section className="mx-auto grid max-w-6xl items-start gap-4 sm:gap-6 lg:min-h-[calc(100vh-4rem)] lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
+      <section className="relative z-10 mx-auto grid max-w-6xl items-start gap-4 sm:gap-6 lg:min-h-[calc(100vh-4rem)] lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
         <div className="px-1 text-center text-[#fff6fa] lg:px-0 lg:text-left">
           <p
             className="text-3xl leading-none text-[#f1b3c6] sm:text-5xl"
@@ -72,7 +108,7 @@ export default async function GuestPage({ params }: PageProps) {
           </a>
         </div>
 
-        <div className="w-full min-w-0 rounded-lg border border-[#b8860b]/45 bg-[#fff6fa]/94 p-4 shadow-[0_30px_70px_-38px_rgba(0,0,0,0.45)] backdrop-blur sm:p-7 lg:p-8 lg:shadow-[0_40px_90px_-40px_rgba(0,0,0,0.45)]">
+        <div className="w-full min-w-0 rounded-lg border border-[#b8860b]/55 bg-[#fff6fa]/64 p-4 shadow-[0_30px_70px_-38px_rgba(0,0,0,0.55)] backdrop-blur-sm sm:p-7 lg:p-8 lg:shadow-[0_40px_90px_-40px_rgba(0,0,0,0.55)]">
           <RsvpForm
             slug={slug}
             guestName={data.guest.name}

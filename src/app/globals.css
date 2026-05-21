@@ -66,6 +66,56 @@ body {
   border-inline-end: 0;
 }
 
+.guest-invitation-page {
+  background-image: url("/sexi-background.jpg");
+  background-position: center -11rem;
+}
+
+.guest-double-happiness-frame {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483647;
+  pointer-events: none;
+}
+
+.guest-double-happiness {
+  position: absolute;
+  display: grid;
+  inline-size: 3rem;
+  block-size: 3rem;
+  place-items: center;
+  border: 1px solid rgba(241, 201, 109, 0.95);
+  border-radius: 999px;
+  background: rgba(3, 27, 18, 0.86);
+  color: #ffd86e;
+  font-family: "Times New Roman", "PingFang SC", "Hiragino Sans GB", "Heiti SC", serif;
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1;
+  box-shadow: 0 0.6rem 1.2rem rgba(3, 27, 18, 0.45), inset 0 0 0 1px rgba(255, 246, 250, 0.16);
+  text-shadow: 0 1px 0 rgba(3, 27, 18, 0.9), 0 0 0.8rem rgba(255, 216, 110, 0.72);
+}
+
+.guest-double-happiness-top-left {
+  left: 0.75rem;
+  top: calc(env(safe-area-inset-top) + 0.75rem);
+}
+
+.guest-double-happiness-top-right {
+  right: 0.75rem;
+  top: calc(env(safe-area-inset-top) + 0.75rem);
+}
+
+.guest-double-happiness-bottom-left {
+  bottom: calc(env(safe-area-inset-bottom) + 0.75rem);
+  left: 0.75rem;
+}
+
+.guest-double-happiness-bottom-right {
+  right: 0.75rem;
+  bottom: calc(env(safe-area-inset-bottom) + 0.75rem);
+}
+
 .admin-spreadsheet .rdg-header-row .rdg-cell {
   border-inline-end-color: #be185d;
   box-shadow: inset -1px 0 0 rgba(122, 18, 57, 0.18);
@@ -142,9 +192,22 @@ body {
 }
 
 @media (max-width: 640px) {
+  .guest-invitation-page {
+    background-size: auto calc(100% + 17rem);
+    background-position: 38% -17rem;
+  }
+
   .admin-spreadsheet {
     --rdg-font-size: 17px;
     block-size: 72vh;
+  }
+}
+
+@media (min-width: 641px) {
+  .guest-double-happiness {
+    inline-size: 3.6rem;
+    block-size: 3.6rem;
+    font-size: 2.45rem;
   }
 }
 

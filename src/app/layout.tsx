@@ -21,6 +21,7 @@ const dancingScript = Dancing_Script({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://www.sexiwedding.com"),
   title: "Sexi Wedding",
   description: "Sean + Lexi = Sexi",
 };

@@ -10,6 +10,63 @@ const fontPath = (...segments: string[]) =>
 const fontDataCormorant = readFile(fontPath("CormorantGaramond-SemiBold.ttf"));
 const fontDataLibre = readFile(fontPath("LibreBaskerville-Bold.ttf"));
 const fontDataDancing = readFile(fontPath("DancingScript-SemiBold.ttf"));
+const invitationBackgroundData = readFile(
+  path.join(process.cwd(), "public", "sexi-background.jpg"),
+).then((data) => `data:image/jpeg;base64,${data.toString("base64")}`);
+
+function chunkLongWord(word: string, maxLength: number) {
+  const chunks: string[] = [];
+
+  for (let index = 0; index < word.length; index += maxLength) {
+    chunks.push(word.slice(index, index + maxLength));
+  }
+
+  return chunks;
+}
+
+function splitNameLines(name: string) {
+  const cleanName = name.trim().replace(/\s+/g, " ") || "You're invited";
+  const maxLineLength =
+    cleanName.length > 88 ? 26 : cleanName.length > 58 ? 30 : 34;
+  const maxLines = 4;
+  const words = cleanName
+    .split(" ")
+    .flatMap((word) =>
+      word.length > maxLineLength ? chunkLongWord(word, maxLineLength) : word,
+    );
+  const lines: string[] = [];
+
+  for (const word of words) {
+    const currentLine = lines[lines.length - 1];
+    const nextLine = currentLine ? `${currentLine} ${word}` : word;
+
+    if (!currentLine) {
+      lines.push(word);
+    } else if (nextLine.length <= maxLineLength) {
+      lines[lines.length - 1] = nextLine;
+    } else if (lines.length < maxLines) {
+      lines.push(word);
+    } else {
+      lines[maxLines - 1] = `${lines[maxLines - 1].replace(/\.*$/, "")}...`;
+      break;
+    }
+  }
+
+  return {
+    lines,
+    isLong: cleanName.length > 58,
+    fontSize:
+      cleanName.length <= 24
+        ? 82
+        : cleanName.length <= 42
+          ? 68
+          : cleanName.length <= 66
+            ? 54
+            : cleanName.length <= 96
+              ? 44
+              : 38,
+  };
+}
 
 export async function generateOgImage() {
   const [cormorantFont, libreFont, dancingFont] = await Promise.all([
@@ -221,5 +278,197 @@ export async function generateOgImage() {
         },
       ],
     }
+  );
+}
+
+export async function generateInvitationOgImage(guestName: string) {
+  const [cormorantFont, libreFont, dancingFont, backgroundImage] =
+    await Promise.all([
+      fontDataCormorant,
+      fontDataLibre,
+      fontDataDancing,
+      invitationBackgroundData,
+    ]);
+  const nameLayout = splitNameLines(guestName);
+
+  return new ImageResponse(
+    (
+      <div
+        style={{
+          width: "100%",
+          height: "100%",
+          display: "flex",
+          position: "relative",
+          overflow: "hidden",
+          background: "#054f2d",
+          color: "#fff6fa",
+        }}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={backgroundImage}
+          alt=""
+          style={{
+            position: "absolute",
+            inset: 0,
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            objectPosition: "38% 33%",
+          }}
+        />
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            background:
+              "linear-gradient(90deg, rgba(3, 27, 18, 0.82), rgba(3, 27, 18, 0.45) 52%, rgba(3, 27, 18, 0.76)), linear-gradient(180deg, rgba(3, 27, 18, 0.48), rgba(3, 27, 18, 0.18) 45%, rgba(3, 27, 18, 0.62))",
+          }}
+        />
+        <div
+          style={{
+            position: "absolute",
+            inset: "34px",
+            border: "2px solid rgba(184, 134, 11, 0.78)",
+          }}
+        />
+        {[
+          ["34px", "34px"],
+          ["34px", "1114px"],
+          ["528px", "34px"],
+          ["528px", "1114px"],
+        ].map(([top, left]) => (
+          <div
+            key={`${top}-${left}`}
+            style={{
+              position: "absolute",
+              top,
+              left,
+              width: "52px",
+              height: "52px",
+              borderRadius: "999px",
+              border: "1px solid rgba(184, 134, 11, 0.82)",
+              background: "rgba(3, 27, 18, 0.66)",
+              color: "#f1c96d",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontFamily:
+                "'Cormorant Garamond', 'Libre Baskerville', serif",
+              fontSize: "34px",
+              fontWeight: 600,
+              lineHeight: 1,
+              textShadow: "0 2px 8px rgba(0, 0, 0, 0.55)",
+            }}
+          >
+            囍
+          </div>
+        ))}
+        <div
+          style={{
+            position: "relative",
+            zIndex: 2,
+            width: "100%",
+            height: "100%",
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "center",
+            padding: "72px 88px",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              fontFamily: "'Dancing Script', 'Cormorant Garamond', serif",
+              fontSize: nameLayout.isLong ? "56px" : "68px",
+              fontWeight: 600,
+              color: "#f1b3c6",
+              letterSpacing: "2px",
+              marginBottom: nameLayout.isLong ? "14px" : "24px",
+              textShadow: "0 4px 16px rgba(0, 0, 0, 0.42)",
+            }}
+          >
+            Sean + Lexi = Sexi
+          </div>
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              maxWidth: "740px",
+              gap: "6px",
+              marginBottom: nameLayout.isLong ? "14px" : "22px",
+            }}
+          >
+            {nameLayout.lines.map((line) => (
+              <div
+                key={line}
+                style={{
+                  display: "flex",
+                  fontFamily:
+                    "'Libre Baskerville', 'Cormorant Garamond', serif",
+                  fontSize: `${nameLayout.fontSize}px`,
+                  fontWeight: 700,
+                  lineHeight: 1.05,
+                  color: "#fff6fa",
+                  textShadow: "0 5px 22px rgba(0, 0, 0, 0.6)",
+                }}
+              >
+                {line}
+              </div>
+            ))}
+          </div>
+          <div
+            style={{
+              display: "flex",
+              fontFamily: "'Cormorant Garamond', serif",
+              fontSize: "46px",
+              fontWeight: 600,
+              color: "#f1c96d",
+              textShadow: "0 4px 18px rgba(0, 0, 0, 0.55)",
+            }}
+          >
+            you&apos;re invited!
+          </div>
+          <div
+            style={{
+              display: "flex",
+              marginTop: nameLayout.isLong ? "34px" : "52px",
+              fontFamily:
+                "'Libre Baskerville', 'Cormorant Garamond', serif",
+              fontSize: "28px",
+              fontWeight: 700,
+              letterSpacing: "5px",
+              textTransform: "uppercase",
+              color: "#f1b3c6",
+            }}
+          >
+            December 12, 2026 · Chicago, IL
+          </div>
+        </div>
+      </div>
+    ),
+    {
+      ...size,
+      fonts: [
+        {
+          name: "Cormorant Garamond",
+          data: cormorantFont,
+          style: "normal",
+          weight: 600,
+        },
+        {
+          name: "Libre Baskerville",
+          data: libreFont,
+          style: "normal",
+          weight: 700,
+        },
+        {
+          name: "Dancing Script",
+          data: dancingFont,
+          style: "normal",
+          weight: 600,
+        },
+      ],
+    },
   );
 }

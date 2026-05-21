@@ -199,7 +199,7 @@ export function RsvpForm({
             </>
           ) : (
             <>
-              If you&apos;re not sure, select &quot;Still deciding&quot; so we know
+              If you&apos;re not sure, select &quot;still deciding&quot; so we know
               you saw this. Please RSVP with a final answer by{" "}
               <strong className="font-semibold text-[#4a1f2e]">November 1st</strong>.
             </>
@@ -229,7 +229,7 @@ export function RsvpForm({
                 className={`min-h-13 rounded-md border px-4 text-sm font-semibold uppercase tracking-[0.14em] transition sm:tracking-[0.16em] ${
                   selected
                     ? "border-[#054f2d] bg-[#054f2d] text-[#fff6fa]"
-                    : "border-[#b8860b]/35 bg-white/78 text-[#054f2d] hover:border-[#054f2d]"
+                    : "border-[#b8860b]/35 bg-white/54 text-[#054f2d] hover:border-[#054f2d]"
                 }`}
               >
                 {option.label}
@@ -271,7 +271,7 @@ export function RsvpForm({
                         className={`min-h-12 rounded-md border text-base font-semibold transition sm:aspect-square ${
                           selected
                             ? "border-[#054f2d] bg-[#054f2d] text-[#fff6fa]"
-                            : "border-[#b8860b]/35 bg-white/78 text-[#054f2d] hover:border-[#054f2d]"
+                            : "border-[#b8860b]/35 bg-white/54 text-[#054f2d] hover:border-[#054f2d]"
                         }`}
                         aria-label={`${count} attending`}
                       >
@@ -322,7 +322,7 @@ export function RsvpForm({
         </div>
       ) : null}
 
-      <div className="sticky bottom-0 -mx-4 -mb-4 grid gap-3 border-t border-[#b8860b]/20 bg-[#fff6fa]/96 px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur sm:static sm:m-0 sm:flex sm:border-t-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none sm:flex-row sm:items-center sm:justify-between">
+      <div className="sticky bottom-0 -mx-4 -mb-4 grid gap-3 border-t border-[#b8860b]/20 bg-[#fff6fa]/56 px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur-sm sm:static sm:m-0 sm:flex sm:border-t-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none sm:flex-row sm:items-center sm:justify-between">
         <SubmitButton />
         {currentErrorLocation === "global" ? (
           <p
