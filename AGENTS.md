@@ -28,6 +28,7 @@ Use npm for scripts. The repo has both `package-lock.json` and `pnpm-lock.yaml`,
 
 - Production is hosted on Vercel at `https://sexiwedding.com`.
 - After committing and pushing to `main`, always run `npm run db:migrate` against production.
+- Do not make changes, submit forms, clear cookies, run migrations, or otherwise mutate anything in production at `sexiwedding.com` unless explicitly instructed. It is OK to read from production for verification or debugging.
 
 ## Data Model
 
@@ -129,5 +130,7 @@ For code changes, run at least:
 
 - `npm run lint`
 - `npm run build`
+
+Always test non-trivial changes in the browser against a local dev server. Local testing is fair game: you may clear cookies, submit forms, edit local data, and reset local browser state as needed. Do not do destructive or mutating tests against production.
 
 For schema changes, add a new numbered SQL file under `migrations/`, run `npm run db:migrate` locally, and confirm the app still builds.
