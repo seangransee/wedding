@@ -1,6 +1,6 @@
 # Our Story
 
-It all started the way the best stories do 😉 sweaty, sandy, and completely unplanned.
+It all started the way the best stories do 😉 sweaty, sandy, and completely unplanned. HI
 
 On June 2nd, 2017, we met at North Avenue Beach during an adult rec league volleyball game. (Yes, beach volleyball. Yes, we're that couple.) Neither of us had any idea that the day before Sean's birthday would turn out to be one of the most important days of our lives. We rang in Sean's birthday dancing the night away, which honestly feels very on-brand for us.
 
