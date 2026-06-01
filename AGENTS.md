@@ -7,6 +7,12 @@ Next.js app for Sean and Lexi's wedding website. The app has four main surfaces:
 - `/:slug` - guest-specific invitation and RSVP page.
 - `/admin` - password-gated guest/RSVP management spreadsheet.
 
+Long-form public/invitation copy lives in Markdown files under `content/` so non-technical editors can update it without touching React code. Current files:
+
+- `content/our-story.md` - the Our Story section.
+- `content/hotel-blocks.md` - the dedicated Hotel Blocks section. Use `<!-- invitation-only-start title="Hotel Blocks" -->` and `<!-- invitation-only-end -->` around booking details that should be hidden on public `/` and shown only on guest invitation pages.
+- `content/faqs.md` - the FAQ section. Keep hotel block booking details in `content/hotel-blocks.md`, not in FAQs.
+
 The package currently uses `next` 16.x with React 19, Tailwind CSS 4, TypeScript, Neon/Postgres, and `react-data-grid`.
 
 ## Commands
@@ -53,7 +59,7 @@ Core tables:
 - `src/app/admin/admin-client.tsx`: spreadsheet UI for adding, editing, sorting, reordering, copying links, viewing links, deleting guests, and toggling flags.
 - `src/app/*/opengraph-image.tsx` and `src/lib/opengraph-image.tsx`: generated PNG Open Graph images for public save-the-date and per-guest invitation links.
 
-Global styling lives in `src/app/globals.css`. The shared public/invitation page shell lives in `src/app/wedding-page-shell.tsx`, includes sticky in-page section navigation, and uses `public/sexi-background.jpg`; Open Graph image generation uses local fonts from `public/fonts/`.
+Global styling lives in `src/app/globals.css`. The shared public/invitation page shell lives in `src/app/wedding-page-shell.tsx`, includes sticky in-page section navigation, renders long-form Markdown content from `content/`, and uses `public/sexi-background.jpg`; Open Graph image generation uses local fonts from `public/fonts/`.
 
 ## Open Graph Images
 
@@ -117,12 +123,14 @@ Be careful changing validation: database constraints, server action validation, 
 
 ## Implementation Notes
 
-- Keep this `AGENTS.md` file current as the site changes. If routes, deployment, data model, invitation-link behavior, RSVP rules, admin workflows, styling conventions, or validation commands change, update this guide in the same work.
+- Keep this `AGENTS.md` file current as the site changes. If routes, deployment, data model, invitation-link behavior, RSVP rules, admin workflows, styling conventions, Markdown content structure, or validation commands change, update this guide in the same work.
 - `src/lib/db.ts` maps snake_case database rows to camelCase TypeScript types. Prefer adding database access helpers there instead of scattering SQL through UI files.
 - Use `revalidatePath` for any server action that changes data visible on `/admin` or a guest slug route.
 - Keep `RESERVED_TOP_LEVEL_PATHS` in `src/proxy.ts` updated if adding new top-level public routes, or a route name that matches the slug pattern may be treated as a guest link.
 - Guest-specific metadata in `src/app/[slug]/page.tsx` uses `/{slug}/opengraph-image`; if slug routing changes, update metadata and image routing together.
 - `INVITATION_BASE_URL` in `admin-client.tsx` is hardcoded to `https://sexiwedding.com` for copied links.
+- All long-form content should be driven by Markdown files in `content/`, not hard-coded in React or TypeScript. The renderer for these files lives in `src/app/markdown-content.tsx`.
+- Public `/` keeps Markdown invitation-only blocks locked behind an invitation link; guest invitation pages render those blocks.
 - Design uses a green/gold/pink wedding palette, Cormorant/Libre/Dancing Script fonts, double-happiness glyphs, and a spreadsheet-like admin UI. Keep new UI consistent with those patterns.
 - Guests will primarily use the site on phones. Treat mobile layouts as the primary experience, especially for invitation pages, RSVP controls, forms, tap targets, safe-area spacing, and text wrapping.
 
