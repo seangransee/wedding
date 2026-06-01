@@ -1,8 +1,8 @@
-# Hotel Blocks
+# Hotels
 
 We have a few options for different price points and convenience levels. We recommend booking early as rooms will go quickly!
 
-<!-- invitation-only-start title="Hotel Blocks" -->
+<!-- invitation-only-start title="Hotels" -->
 
 The Blackstone - our venue!
 

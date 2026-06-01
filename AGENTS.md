@@ -10,7 +10,7 @@ Next.js app for Sean and Lexi's wedding website. The app has four main surfaces:
 Long-form public/invitation copy lives in Markdown files under `content/` so non-technical editors can update it without touching React code. Current files:
 
 - `content/our-story.md` - the Our Story section.
-- `content/hotel-blocks.md` - the dedicated Hotel Blocks section. Use `<!-- invitation-only-start title="Hotel Blocks" -->` and `<!-- invitation-only-end -->` around booking details that should be hidden on public `/` and shown only on guest invitation pages.
+- `content/hotel-blocks.md` - the dedicated Hotels section. Use `<!-- invitation-only-start title="Hotels" -->` and `<!-- invitation-only-end -->` around booking details that should be hidden on public `/` and shown only on guest invitation pages.
 - `content/faqs.md` - the FAQ section. Keep hotel block booking details in `content/hotel-blocks.md`, not in FAQs.
 
 The package currently uses `next` 16.x with React 19, Tailwind CSS 4, TypeScript, Neon/Postgres, and `react-data-grid`.

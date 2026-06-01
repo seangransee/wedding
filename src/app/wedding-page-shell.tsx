@@ -80,9 +80,9 @@ function PageNav({
 }) {
   const navItems = [
     { href: `#${panelId}`, label: panelNavLabel },
-    { href: "#hotel-blocks", label: "Hotel Blocks" },
-    { href: "#faqs", label: "FAQs" },
     { href: "#our-story", label: "Our Story" },
+    { href: "#faqs", label: "FAQs" },
+    { href: "#hotel-blocks", label: "Hotels" },
   ];
 
   return (
@@ -110,18 +110,18 @@ function PageNav({
 function LongFormSections({ showHotelBlocks }: { showHotelBlocks: boolean }) {
   return (
     <div className="pb-16">
-      <MarkdownContent
-        id="hotel-blocks"
-        fileName="hotel-blocks.md"
-        lockedBlocks={!showHotelBlocks}
-      />
+      <MarkdownContent id="our-story" fileName="our-story.md" />
       <MarkdownContent
         id="faqs"
         fileName="faqs.md"
         lockedBlocks={!showHotelBlocks}
         subtitleFromFirstParagraph
       />
-      <MarkdownContent id="our-story" fileName="our-story.md" />
+      <MarkdownContent
+        id="hotel-blocks"
+        fileName="hotel-blocks.md"
+        lockedBlocks={!showHotelBlocks}
+      />
     </div>
   );
 }
