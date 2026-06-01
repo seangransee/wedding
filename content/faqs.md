@@ -11,7 +11,7 @@ Our wedding is on Saturday, December 12, 2026, at The Blackstone Chicago, locate
 ### What is the best way to get to the venue?
 
 The venue is easily accessible by rideshare (Uber/Lyft are plentiful in Chicago) and we recommend this as the easiest option, especially if you plan to really enjoy Rod Tuffcurls and the Benchpress and the open bar! There is also very limited street parking, valet parking at the hotel for $72 or self-parking across the street at the Hilton Chicago for $39.
-bye bitch
+
 ### What should I expect weather-wise in Chicago in December?
 
 Chicago in December is cold — temperatures typically range from 20–35°F (-7 to 2°C), and snow is always possible! We recommend bringing a warm coat, hat, and gloves for any time spent outdoors. The venue will be warm and cozy inside, so dress for the occasion and bundle up for the commute.
@@ -64,7 +64,7 @@ This is TBD, at the moment we will be setting up a honeymoon fund/travel fund.
 
 ### Should I bring my gift to the wedding?
 
-We kindly ask that gifts be shipped directly to us rather than brought to the venue — it makes things much easier on the day! Our shipping address is 600 Oak St, Apt 25, San Francisco, CA 94117. Of course, cards are always welcome at the wedding.
+We kindly ask that gifts be shipped directly to us rather than brought to the venue — it makes things much easier on the day! Plus we'd have to get it from Chicago to SF and we'll have limited luggage space. Our shipping address is 600 Oak St, Apt 25, San Francisco, CA 94117. Of course, cards are always welcome at the wedding.
 
 ## Photos & Phones
 
