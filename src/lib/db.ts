@@ -109,6 +109,9 @@ type RsvpAuditEventRow = {
 };
 
 const HIDDEN_RSVP_AUDIT_GUEST_NAME = "Sean and Lexi";
+const ADMIN_LOGIN_MAX_FAILED_ATTEMPTS = 5;
+const ADMIN_LOGIN_WINDOW_MINUTES = 15;
+const ADMIN_LOGIN_LOCKOUT_MINUTES = 15;
 
 type SqlClient = {
   query<T extends QueryResultRow = QueryResultRow>(
@@ -526,6 +529,82 @@ export async function listRsvpAuditEvents(): Promise<RsvpAuditEvent[]> {
     attendeeNames: row.attendee_names ? row.attendee_names.split("|||RSVP|||") : [],
     createdAt: row.created_at,
   }));
+}
+
+export async function getAdminLoginRateLimit(
+  rateLimitKey: string,
+): Promise<{ limited: boolean; retryAfterSeconds: number }> {
+  const rows = (await sql().query(
+    `SELECT ceil(extract(epoch FROM (locked_until - now())))::integer AS retry_after_seconds
+     FROM wedding_admin_login_attempts
+     WHERE rate_limit_key = $1
+       AND locked_until > now()`,
+    [rateLimitKey],
+  )) as Array<{ retry_after_seconds: number }>;
+
+  const retryAfterSeconds = rows[0]?.retry_after_seconds ?? 0;
+
+  return {
+    limited: retryAfterSeconds > 0,
+    retryAfterSeconds: Math.max(0, retryAfterSeconds),
+  };
+}
+
+export async function recordAdminLoginFailure(
+  rateLimitKey: string,
+): Promise<{ limited: boolean; retryAfterSeconds: number }> {
+  const rows = (await sql().query(
+    `WITH upserted AS (
+       INSERT INTO wedding_admin_login_attempts (
+         rate_limit_key,
+         failed_count,
+         window_started_at,
+         locked_until,
+         last_failed_at
+       )
+       VALUES ($1, 1, now(), NULL, now())
+       ON CONFLICT (rate_limit_key) DO UPDATE SET
+         failed_count = CASE
+           WHEN wedding_admin_login_attempts.locked_until > now() THEN wedding_admin_login_attempts.failed_count
+           WHEN wedding_admin_login_attempts.window_started_at <= now() - ($2::integer * interval '1 minute') THEN 1
+           ELSE wedding_admin_login_attempts.failed_count + 1
+         END,
+         window_started_at = CASE
+           WHEN wedding_admin_login_attempts.locked_until > now() THEN wedding_admin_login_attempts.window_started_at
+           WHEN wedding_admin_login_attempts.window_started_at <= now() - ($2::integer * interval '1 minute') THEN now()
+           ELSE wedding_admin_login_attempts.window_started_at
+         END,
+         locked_until = CASE
+           WHEN wedding_admin_login_attempts.locked_until > now() THEN wedding_admin_login_attempts.locked_until
+           WHEN wedding_admin_login_attempts.window_started_at <= now() - ($2::integer * interval '1 minute') THEN NULL
+           WHEN wedding_admin_login_attempts.failed_count + 1 >= $3 THEN now() + ($4::integer * interval '1 minute')
+           ELSE NULL
+         END,
+         last_failed_at = now()
+       RETURNING locked_until
+     )
+     SELECT COALESCE(ceil(extract(epoch FROM (locked_until - now())))::integer, 0) AS retry_after_seconds
+     FROM upserted`,
+    [
+      rateLimitKey,
+      ADMIN_LOGIN_WINDOW_MINUTES,
+      ADMIN_LOGIN_MAX_FAILED_ATTEMPTS,
+      ADMIN_LOGIN_LOCKOUT_MINUTES,
+    ],
+  )) as Array<{ retry_after_seconds: number }>;
+
+  const retryAfterSeconds = rows[0]?.retry_after_seconds ?? 0;
+
+  return {
+    limited: retryAfterSeconds > 0,
+    retryAfterSeconds: Math.max(0, retryAfterSeconds),
+  };
+}
+
+export async function clearAdminLoginFailures(rateLimitKey: string) {
+  await sql().query("DELETE FROM wedding_admin_login_attempts WHERE rate_limit_key = $1", [
+    rateLimitKey,
+  ]);
 }
 
 export async function saveRsvp(input: {

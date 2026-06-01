@@ -1,12 +1,15 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { ADMIN_COOKIE_NAME, ADMIN_PASSWORD, cookieOptions } from "@/lib/cookies";
 import {
+  clearAdminLoginFailures,
   createGuest,
   deleteGuestById,
+  getAdminLoginRateLimit,
+  recordAdminLoginFailure,
   reorderGuestsInDefaultSort,
   updateGuestCount,
   updateGuestFuckYes,
@@ -21,6 +24,26 @@ export type AdminActionState = {
   ok: boolean;
   message: string;
 };
+
+function getAdminLoginRateLimitMessage(retryAfterSeconds: number) {
+  const retryAfterMinutes = Math.max(1, Math.ceil(retryAfterSeconds / 60));
+  return `Too many wrong attempts. Try again in ${retryAfterMinutes} minute${
+    retryAfterMinutes === 1 ? "" : "s"
+  }.`;
+}
+
+function normalizeClientIp(value: string | null) {
+  return value?.split(",")[0]?.trim() || null;
+}
+
+async function getAdminLoginRateLimitKey() {
+  const headerStore = await headers();
+  const forwardedFor = normalizeClientIp(headerStore.get("x-forwarded-for"));
+  const vercelForwardedFor = normalizeClientIp(headerStore.get("x-vercel-forwarded-for"));
+  const realIp = normalizeClientIp(headerStore.get("x-real-ip"));
+
+  return `admin-login:${forwardedFor || vercelForwardedFor || realIp || "unknown"}`;
+}
 
 async function isAdminLoggedIn() {
   const cookieStore = await cookies();
@@ -38,13 +61,28 @@ export async function loginAdmin(
   formData: FormData,
 ): Promise<AdminActionState> {
   const password = String(formData.get("password") ?? "");
+  const rateLimitKey = await getAdminLoginRateLimitKey();
+  const currentLimit = await getAdminLoginRateLimit(rateLimitKey);
 
-  if (password !== ADMIN_PASSWORD) {
+  if (currentLimit.limited) {
     return {
       ok: false,
-      message: "That password is not right.",
+      message: getAdminLoginRateLimitMessage(currentLimit.retryAfterSeconds),
     };
   }
+
+  if (password !== ADMIN_PASSWORD) {
+    const updatedLimit = await recordAdminLoginFailure(rateLimitKey);
+
+    return {
+      ok: false,
+      message: updatedLimit.limited
+        ? getAdminLoginRateLimitMessage(updatedLimit.retryAfterSeconds)
+        : "That password is not right.",
+    };
+  }
+
+  await clearAdminLoginFailures(rateLimitKey);
 
   const cookieStore = await cookies();
   cookieStore.set(ADMIN_COOKIE_NAME, ADMIN_PASSWORD, cookieOptions());

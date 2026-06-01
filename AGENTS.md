@@ -113,6 +113,7 @@ Be careful changing validation: database constraints, server action validation, 
 ## Admin Behavior
 
 - Admin auth is a simple HTTP-only cookie. The password comes from the `ADMIN_PASSWORD` environment variable, and cookie names are in `src/lib/cookies.ts`; do not duplicate the password elsewhere.
+- Admin login is rate-limited in `wedding_admin_login_attempts` by request IP: 5 wrong attempts in 15 minutes locks that IP out for 15 minutes. Successful login clears the bucket.
 - `/admin` uses `react-data-grid` with all rows rendered and a responsive width calculation.
 - Editable columns are Name, URL, Notes, and Max. URL is locked when `invite_sent` is true.
 - Sorting is URL-driven with `?sort=...&dir=...`. Default sort uses `sort_order`.
