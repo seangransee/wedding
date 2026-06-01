@@ -68,7 +68,13 @@ function splitNameLines(name: string) {
   };
 }
 
-export async function generateOgImage() {
+type PublicOgImageOptions = {
+  badge?: string;
+};
+
+export async function generateOgImage({
+  badge = "SAVE THE DATE",
+}: PublicOgImageOptions = {}) {
   const [cormorantFont, libreFont, dancingFont] = await Promise.all([
     fontDataCormorant,
     fontDataLibre,
@@ -183,7 +189,7 @@ export async function generateOgImage() {
                   background: "rgba(241, 179, 198, 0.45)",
                 }}
               />
-              SAVE THE DATE
+              {badge}
               <span
                 style={{
                   display: "block",

@@ -1,7 +1,7 @@
 "use client";
 
 import clsx from "clsx";
-import { ArrowUpDown, Check, Copy, Eye, GripVertical, Trash2 } from "lucide-react";
+import { ArrowUpDown, Check, Copy, Download, Eye, GripVertical, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useActionState, useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { createPortal, useFormStatus } from "react-dom";
@@ -15,7 +15,7 @@ import {
   type RowsChangeData,
   type SortColumn,
 } from "react-data-grid";
-import type { GuestWithRsvp } from "@/lib/db";
+import type { GuestWithRsvp, RsvpAuditEvent } from "@/lib/db";
 import { slugify } from "@/lib/slug";
 import {
   addGuest,
@@ -126,6 +126,146 @@ function rsvpClassName(status: string | null) {
     return "border-[#d97706] bg-[#fef3c7] text-[#92400e]";
   }
   return "border-[#64748b] bg-[#e2e8f0] text-[#334155]";
+}
+
+function csvCell(value: boolean | number | string | null | undefined) {
+  const text = value === null || value === undefined ? "" : String(value);
+  return `"${text.replace(/"/g, '""')}"`;
+}
+
+function makeAdminCsv(guests: GuestWithRsvp[], auditEvents: RsvpAuditEvent[]) {
+  const headers = [
+    "record_type",
+    "guest_id",
+    "guest_name",
+    "guest_slug",
+    "invitation_url",
+    "notes",
+    "max_guests",
+    "invite_sent",
+    "fuck_yes",
+    "sort_order",
+    "current_rsvp_status",
+    "current_attending_count",
+    "current_place_cards",
+    "guest_created_at",
+    "guest_updated_at",
+    "audit_event_id",
+    "audit_event_type",
+    "audit_guest_name_previous",
+    "audit_guest_name_current",
+    "audit_rsvp_status",
+    "audit_attending_count",
+    "audit_place_cards",
+    "audit_created_at",
+  ];
+
+  const guestRows = guests.map((guest) => [
+    "guest",
+    guest.id,
+    guest.name,
+    guest.slug,
+    `${INVITATION_BASE_URL}/${guest.slug}`,
+    guest.notes,
+    guest.guestCount,
+    guest.inviteSent,
+    guest.fuckYes,
+    guest.sortOrder,
+    guest.rsvpStatus,
+    guest.attendingCount,
+    guest.attendeeNames.join("; "),
+    guest.createdAt,
+    guest.updatedAt,
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+  ]);
+
+  const auditRows = auditEvents.map((event) => [
+    "rsvp_audit",
+    event.guestId,
+    event.guestName,
+    event.guestSlug,
+    `${INVITATION_BASE_URL}/${event.guestSlug}`,
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    event.id,
+    event.eventType,
+    event.guestNamePrevious,
+    event.guestNameCurrent,
+    event.status,
+    event.attendingCount,
+    event.attendeeNames.join("; "),
+    event.createdAt,
+  ]);
+
+  return [headers, ...guestRows, ...auditRows]
+    .map((row) => row.map(csvCell).join(","))
+    .join("\r\n");
+}
+
+export function AdminCsvExportButton({
+  auditEvents,
+  guests,
+}: {
+  auditEvents: RsvpAuditEvent[];
+  guests: GuestWithRsvp[];
+}) {
+  const [exportStatus, setExportStatus] = useState<"idle" | "exported">("idle");
+
+  useEffect(() => {
+    if (exportStatus === "idle") {
+      return;
+    }
+
+    const timeout = window.setTimeout(() => setExportStatus("idle"), 2200);
+    return () => window.clearTimeout(timeout);
+  }, [exportStatus]);
+
+  function exportCsv() {
+    const csv = makeAdminCsv(guests, auditEvents);
+    const blob = new Blob([`\uFEFF${csv}`], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+
+    link.href = url;
+    link.download = `sexi-wedding-admin-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.append(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 0);
+    setExportStatus("exported");
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={exportCsv}
+      aria-label={exportStatus === "exported" ? "CSV exported" : "Export all admin data as CSV"}
+      title={exportStatus === "exported" ? "CSV exported" : "Export all admin data as CSV"}
+      className="inline-flex min-h-8 items-center justify-center gap-1.5 border border-[#7a1239] bg-[#fff8fb] px-3 text-xs font-semibold uppercase tracking-[0.1em] text-[#7a1239] transition hover:border-[#be185d] hover:bg-[#ffe0ec]"
+    >
+      {exportStatus === "exported" ? (
+        <Check aria-hidden="true" className="size-3.5 stroke-[3]" />
+      ) : (
+        <Download aria-hidden="true" className="size-3.5" />
+      )}
+      <span aria-live="polite">{exportStatus === "exported" ? "Exported" : "Export CSV"}</span>
+    </button>
+  );
 }
 
 export function LocalAuditTimestamp({ value }: { value: string }) {

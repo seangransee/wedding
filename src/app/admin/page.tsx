@@ -3,6 +3,7 @@ import { ADMIN_COOKIE_NAME, ADMIN_PASSWORD } from "@/lib/cookies";
 import { listGuestsWithRsvps, listRsvpAuditEvents } from "@/lib/db";
 import {
   AddGuestForm,
+  AdminCsvExportButton,
   AdminLoginForm,
   GuestTable,
   LocalAuditTimestamp,
@@ -188,24 +189,27 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
               RSVP admin
             </h1>
           </div>
-          <div className="grid grid-cols-1 overflow-hidden border border-[#df7fa3] bg-[#fff8fb] text-xs sm:grid-cols-3">
-            <div className="border-r border-[#efb5c9] px-2 py-1">
-              <span className="text-[#8f5070]">Yes</span>
-              <span className="ml-2 font-semibold tabular-nums text-[#8f2448]">
-                {yesCount}
-              </span>
-            </div>
-            <div className="border-r border-[#efb5c9] px-2 py-1">
-              <span className="text-[#8f5070]">Yes+Maybe</span>
-              <span className="ml-2 font-semibold tabular-nums text-[#a33a62]">
-                {yesMaybeCount}
-              </span>
-            </div>
-            <div className="px-2 py-1">
-              <span className="text-[#8f5070]">Yes+Maybe+No Response</span>
-              <span className="ml-2 font-semibold tabular-nums text-[#7a1239]">
-                {yesMaybeInvitedCount}
-              </span>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <AdminCsvExportButton auditEvents={auditEvents} guests={sortedGuests} />
+            <div className="grid grid-cols-1 overflow-hidden border border-[#df7fa3] bg-[#fff8fb] text-xs sm:grid-cols-3">
+              <div className="border-r border-[#efb5c9] px-2 py-1">
+                <span className="text-[#8f5070]">Yes</span>
+                <span className="ml-2 font-semibold tabular-nums text-[#8f2448]">
+                  {yesCount}
+                </span>
+              </div>
+              <div className="border-r border-[#efb5c9] px-2 py-1">
+                <span className="text-[#8f5070]">Yes+Maybe</span>
+                <span className="ml-2 font-semibold tabular-nums text-[#a33a62]">
+                  {yesMaybeCount}
+                </span>
+              </div>
+              <div className="px-2 py-1">
+                <span className="text-[#8f5070]">Yes+Maybe+No Response</span>
+                <span className="ml-2 font-semibold tabular-nums text-[#7a1239]">
+                  {yesMaybeInvitedCount}
+                </span>
+              </div>
             </div>
           </div>
         </div>

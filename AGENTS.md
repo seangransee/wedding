@@ -1,7 +1,8 @@
 # Wedding Website
 
-Next.js app for Sean and Lexi's wedding website. The app has three main surfaces:
+Next.js app for Sean and Lexi's wedding website. The app has four main surfaces:
 
+- `/` - public wedding info page, unless a valid guest cookie redirects to the matching invitation link.
 - `/savethedate` - public save-the-date page.
 - `/:slug` - guest-specific invitation and RSVP page.
 - `/admin` - password-gated guest/RSVP management spreadsheet.
@@ -43,7 +44,7 @@ Core tables:
 
 ## Routes and Flow
 
-- `src/app/page.tsx`: root route. If the guest cookie contains a valid existing slug, it redirects to `/:slug`; otherwise it redirects to `/savethedate`.
+- `src/app/page.tsx`: root route. If the guest cookie contains a valid existing slug, it redirects to `/:slug`; otherwise it shows the public wedding info page.
 - `src/app/savethedate/page.tsx`: public save-the-date page with calendar/map links and static Open Graph metadata.
 - `src/app/[slug]/page.tsx`: dynamic invitation page. It loads guest, RSVP, and attendee data by slug; missing slugs call `notFound()`. The route is `force-dynamic` because it depends on database state and cookies.
 - `src/app/[slug]/rsvp-form.tsx`: client RSVP form. It autosaves when status/count selections change and saves place-card names on blur or explicit Save.
@@ -52,7 +53,7 @@ Core tables:
 - `src/app/admin/admin-client.tsx`: spreadsheet UI for adding, editing, sorting, reordering, copying links, viewing links, deleting guests, and toggling flags.
 - `src/app/*/opengraph-image.tsx` and `src/lib/opengraph-image.tsx`: generated PNG Open Graph images for public save-the-date and per-guest invitation links.
 
-Global styling lives in `src/app/globals.css`. The guest invitation page uses `public/sexi-background.jpg`; Open Graph image generation uses local fonts from `public/fonts/`.
+Global styling lives in `src/app/globals.css`. The shared public/invitation page shell lives in `src/app/wedding-page-shell.tsx`, includes sticky in-page section navigation, and uses `public/sexi-background.jpg`; Open Graph image generation uses local fonts from `public/fonts/`.
 
 ## Open Graph Images
 
@@ -80,7 +81,7 @@ Slug rules are centralized in `src/lib/slug.ts`: lowercase letters, numbers, and
 - A guest slug path is exactly one top-level segment, not `admin` or `savethedate`, and must match the slug pattern.
 - On `GET /{slug}`, if the slug exists in `wedding_guests`, the proxy sets the `sexi-guest` cookie to that slug.
 - On `GET /` or `GET /savethedate`, if `sexi-guest` is a valid existing slug, the proxy redirects to `/{slug}`.
-- `src/app/page.tsx` repeats the root redirect as a fallback.
+- `src/app/page.tsx` repeats the root redirect as a fallback, then renders the public wedding info page when there is no valid guest cookie.
 
 The RSVP server action does not trust the form slug alone. `autosaveRsvp` permits saving only when either:
 
@@ -110,6 +111,7 @@ Be careful changing validation: database constraints, server action validation, 
 - Editable columns are Name, URL, Notes, and Max. URL is locked when `invite_sent` is true.
 - Sorting is URL-driven with `?sort=...&dir=...`. Default sort uses `sort_order`.
 - Drag-to-reorder is available only in default sort; it saves the full ordered guest id list through `reorderGuestRows`.
+- The Export CSV button downloads the loaded admin data as one CSV with `guest` rows for current invitation/RSVP state and `rsvp_audit` rows for visible RSVP edit history.
 - Deleting a guest requires typing `delete`, soft-deletes visible audit events for that guest, then deletes the guest row. RSVP and attendee rows cascade from foreign keys.
 - The audit table shown in admin filters to RSVP events and hides the `Sean and Lexi` guest name.
 

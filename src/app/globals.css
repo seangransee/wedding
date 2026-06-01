@@ -81,15 +81,15 @@ body {
 .guest-double-happiness {
   position: absolute;
   display: grid;
-  inline-size: 3rem;
-  block-size: 3rem;
+  inline-size: 2.65rem;
+  block-size: 2.65rem;
   place-items: center;
   border: 1px solid rgba(241, 201, 109, 0.95);
   border-radius: 999px;
   background: rgba(3, 27, 18, 0.86);
   color: #ffd86e;
   font-family: "Times New Roman", "PingFang SC", "Hiragino Sans GB", "Heiti SC", serif;
-  font-size: 2rem;
+  font-size: 1.75rem;
   font-weight: 700;
   line-height: 1;
   box-shadow: 0 0.6rem 1.2rem rgba(3, 27, 18, 0.45), inset 0 0 0 1px rgba(255, 246, 250, 0.16);
