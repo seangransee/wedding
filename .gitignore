@@ -41,3 +41,6 @@ yarn-error.log*
 next-env.d.ts
 
 .playwright-mcp
+
+# Project agent instructions should be tracked even if globally ignored.
+!AGENTS.md
