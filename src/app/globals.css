@@ -76,9 +76,9 @@ body {
   inset: 0;
   z-index: -1;
   background-image: url("/sexi-background.jpg");
-  background-position: -14% 56%;
+  background-position: center 48%;
   background-repeat: no-repeat;
-  background-size: 110vw auto;
+  background-size: min(110vw, 1450px) auto;
   transform: translateZ(0);
 }
 
