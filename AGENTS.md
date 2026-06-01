@@ -112,7 +112,7 @@ Be careful changing validation: database constraints, server action validation, 
 
 ## Admin Behavior
 
-- Admin auth is a simple HTTP-only cookie. The password and cookie names are in `src/lib/cookies.ts`; do not duplicate the password elsewhere.
+- Admin auth is a simple HTTP-only cookie. The password comes from the `ADMIN_PASSWORD` environment variable, and cookie names are in `src/lib/cookies.ts`; do not duplicate the password elsewhere.
 - `/admin` uses `react-data-grid` with all rows rendered and a responsive width calculation.
 - Editable columns are Name, URL, Notes, and Max. URL is locked when `invite_sent` is true.
 - Sorting is URL-driven with `?sort=...&dir=...`. Default sort uses `sort_order`.
