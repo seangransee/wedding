@@ -80,7 +80,7 @@ Slug rules are centralized in `src/lib/slug.ts`: lowercase letters, numbers, and
 
 - A guest slug path is exactly one top-level segment, not `admin` or `savethedate`, and must match the slug pattern.
 - On `GET /{slug}`, if the slug exists in `wedding_guests`, the proxy sets the `sexi-guest` cookie to that slug.
-- On `GET /` or `GET /savethedate`, if `sexi-guest` is a valid existing slug, the proxy redirects to `/{slug}`.
+- On `GET /`, if `sexi-guest` is a valid existing slug, the proxy redirects to `/{slug}`. `/savethedate` stays public and does not redirect based on the guest cookie.
 - `src/app/page.tsx` repeats the root redirect as a fallback, then renders the public wedding info page when there is no valid guest cookie.
 
 The RSVP server action does not trust the form slug alone. `autosaveRsvp` permits saving only when either:

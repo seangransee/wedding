@@ -16,7 +16,7 @@ export async function proxy(request: NextRequest) {
 
   if (
     request.method === "GET" &&
-    (pathname === "/" || pathname === "/savethedate") &&
+    pathname === "/" &&
     isValidSlug(guestSlug) &&
     (await guestSlugExists(guestSlug))
   ) {
