@@ -4,7 +4,7 @@ It all started the way the best stories do 😉 sweaty, sandy, and completely un
 
 On June 2nd, 2017, we met at North Avenue Beach during an adult rec league volleyball game. (Yes, beach volleyball. Yes, we're that couple.) Neither of us had any idea that the day before Sean's birthday would turn out to be one of the most important days of our lives. We rang in Sean's birthday dancing the night away, which honestly feels very on-brand for us.
 
-We quickly became really good friends, hitting up fun concerts like Taylor Swift's Reputation Tour and Colin Jost’s stand-up tour, and generally making the most of Chicago. Until a trip to Russia changed everything. The rest, as they say, is history. An extremely chaotic, adventure-filled history.
+We quickly became really good friends, hitting up fun concerts like Taylor Swift's Reputation Tour, various Rod Tuffcurls and the Bench Press concerts, Colin Jost’s stand-up tour, and generally making the most of Chicago. Until a trip to Russia changed everything. The rest, as they say, is history. An extremely chaotic, adventure-filled history.
 
 When COVID hit, we moved in together and nothing says "I love you" quite like sharing 850 square feet during a global pandemic and coming out the other side still actually liking each other. Then in January 2021, we got the baby, Nala, who has been running the household ever since and absolutely knows it.
 
