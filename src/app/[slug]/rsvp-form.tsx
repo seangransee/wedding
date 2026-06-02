@@ -47,7 +47,7 @@ type ErrorLocation = "status" | "count" | "names" | "global" | null;
 function ErrorNote({ children }: { children: ReactNode }) {
   return (
     <div
-      className="rounded-md border border-[#be185d]/45 bg-[#fff1f7] px-3 py-2 text-sm font-semibold leading-relaxed text-[#8f2448] shadow-[inset_3px_0_0_#be185d]"
+      className="rounded-md border border-[#be185d]/45 bg-[#fff1f7] px-4 py-3 text-lg font-semibold leading-relaxed text-[#8f2448] shadow-[inset_3px_0_0_#be185d] sm:text-xl"
       role="alert"
     >
       {children}
@@ -214,22 +214,22 @@ export function RsvpForm({
   }
 
   return (
-    <form ref={formRef} onSubmit={(event) => event.preventDefault()} className="grid gap-5 sm:gap-6">
+    <form ref={formRef} onSubmit={(event) => event.preventDefault()} className="grid gap-6 sm:gap-7">
       <input type="hidden" name="slug" value={slug} />
       <input type="hidden" name="status" value={status} />
       <input type="hidden" name="attendingCount" value={effectiveAttendingCount ?? ""} />
 
       <div className="min-w-0">
-        <h2 className="break-words text-3xl font-semibold leading-tight text-[#054f2d] sm:text-4xl">
+        <h2 className="break-words text-4xl font-semibold leading-tight text-[#054f2d] sm:text-6xl">
           {guestName}, you&apos;re invited!
         </h2>
       </div>
 
-      <div className="grid gap-3">
-        <p className="text-base font-semibold text-[#4a1f2e]">
+      <div className="grid gap-4">
+        <p className="text-lg font-semibold leading-[1.65] text-[#351421] sm:text-xl">
           Will you be attending?
         </p>
-        <p className="text-sm leading-relaxed text-[#4a1f2e]/72">
+        <p className="text-lg leading-[1.85] text-[#351421] sm:text-xl">
           {fuckYes ? (
             <>
               Please RSVP with a final answer by{" "}
@@ -243,7 +243,7 @@ export function RsvpForm({
             </>
           )}
         </p>
-        <div className={`grid gap-2 sm:gap-3 ${fuckYes ? "sm:grid-cols-2" : "sm:grid-cols-3"}`}>
+        <div className="grid gap-3">
           {rsvpOptions.map((option) => {
             const selected = selectedOptionId === option.id;
             return (
@@ -279,7 +279,7 @@ export function RsvpForm({
                   });
                 }}
                 aria-pressed={selected}
-                className={`min-h-13 rounded-md border px-4 text-sm font-semibold uppercase tracking-[0.14em] transition sm:tracking-[0.16em] ${
+                className={`min-h-14 rounded-md border px-4 text-base font-semibold uppercase tracking-[0.12em] transition sm:text-lg ${
                   selected
                     ? "border-[#054f2d] bg-[#054f2d] text-[#fff6fa]"
                     : "border-[#b8860b]/35 bg-white/54 text-[#054f2d] hover:border-[#054f2d]"
@@ -298,11 +298,11 @@ export function RsvpForm({
       {status === "yes" ? (
         <div className="grid gap-5">
           {guestCount > 1 ? (
-            <div className="grid gap-3">
-              <p className="text-base font-semibold text-[#4a1f2e]">
+            <div className="grid gap-4">
+              <p className="text-lg font-semibold leading-[1.65] text-[#351421] sm:text-xl">
                 How many attending?
               </p>
-              <div className="grid grid-cols-5 gap-2 sm:grid-cols-10">
+              <div className="grid grid-cols-5 gap-2">
                 {Array.from({ length: guestCount }, (_, index) => index + 1).map(
                   (count) => {
                     const selected = attendingCount === count;
@@ -330,7 +330,7 @@ export function RsvpForm({
                           });
                         }}
                         aria-pressed={selected}
-                        className={`min-h-12 rounded-md border text-base font-semibold transition sm:aspect-square ${
+                        className={`min-h-12 rounded-md border text-lg font-semibold transition sm:min-h-14 sm:text-xl ${
                           selected
                             ? "border-[#054f2d] bg-[#054f2d] text-[#fff6fa]"
                             : "border-[#b8860b]/35 bg-white/54 text-[#054f2d] hover:border-[#054f2d]"
@@ -350,13 +350,13 @@ export function RsvpForm({
           ) : null}
 
           {visibleAttendeeDetails.length > 0 ? (
-            <div className="grid gap-3">
-              <p className="text-sm text-[#4a1f2e]/70">
+            <div className="grid gap-4">
+              <p className="text-lg leading-[1.85] text-[#351421] sm:text-xl">
                 {visibleAttendeeDetails.length === 1
                   ? "Enter your full name exactly as it should appear on the place card."
                   : "Enter each full name exactly as it should appear on the place card."}
               </p>
-              <p className="text-sm leading-relaxed text-[#4a1f2e]/70">
+              <p className="text-lg leading-[1.85] text-[#351421] sm:text-xl">
                 Please select your meal type and note below if you have any dietary restrictions or allergies we need to be aware of.
               </p>
               {currentErrorLocation === "names" ? (
@@ -365,7 +365,7 @@ export function RsvpForm({
               {visibleAttendeeDetails.map((attendee, index) => (
                 <div
                   key={index}
-                  className="grid gap-3 rounded-md border border-[#b8860b]/25 bg-white/50 p-3 text-sm font-semibold text-[#054f2d]"
+                  className="grid gap-4 rounded-md border border-[#b8860b]/25 bg-white/50 p-4 text-lg font-semibold leading-[1.5] text-[#054f2d] sm:text-xl"
                 >
                   <label htmlFor={`attendee-name-${index}`}>
                     {visibleAttendeeDetails.length === 1 ? "Full name" : `Full name ${index + 1}`}
@@ -391,7 +391,7 @@ export function RsvpForm({
                         setAttendeeDetails(next);
                       }}
                       autoComplete="name"
-                      className="min-h-12 min-w-0 rounded-md border border-[#b8860b]/35 bg-white px-3 text-base font-normal text-[#4a1f2e] outline-none transition focus:border-[#054f2d] focus:ring-2 focus:ring-[#054f2d]/20"
+                      className="min-h-12 min-w-0 rounded-md border border-[#b8860b]/35 bg-white px-3 text-lg font-normal text-[#4a1f2e] outline-none transition focus:border-[#054f2d] focus:ring-2 focus:ring-[#054f2d]/20 sm:min-h-14 sm:text-xl"
                     />
                     <button
                       type="button"
@@ -402,7 +402,7 @@ export function RsvpForm({
                           attendingCount: effectiveAttendingCount,
                         });
                       }}
-                      className="min-h-12 rounded-md border border-[#b8860b]/55 bg-[#054f2d] px-3 text-xs font-semibold uppercase tracking-[0.12em] text-[#fff6fa] transition hover:bg-[#0d6b40] disabled:cursor-not-allowed disabled:opacity-60 sm:px-4"
+                      className="min-h-12 rounded-md border border-[#b8860b]/55 bg-[#054f2d] px-3 text-sm font-semibold uppercase tracking-[0.1em] text-[#fff6fa] transition hover:bg-[#0d6b40] disabled:cursor-not-allowed disabled:opacity-60 sm:min-h-14 sm:px-4 sm:text-base"
                     >
                       Save
                     </button>
@@ -412,7 +412,7 @@ export function RsvpForm({
                     aria-labelledby={`attendee-meal-label-${index}`}
                     className="grid gap-2"
                   >
-                    <legend id={`attendee-meal-label-${index}`} className="text-sm font-semibold text-[#054f2d]">
+                    <legend id={`attendee-meal-label-${index}`} className="text-lg font-semibold text-[#054f2d] sm:text-xl">
                       Meal type
                     </legend>
                     <input
@@ -420,7 +420,7 @@ export function RsvpForm({
                       name="attendeeMealTypes"
                       value={attendee.mealType ?? ""}
                     />
-                    <div className="grid gap-2 sm:grid-cols-3">
+                    <div className="grid gap-3">
                       {MEAL_OPTIONS.map((option) => {
                         const selected = attendee.mealType === option.value;
 
@@ -445,7 +445,7 @@ export function RsvpForm({
                                 attendeeDetails: next,
                               });
                             }}
-                            className={`grid min-h-11 grid-cols-[auto_1fr] items-center gap-2 rounded-md border px-3 text-left text-sm font-semibold transition ${
+                            className={`grid min-h-12 grid-cols-[auto_1fr] items-center gap-3 rounded-md border px-3 text-left text-lg font-semibold transition sm:min-h-14 sm:text-xl ${
                               selected
                                 ? "border-[#054f2d] bg-[#e8f3eb] text-[#054f2d]"
                                 : "border-[#b8860b]/35 bg-white/70 text-[#4a1f2e] hover:border-[#054f2d]"
@@ -493,7 +493,7 @@ export function RsvpForm({
                         };
                         setAttendeeDetails(next);
                       }}
-                      className="min-h-24 min-w-0 resize-y rounded-md border border-[#b8860b]/35 bg-white px-3 py-2 text-base font-normal text-[#4a1f2e] outline-none transition focus:border-[#054f2d] focus:ring-2 focus:ring-[#054f2d]/20"
+                      className="min-h-28 min-w-0 resize-y rounded-md border border-[#b8860b]/35 bg-white px-3 py-2 text-lg font-normal text-[#4a1f2e] outline-none transition focus:border-[#054f2d] focus:ring-2 focus:ring-[#054f2d]/20 sm:text-xl"
                     />
                   </div>
                 </div>
@@ -503,7 +503,7 @@ export function RsvpForm({
         </div>
       ) : null}
 
-      <div className="-mx-4 -mb-4 grid gap-2 border-t border-[#b8860b]/20 bg-[#fff6fa]/38 px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] text-center text-sm font-semibold backdrop-blur-sm sm:m-0 sm:border-t-0 sm:bg-transparent sm:p-0 sm:text-left sm:backdrop-blur-none">
+      <div className="-mx-5 -mb-5 grid gap-2 border-t border-[#b8860b]/20 bg-[#fff6fa]/38 px-5 py-4 pb-[calc(1rem+env(safe-area-inset-bottom))] text-center text-lg font-semibold backdrop-blur-sm sm:-mx-8 sm:-mb-8 sm:px-8 sm:text-xl lg:-mx-10 lg:-mb-10 lg:px-10">
         <p className="text-[#054f2d]/75" role="status" aria-live="polite">
           {isSaving ? "Saving..." : saveState.ok ? "Saved" : ""}
         </p>

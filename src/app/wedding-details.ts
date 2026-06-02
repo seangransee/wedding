@@ -1,9 +1,34 @@
+const WEDDING_WEBSITE_URL = "https://sexiwedding.com";
+
+type WeddingCalendarUrlOptions = {
+  websiteUrl?: string;
+  descriptionIntro?: string;
+};
+
+export function getWeddingCalendarUrl({
+  websiteUrl = WEDDING_WEBSITE_URL,
+  descriptionIntro = "Sean + Lexi = Sexi",
+}: WeddingCalendarUrlOptions = {}) {
+  const params = new URLSearchParams({
+    action: "TEMPLATE",
+    text: "Sean & Lexi's Wedding",
+    dates: "20261212/20261213",
+    location:
+      "The Blackstone, Autograph Collection, 636 South Michigan Avenue, Chicago, IL 60605, USA",
+    details: `${descriptionIntro}\n\n${websiteUrl}`,
+  });
+
+  params.append("sprop", `website:${websiteUrl}`);
+
+  return `https://www.google.com/calendar/render?${params.toString()}`;
+}
+
 export const WEDDING_DETAILS = {
   brand: "Sean + Lexi = Sexi",
   dateLabel: "December 12, 2026",
   venueName: "The Blackstone Hotel",
   locationLabel: "Chicago, IL",
   mapUrl: "https://maps.app.goo.gl/UKgUKENz1W4efCC7A",
-  calendarUrl:
-    "https://www.google.com/calendar/render?action=TEMPLATE&text=Sean%20%26%20Lexi%27s%20Wedding&dates=20261212/20261213&location=The%20Blackstone%2C%20Autograph%20Collection%2C%20636%20South%20Michigan%20Avenue%2C%20Chicago%2C%20IL%2060605%2C%20USA&details=Sean%20%2B%20Lexi%20%3D%20Sexi",
+  websiteUrl: WEDDING_WEBSITE_URL,
+  calendarUrl: getWeddingCalendarUrl(),
 };

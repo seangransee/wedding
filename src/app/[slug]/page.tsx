@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getGuestPageData } from "@/lib/db";
+import { WEDDING_DETAILS } from "../wedding-details";
 import { WeddingPageShell } from "../wedding-page-shell";
 import { RsvpForm } from "./rsvp-form";
 
@@ -70,6 +71,7 @@ export default async function GuestPage({ params }: PageProps) {
 
   return (
     <WeddingPageShell
+      calendarWebsiteUrl={new URL(slug, WEDDING_DETAILS.websiteUrl).toString()}
       panelId="rsvp"
       panelNavLabel="RSVP"
       showHotelBlocks

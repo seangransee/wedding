@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { WEDDING_DETAILS } from "../wedding-details";
 
 export const metadata: Metadata = {
   title: "Save the Date!",
@@ -103,7 +104,7 @@ export default function SaveTheDate() {
             <div>
               <p className="text-2xl font-semibold sm:text-3xl">
                 <a
-                  href="https://www.google.com/calendar/render?action=TEMPLATE&text=Sean%20%26%20Lexi%27s%20Wedding&dates=20261212/20261213&location=The%20Blackstone%2C%20Autograph%20Collection%2C%20636%20South%20Michigan%20Avenue%2C%20Chicago%2C%20IL%2060605%2C%20USA&details=Lexi%20and%20Sean%20are%20finally%20getting%20married."
+                  href={WEDDING_DETAILS.calendarUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-current underline decoration-dashed decoration-1 decoration-[#054f2d]/50 underline-offset-6 transition-colors hover:text-[#f1b3c6] hover:decoration-[#f1b3c6]"
@@ -133,7 +134,7 @@ export default function SaveTheDate() {
           </div>
           <div className="mt-8 sm:mt-10 text-center">
             <a
-              href="https://www.google.com/calendar/render?action=TEMPLATE&text=Sean%20%26%20Lexi%27s%20Wedding&dates=20261212/20261213&location=The%20Blackstone%2C%20Autograph%20Collection%2C%20636%20South%20Michigan%20Avenue%2C%20Chicago%2C%20IL%2060605%2C%20USA&details=Sean%20%2B%20Lexi%20%3D%20Sexi"
+              href={WEDDING_DETAILS.calendarUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-block text-sm font-semibold uppercase tracking-[0.2em] text-[#054f2d]/80 underline decoration-dashed decoration-1 underline-offset-4 transition-colors hover:text-[#f1b3c6] hover:decoration-[#f1b3c6]"
