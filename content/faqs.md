@@ -1,7 +1,5 @@
 # Frequently Asked Questions
 
-December 2026 · Chicago, Illinois
-
 ## Logistics & Travel
 
 ### When and where is the wedding?

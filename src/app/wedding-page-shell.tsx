@@ -115,8 +115,8 @@ function LongFormSections({ showHotelBlocks }: { showHotelBlocks: boolean }) {
       <MarkdownContent
         id="faqs"
         fileName="faqs.md"
+        emphasizeHeadings
         lockedBlocks={!showHotelBlocks}
-        subtitleFromFirstParagraph
       />
       <MarkdownContent
         id="hotel-blocks"

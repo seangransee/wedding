@@ -29,6 +29,7 @@ type MarkdownNode =
 type MarkdownContentProps = {
   fileName: string;
   id: string;
+  emphasizeHeadings?: boolean;
   lockedBlocks?: boolean;
   subtitleFromFirstParagraph?: boolean;
 };
@@ -173,7 +174,11 @@ function renderInlineMarkdown(text: string) {
   return parts;
 }
 
-function renderNodes(nodes: MarkdownNode[], lockedBlocks: boolean): ReactNode[] {
+function renderNodes(
+  nodes: MarkdownNode[],
+  lockedBlocks: boolean,
+  emphasizeHeadings: boolean,
+): ReactNode[] {
   return nodes.map((node, index) => {
     switch (node.type) {
       case "heading":
@@ -192,7 +197,11 @@ function renderNodes(nodes: MarkdownNode[], lockedBlocks: boolean): ReactNode[] 
           return (
             <h3
               key={index}
-              className="border-t border-[#b8860b]/40 pt-7 text-base font-semibold uppercase tracking-[0.18em] text-[#7a1239] first:border-t-0 first:pt-0 sm:pt-8 sm:text-lg sm:tracking-[0.22em]"
+              className={
+                emphasizeHeadings
+                  ? "border-y border-[#b8860b]/55 bg-[#f9dce8]/45 px-3 py-3 text-center text-base font-bold uppercase tracking-[0.2em] text-[#7a1239] shadow-[inset_0_1px_0_rgba(255,255,255,0.7)] first:mt-0 sm:px-5 sm:py-4 sm:text-lg sm:tracking-[0.24em]"
+                  : "border-t border-[#b8860b]/40 pt-7 text-base font-semibold uppercase tracking-[0.18em] text-[#7a1239] first:border-t-0 first:pt-0 sm:pt-8 sm:text-lg sm:tracking-[0.22em]"
+              }
             >
               {renderInlineMarkdown(node.text)}
             </h3>
@@ -202,7 +211,11 @@ function renderNodes(nodes: MarkdownNode[], lockedBlocks: boolean): ReactNode[] 
         return (
           <h4
             key={index}
-            className="border-t border-[#b8860b]/35 pt-4 text-2xl font-semibold leading-tight text-[#043d24] first:border-t-0 first:pt-0 sm:text-3xl"
+            className={
+              emphasizeHeadings
+                ? "border-l-4 border-[#b8860b] bg-[#fff1f7]/80 py-3 pl-4 pr-3 text-[1.7rem] font-semibold leading-tight text-[#043d24] shadow-[inset_0_1px_0_rgba(255,255,255,0.75)] sm:pl-5 sm:text-3xl"
+                : "border-t border-[#b8860b]/35 pt-4 text-2xl font-semibold leading-tight text-[#043d24] first:border-t-0 first:pt-0 sm:text-3xl"
+            }
           >
             {renderInlineMarkdown(node.text)}
           </h4>
@@ -247,7 +260,7 @@ function renderNodes(nodes: MarkdownNode[], lockedBlocks: boolean): ReactNode[] 
 
         return (
           <div key={index} className="grid gap-3">
-            {renderNodes(node.children, lockedBlocks)}
+            {renderNodes(node.children, lockedBlocks, emphasizeHeadings)}
           </div>
         );
     }
@@ -256,6 +269,7 @@ function renderNodes(nodes: MarkdownNode[], lockedBlocks: boolean): ReactNode[] 
 
 export function MarkdownContent({
   fileName,
+  emphasizeHeadings = false,
   id,
   lockedBlocks = false,
   subtitleFromFirstParagraph = false,
@@ -271,7 +285,7 @@ export function MarkdownContent({
   return (
     <section
       id={id}
-      className="relative z-10 mx-auto mt-5 max-w-5xl scroll-mt-28 sm:mt-8"
+      className="relative z-10 mx-auto mt-12 max-w-5xl scroll-mt-28 sm:mt-16 lg:mt-20"
     >
       <article className="grid gap-6 rounded-lg border border-[#b8860b]/60 bg-[#fffafd]/96 p-5 text-[#351421] shadow-[0_26px_70px_-40px_rgba(0,0,0,0.68)] backdrop-blur-sm sm:gap-7 sm:p-8 lg:p-10">
         <header className="grid gap-3 border-b border-[#b8860b]/45 pb-5 text-center sm:pb-6">
@@ -280,9 +294,13 @@ export function MarkdownContent({
               {renderInlineMarkdown(subtitle.text)}
             </p>
           ) : null}
-          {firstNode ? renderNodes([firstNode], lockedBlocks) : null}
+          {firstNode
+            ? renderNodes([firstNode], lockedBlocks, emphasizeHeadings)
+            : null}
         </header>
-        <div className="grid gap-6">{renderNodes(bodyNodes, lockedBlocks)}</div>
+        <div className="grid gap-6">
+          {renderNodes(bodyNodes, lockedBlocks, emphasizeHeadings)}
+        </div>
       </article>
     </section>
   );
