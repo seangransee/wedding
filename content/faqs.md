@@ -10,7 +10,7 @@ Our wedding is on Saturday, December 12, 2026, at The Blackstone Chicago, locate
 
 ### What is the best way to get to the venue?
 
-The venue is easily accessible by rideshare (Uber/Lyft are plentiful in Chicago) and we recommend this as the easiest option, especially if you plan to really enjoy Rod Tuffcurls and the Benchpress and the open bar! There is also very limited street parking, valet parking at the hotel for $72 or self-parking across the street at the Hilton Chicago for $39.
+The venue is easily accessible by rideshare (Uber/Lyft are plentiful in Chicago) and we recommend this as the easiest option, especially if you plan to really enjoy Rod Tuffcurls and the Benchpress and the open bar! There is also very limited street parking, valet parking at the hotel for $32 or self-parking across the street at the Hilton Chicago for $39.
 
 ### What should I expect weather-wise in Chicago in December?
 
