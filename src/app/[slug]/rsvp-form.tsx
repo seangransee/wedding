@@ -7,7 +7,7 @@ import {
   type ReactNode,
 } from "react";
 import { autosaveRsvp, type RsvpActionState } from "./actions";
-import type { RsvpStatus } from "@/lib/db";
+import type { MealType, RsvpAttendeeDetails, RsvpStatus } from "@/lib/db";
 
 type RsvpFormProps = {
   slug: string;
@@ -16,7 +16,7 @@ type RsvpFormProps = {
   fuckYes: boolean;
   initialStatus: RsvpStatus | "";
   initialAttendingCount: number | null;
-  initialAttendeeNames: string[];
+  initialAttendeeDetails: RsvpAttendeeDetails[];
 };
 
 type RsvpOption = {
@@ -34,6 +34,12 @@ const RSVP_OPTIONS: RsvpOption[] = [
 const FUCK_YES_RSVP_OPTIONS: RsvpOption[] = [
   { id: "yes", value: "yes", label: "Yes" },
   { id: "fuck-yes", value: "yes", label: "Fuck yes" },
+];
+
+const MEAL_OPTIONS: Array<{ value: MealType; label: string }> = [
+  { value: "beef", label: "Beef" },
+  { value: "fish", label: "Fish" },
+  { value: "vegetarian", label: "Vegetarian" },
 ];
 
 type ErrorLocation = "status" | "count" | "names" | "global" | null;
@@ -76,7 +82,7 @@ export function RsvpForm({
   fuckYes,
   initialStatus,
   initialAttendingCount,
-  initialAttendeeNames,
+  initialAttendeeDetails,
 }: RsvpFormProps) {
   const visibleInitialStatus = fuckYes && initialStatus !== "yes" ? "" : initialStatus;
   const rsvpOptions = fuckYes ? FUCK_YES_RSVP_OPTIONS : RSVP_OPTIONS;
@@ -87,10 +93,10 @@ export function RsvpForm({
       values: {
         status: visibleInitialStatus,
         attendingCount: initialAttendingCount,
-        attendeeNames: initialAttendeeNames,
+        attendeeDetails: initialAttendeeDetails,
       },
     }),
-    [initialAttendeeNames, initialAttendingCount, visibleInitialStatus],
+    [initialAttendeeDetails, initialAttendingCount, visibleInitialStatus],
   );
   const [saveState, setSaveState] = useState<RsvpActionState>(initialState);
   const [status, setStatus] = useState<RsvpStatus | "">(visibleInitialStatus);
@@ -98,8 +104,8 @@ export function RsvpForm({
   const [attendingCount, setAttendingCount] = useState<number | null>(
     initialAttendingCount,
   );
-  const [attendeeNames, setAttendeeNames] =
-    useState<string[]>(initialAttendeeNames);
+  const [attendeeDetails, setAttendeeDetails] =
+    useState<RsvpAttendeeDetails[]>(initialAttendeeDetails);
   const [localError, setLocalError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
@@ -108,38 +114,57 @@ export function RsvpForm({
     ? 1
     : attendingCount;
 
-  const visibleNames = useMemo(() => {
+  const visibleAttendeeDetails = useMemo(() => {
     const count = effectiveAttendingCount ?? 0;
     return Array.from(
       { length: count },
-      (_, index) => attendeeNames[index] ?? "",
+      (_, index) => attendeeDetails[index] ?? {
+        fullName: "",
+        mealType: null,
+        dietaryNotes: "",
+      },
     );
-  }, [attendeeNames, effectiveAttendingCount]);
+  }, [attendeeDetails, effectiveAttendingCount]);
   const displayedError = localError || (!saveState.ok ? saveState.message : "");
   const currentErrorLocation = errorLocation(displayedError, false);
 
-  function currentAttendeeNames() {
-    return Array.from(
-      formRef.current?.querySelectorAll<HTMLInputElement>(
-        'input[name="attendeeNames"]',
-      ) ?? [],
+  function currentAttendeeDetails() {
+    const names = Array.from(
+      formRef.current?.querySelectorAll<HTMLInputElement>('input[name="attendeeNames"]') ?? [],
       (input) => input.value,
     );
+    const mealTypes = Array.from(
+      formRef.current?.querySelectorAll<HTMLInputElement>('input[name="attendeeMealTypes"]') ?? [],
+      (input) => input.value,
+    );
+    const dietaryNotes = Array.from(
+      formRef.current?.querySelectorAll<HTMLTextAreaElement>('textarea[name="attendeeDietaryNotes"]') ?? [],
+      (textarea) => textarea.value,
+    );
+    const count = Math.max(names.length, mealTypes.length, dietaryNotes.length);
+
+    return Array.from({ length: count }, (_, index) => ({
+      fullName: names[index] ?? "",
+      mealType: mealTypes[index] === "beef" || mealTypes[index] === "fish" || mealTypes[index] === "vegetarian"
+        ? mealTypes[index]
+        : null,
+      dietaryNotes: dietaryNotes[index] ?? "",
+    }));
   }
 
   async function saveDraft(nextValues?: {
     status?: RsvpStatus | "";
     attendingCount?: number | null;
-    attendeeNames?: string[];
+    attendeeDetails?: RsvpAttendeeDetails[];
   }) {
     const nextStatus = nextValues?.status ?? status;
     const nextAttendingCount =
       nextStatus === "yes" && guestCount === 1
         ? 1
         : nextValues?.attendingCount ?? attendingCount;
-    const namesFromInputs = currentAttendeeNames();
-    const nextNames = nextValues?.attendeeNames ?? (
-      namesFromInputs.length > 0 ? namesFromInputs : attendeeNames
+    const detailsFromInputs = currentAttendeeDetails();
+    const nextDetails = nextValues?.attendeeDetails ?? (
+      detailsFromInputs.length > 0 ? detailsFromInputs : attendeeDetails
     );
 
     if (!nextStatus) {
@@ -163,8 +188,16 @@ export function RsvpForm({
     if (nextStatus === "yes" && nextAttendingCount) {
       Array.from(
         { length: nextAttendingCount },
-        (_, index) => nextNames[index] ?? "",
-      ).forEach((name) => formData.append("attendeeNames", name));
+        (_, index) => nextDetails[index] ?? {
+          fullName: "",
+          mealType: null,
+          dietaryNotes: "",
+        },
+      ).forEach((attendee) => {
+        formData.append("attendeeNames", attendee.fullName);
+        formData.append("attendeeMealTypes", attendee.mealType ?? "");
+        formData.append("attendeeDietaryNotes", attendee.dietaryNotes);
+      });
     }
 
     const sequence = saveSequence.current + 1;
@@ -226,7 +259,11 @@ export function RsvpForm({
                   const nextNames = option.value === "yes" && nextCount
                     ? Array.from(
                         { length: nextCount },
-                        (_, nameIndex) => attendeeNames[nameIndex] ?? "",
+                        (_, attendeeIndex) => attendeeDetails[attendeeIndex] ?? {
+                          fullName: "",
+                          mealType: null,
+                          dietaryNotes: "",
+                        },
                       )
                     : [];
 
@@ -234,11 +271,11 @@ export function RsvpForm({
                   setSelectedOptionId(option.id);
                   setStatus(option.value);
                   setAttendingCount(nextCount);
-                  setAttendeeNames(nextNames);
+                  setAttendeeDetails(nextNames);
                   void saveDraft({
                     status: option.value,
                     attendingCount: nextCount,
-                    attendeeNames: nextNames,
+                    attendeeDetails: nextNames,
                   });
                 }}
                 aria-pressed={selected}
@@ -276,16 +313,20 @@ export function RsvpForm({
                         onClick={() => {
                           const nextNames = Array.from(
                             { length: count },
-                            (_, nameIndex) => attendeeNames[nameIndex] ?? "",
+                            (_, attendeeIndex) => attendeeDetails[attendeeIndex] ?? {
+                              fullName: "",
+                              mealType: null,
+                              dietaryNotes: "",
+                            },
                           );
 
                           setLocalError("");
                           setAttendingCount(count);
-                          setAttendeeNames(nextNames);
+                          setAttendeeDetails(nextNames);
                           void saveDraft({
                             status: "yes",
                             attendingCount: count,
-                            attendeeNames: nextNames,
+                            attendeeDetails: nextNames,
                           });
                         }}
                         aria-pressed={selected}
@@ -308,29 +349,32 @@ export function RsvpForm({
             </div>
           ) : null}
 
-          {visibleNames.length > 0 ? (
+          {visibleAttendeeDetails.length > 0 ? (
             <div className="grid gap-3">
               <p className="text-sm text-[#4a1f2e]/70">
-                {visibleNames.length === 1
+                {visibleAttendeeDetails.length === 1
                   ? "Enter your full name exactly as it should appear on the place card."
                   : "Enter each full name exactly as it should appear on the place card."}
+              </p>
+              <p className="text-sm leading-relaxed text-[#4a1f2e]/70">
+                Please select your meal type and note below if you have any dietary restrictions or allergies we need to be aware of.
               </p>
               {currentErrorLocation === "names" ? (
                 <ErrorNote>{displayedError}</ErrorNote>
               ) : null}
-              {visibleNames.map((name, index) => (
+              {visibleAttendeeDetails.map((attendee, index) => (
                 <div
                   key={index}
-                  className="grid gap-2 text-sm font-semibold text-[#054f2d]"
+                  className="grid gap-3 rounded-md border border-[#b8860b]/25 bg-white/50 p-3 text-sm font-semibold text-[#054f2d]"
                 >
                   <label htmlFor={`attendee-name-${index}`}>
-                    {visibleNames.length === 1 ? "Full name" : `Full name ${index + 1}`}
+                    {visibleAttendeeDetails.length === 1 ? "Full name" : `Full name ${index + 1}`}
                   </label>
                   <div className="grid grid-cols-[1fr_auto] gap-2">
                     <input
                       id={`attendee-name-${index}`}
                       name="attendeeNames"
-                      value={name}
+                      value={attendee.fullName}
                       onBlur={() => {
                         void saveDraft({
                           status: "yes",
@@ -339,9 +383,12 @@ export function RsvpForm({
                       }}
                       onChange={(event) => {
                         setLocalError("");
-                        const next = [...visibleNames];
-                        next[index] = event.target.value;
-                        setAttendeeNames(next);
+                        const next = [...visibleAttendeeDetails];
+                        next[index] = {
+                          ...next[index],
+                          fullName: event.target.value,
+                        };
+                        setAttendeeDetails(next);
                       }}
                       autoComplete="name"
                       className="min-h-12 min-w-0 rounded-md border border-[#b8860b]/35 bg-white px-3 text-base font-normal text-[#4a1f2e] outline-none transition focus:border-[#054f2d] focus:ring-2 focus:ring-[#054f2d]/20"
@@ -359,6 +406,95 @@ export function RsvpForm({
                     >
                       Save
                     </button>
+                  </div>
+                  <fieldset
+                    role="radiogroup"
+                    aria-labelledby={`attendee-meal-label-${index}`}
+                    className="grid gap-2"
+                  >
+                    <legend id={`attendee-meal-label-${index}`} className="text-sm font-semibold text-[#054f2d]">
+                      Meal type
+                    </legend>
+                    <input
+                      type="hidden"
+                      name="attendeeMealTypes"
+                      value={attendee.mealType ?? ""}
+                    />
+                    <div className="grid gap-2 sm:grid-cols-3">
+                      {MEAL_OPTIONS.map((option) => {
+                        const selected = attendee.mealType === option.value;
+
+                        return (
+                          <button
+                            key={option.value}
+                            type="button"
+                            role="radio"
+                            aria-checked={selected}
+                            onClick={() => {
+                              const next = [...visibleAttendeeDetails];
+                              next[index] = {
+                                ...next[index],
+                                mealType: selected ? null : option.value,
+                              };
+
+                              setLocalError("");
+                              setAttendeeDetails(next);
+                              void saveDraft({
+                                status: "yes",
+                                attendingCount: effectiveAttendingCount,
+                                attendeeDetails: next,
+                              });
+                            }}
+                            className={`grid min-h-11 grid-cols-[auto_1fr] items-center gap-2 rounded-md border px-3 text-left text-sm font-semibold transition ${
+                              selected
+                                ? "border-[#054f2d] bg-[#e8f3eb] text-[#054f2d]"
+                                : "border-[#b8860b]/35 bg-white/70 text-[#4a1f2e] hover:border-[#054f2d]"
+                            }`}
+                          >
+                            <span
+                              aria-hidden="true"
+                              className={`grid size-4 place-items-center rounded-[3px] border ${
+                                selected
+                                  ? "border-[#054f2d] bg-[#054f2d]"
+                                  : "border-[#b8860b]/55 bg-white"
+                              }`}
+                            >
+                              {selected ? (
+                                <span className="size-2 rounded-[2px] bg-[#fff6fa]" />
+                              ) : null}
+                            </span>
+                            <span>{option.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </fieldset>
+                  <div className="grid gap-2">
+                    <label htmlFor={`attendee-dietary-notes-${index}`}>
+                      Dietary restrictions or allergies
+                    </label>
+                    <textarea
+                      id={`attendee-dietary-notes-${index}`}
+                      name="attendeeDietaryNotes"
+                      value={attendee.dietaryNotes}
+                      rows={3}
+                      onBlur={() => {
+                        void saveDraft({
+                          status: "yes",
+                          attendingCount: effectiveAttendingCount,
+                        });
+                      }}
+                      onChange={(event) => {
+                        setLocalError("");
+                        const next = [...visibleAttendeeDetails];
+                        next[index] = {
+                          ...next[index],
+                          dietaryNotes: event.target.value,
+                        };
+                        setAttendeeDetails(next);
+                      }}
+                      className="min-h-24 min-w-0 resize-y rounded-md border border-[#b8860b]/35 bg-white px-3 py-2 text-base font-normal text-[#4a1f2e] outline-none transition focus:border-[#054f2d] focus:ring-2 focus:ring-[#054f2d]/20"
+                    />
                   </div>
                 </div>
               ))}

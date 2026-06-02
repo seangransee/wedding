@@ -3,7 +3,13 @@
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { ADMIN_COOKIE_NAME, ADMIN_PASSWORD, GUEST_COOKIE_NAME } from "@/lib/cookies";
-import { getGuestBySlug, saveRsvp, type RsvpStatus } from "@/lib/db";
+import {
+  getGuestBySlug,
+  saveRsvp,
+  type MealType,
+  type RsvpAttendeeDetails,
+  type RsvpStatus,
+} from "@/lib/db";
 import { isValidSlug } from "@/lib/slug";
 
 export type RsvpActionState = {
@@ -12,7 +18,7 @@ export type RsvpActionState = {
   values: {
     status: RsvpStatus | "";
     attendingCount: number | null;
-    attendeeNames: string[];
+    attendeeDetails: RsvpAttendeeDetails[];
   };
 };
 
@@ -32,6 +38,18 @@ async function canSubmitForSlug(slug: string) {
   return isAdmin || guestSlug === slug;
 }
 
+function mealTypeOrNull(value: string): MealType | null {
+  if (value === "beef" || value === "fish" || value === "vegetarian") {
+    return value;
+  }
+
+  return null;
+}
+
+function isValidMealType(value: string) {
+  return value === "" || value === "beef" || value === "fish" || value === "vegetarian";
+}
+
 export async function autosaveRsvp(
   formData: FormData,
 ): Promise<RsvpActionState> {
@@ -41,10 +59,29 @@ export async function autosaveRsvp(
   const submittedNames = formData
     .getAll("attendeeNames")
     .map((value) => String(value));
+  const submittedMealTypes = formData
+    .getAll("attendeeMealTypes")
+    .map((value) => String(value));
+  const submittedDietaryNotes = formData
+    .getAll("attendeeDietaryNotes")
+    .map((value) => String(value));
+  const submittedAttendeeCount = Math.max(
+    submittedNames.length,
+    submittedMealTypes.length,
+    submittedDietaryNotes.length,
+  );
+  const submittedAttendeeDetails = Array.from(
+    { length: submittedAttendeeCount },
+    (_, index) => ({
+      fullName: submittedNames[index] ?? "",
+      mealType: mealTypeOrNull(submittedMealTypes[index] ?? ""),
+      dietaryNotes: submittedDietaryNotes[index] ?? "",
+    }),
+  );
   const values: RsvpActionState["values"] = {
     status: status === "yes" || status === "no" || status === "deciding" ? status : "",
     attendingCount: rawCount ? Number(rawCount) : null,
-    attendeeNames: submittedNames,
+    attendeeDetails: submittedAttendeeDetails,
   };
 
   if (!isValidSlug(slug)) {
@@ -68,7 +105,7 @@ export async function autosaveRsvp(
     return stateWithValues("Choose an RSVP option.", false, {
       status: "",
       attendingCount: null,
-      attendeeNames: [],
+      attendeeDetails: [],
     });
   }
 
@@ -77,14 +114,14 @@ export async function autosaveRsvp(
       guestId: guest.id,
       status,
       attendingCount: null,
-      attendeeNames: [],
+      attendeeDetails: [],
     });
 
     revalidatePath(`/${slug}`);
     return stateWithValues("Saved.", true, {
       status,
       attendingCount: null,
-      attendeeNames: [],
+      attendeeDetails: [],
     });
   }
 
@@ -95,22 +132,35 @@ export async function autosaveRsvp(
     return stateWithValues(`Choose a count from 1 to ${guest.guestCount}.`, false, values);
   }
 
-  const attendeeNames = Array.from(
+  const hasInvalidMealType = Array.from(
     { length: attendingCount },
-    (_, index) => String(submittedNames[index] ?? ""),
+    (_, index) => String(submittedMealTypes[index] ?? ""),
+  ).some((mealType) => !isValidMealType(mealType));
+
+  if (hasInvalidMealType) {
+    return stateWithValues("Choose a valid meal type.", false, values);
+  }
+
+  const attendeeDetails = Array.from(
+    { length: attendingCount },
+    (_, index) => ({
+      fullName: String(submittedNames[index] ?? ""),
+      mealType: mealTypeOrNull(String(submittedMealTypes[index] ?? "")),
+      dietaryNotes: String(submittedDietaryNotes[index] ?? ""),
+    }),
   );
 
   await saveRsvp({
     guestId: guest.id,
     status: "yes",
     attendingCount,
-    attendeeNames,
+    attendeeDetails,
   });
 
   revalidatePath(`/${slug}`);
   return stateWithValues("Saved.", true, {
     status: "yes",
     attendingCount,
-    attendeeNames,
+    attendeeDetails,
   });
 }

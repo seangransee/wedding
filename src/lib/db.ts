@@ -3,6 +3,13 @@ import { Pool, type QueryResultRow } from "pg";
 
 export type RsvpStatus = "yes" | "no" | "deciding";
 export type RsvpAuditEventType = "rsvp" | "guest_name";
+export type MealType = "beef" | "fish" | "vegetarian";
+
+export type RsvpAttendeeDetails = {
+  fullName: string;
+  mealType: MealType | null;
+  dietaryNotes: string;
+};
 
 export type Guest = {
   id: number;
@@ -31,12 +38,14 @@ export type RsvpAttendee = {
   rsvpId: number;
   position: number;
   fullName: string;
+  mealType: MealType | null;
+  dietaryNotes: string;
 };
 
 export type GuestWithRsvp = Guest & {
   rsvpStatus: RsvpStatus | null;
   attendingCount: number | null;
-  attendeeNames: string[];
+  attendeeDetails: RsvpAttendeeDetails[];
 };
 
 export type RsvpAuditEvent = {
@@ -49,7 +58,7 @@ export type RsvpAuditEvent = {
   guestNameCurrent: string;
   status: RsvpStatus | null;
   attendingCount: number | null;
-  attendeeNames: string[];
+  attendeeDetails: RsvpAttendeeDetails[];
   createdAt: string;
 };
 
@@ -85,13 +94,15 @@ type RsvpAttendeeRow = {
   id: number;
   rsvp_id: number;
   position: number;
-  full_name: string;
+  full_name: string | null;
+  meal_type: MealType | null;
+  dietary_notes: string | null;
 };
 
 type GuestWithRsvpRow = GuestRow & {
   rsvp_status: RsvpStatus | null;
   attending_count: number | null;
-  attendee_names: string | null;
+  attendee_details: string | null;
 };
 
 type RsvpAuditEventRow = {
@@ -104,7 +115,7 @@ type RsvpAuditEventRow = {
   guest_name_current: string;
   status: RsvpStatus | null;
   attending_count: number | null;
-  attendee_names: string | null;
+  attendee_details: string | null;
   created_at: string;
 };
 
@@ -200,8 +211,18 @@ function toAttendee(row: RsvpAttendeeRow): RsvpAttendee {
     id: row.id,
     rsvpId: row.rsvp_id,
     position: row.position,
-    fullName: row.full_name,
+    fullName: row.full_name ?? "",
+    mealType: row.meal_type,
+    dietaryNotes: row.dietary_notes ?? "",
   };
+}
+
+function parseAttendeeDetails(value: string | null): RsvpAttendeeDetails[] {
+  if (!value) {
+    return [];
+  }
+
+  return JSON.parse(value) as RsvpAttendeeDetails[];
 }
 
 export async function guestSlugExists(slug: string) {
@@ -438,8 +459,19 @@ export async function listGuestsWithRsvps(): Promise<GuestWithRsvp[]> {
        g.updated_at,
        r.status AS rsvp_status,
        r.attending_count,
-       string_agg(a.full_name, '|||RSVP|||' ORDER BY a.position)
-         FILTER (WHERE a.id IS NOT NULL) AS attendee_names
+       (
+         COALESCE(
+           json_agg(
+             json_build_object(
+               'fullName', COALESCE(a.full_name, ''),
+               'mealType', a.meal_type,
+               'dietaryNotes', COALESCE(a.dietary_notes, '')
+             )
+             ORDER BY a.position
+           ) FILTER (WHERE a.id IS NOT NULL),
+           '[]'::json
+         ) #>> '{}'
+       ) AS attendee_details
      FROM wedding_guests g
      LEFT JOIN wedding_rsvps r ON r.guest_id = g.id
      LEFT JOIN wedding_rsvp_attendees a ON a.rsvp_id = r.id
@@ -451,7 +483,7 @@ export async function listGuestsWithRsvps(): Promise<GuestWithRsvp[]> {
     ...toGuest(row),
     rsvpStatus: row.rsvp_status,
     attendingCount: row.attending_count,
-    attendeeNames: row.attendee_names ? row.attendee_names.split("|||RSVP|||") : [],
+    attendeeDetails: parseAttendeeDetails(row.attendee_details),
   }));
 }
 
@@ -474,7 +506,7 @@ export async function getGuestPageData(slug: string): Promise<GuestPageData | nu
   }
 
   const attendeeRows = (await sql().query(
-    `SELECT id, rsvp_id, position, full_name
+    `SELECT id, rsvp_id, position, full_name, meal_type, dietary_notes
      FROM wedding_rsvp_attendees
      WHERE rsvp_id = $1
      ORDER BY position ASC`,
@@ -501,8 +533,19 @@ export async function listRsvpAuditEvents(): Promise<RsvpAuditEvent[]> {
        audit.status,
        audit.attending_count,
        audit.created_at,
-       string_agg(attendee.full_name, '|||RSVP|||' ORDER BY attendee.position)
-         FILTER (WHERE attendee.id IS NOT NULL) AS attendee_names
+       (
+         COALESCE(
+           json_agg(
+             json_build_object(
+               'fullName', COALESCE(attendee.full_name, ''),
+               'mealType', attendee.meal_type,
+               'dietaryNotes', COALESCE(attendee.dietary_notes, '')
+             )
+             ORDER BY attendee.position
+           ) FILTER (WHERE attendee.id IS NOT NULL),
+           '[]'::json
+         ) #>> '{}'
+       ) AS attendee_details
      FROM wedding_rsvp_audit_events audit
      LEFT JOIN wedding_rsvp_audit_attendees attendee ON attendee.audit_event_id = audit.id
      LEFT JOIN wedding_guests current_guest ON current_guest.id = audit.guest_id
@@ -526,7 +569,7 @@ export async function listRsvpAuditEvents(): Promise<RsvpAuditEvent[]> {
     guestNameCurrent: row.guest_name_current,
     status: row.status,
     attendingCount: row.attending_count,
-    attendeeNames: row.attendee_names ? row.attendee_names.split("|||RSVP|||") : [],
+    attendeeDetails: parseAttendeeDetails(row.attendee_details),
     createdAt: row.created_at,
   }));
 }
@@ -611,8 +654,12 @@ export async function saveRsvp(input: {
   guestId: number;
   status: RsvpStatus;
   attendingCount: number | null;
-  attendeeNames: string[];
+  attendeeDetails: RsvpAttendeeDetails[];
 }) {
+  const attendeeNames = input.attendeeDetails.map((attendee) => attendee.fullName);
+  const attendeeMealTypes = input.attendeeDetails.map((attendee) => attendee.mealType);
+  const attendeeDietaryNotes = input.attendeeDetails.map((attendee) => attendee.dietaryNotes);
+
   await sql().query(
     `WITH upserted AS (
        INSERT INTO wedding_rsvps (guest_id, status, attending_count)
@@ -633,13 +680,28 @@ export async function saveRsvp(input: {
        FROM upserted, (SELECT count(*) FROM deleted) AS deleted_count
      ),
      input_attendees AS (
-       SELECT ordinality::integer AS position, btrim(attendee_name) AS attendee_name
-       FROM unnest($4::text[]) WITH ORDINALITY AS attendees(attendee_name, ordinality)
-       WHERE length(btrim(attendee_name)) > 0
+       SELECT
+         names.ordinality::integer AS position,
+         NULLIF(btrim(names.attendee_name), '') AS full_name,
+         NULLIF(meals.meal_type, '') AS meal_type,
+         NULLIF(btrim(notes.dietary_notes), '') AS dietary_notes
+       FROM unnest($4::text[]) WITH ORDINALITY AS names(attendee_name, ordinality)
+       LEFT JOIN unnest($5::text[]) WITH ORDINALITY AS meals(meal_type, ordinality)
+         ON meals.ordinality = names.ordinality
+       LEFT JOIN unnest($6::text[]) WITH ORDINALITY AS notes(dietary_notes, ordinality)
+         ON notes.ordinality = names.ordinality
+       WHERE length(btrim(names.attendee_name)) > 0
+          OR NULLIF(meals.meal_type, '') IS NOT NULL
+          OR length(btrim(notes.dietary_notes)) > 0
      ),
      inserted_attendees AS (
-       INSERT INTO wedding_rsvp_attendees (rsvp_id, position, full_name)
-       SELECT ready.id, input_attendees.position, input_attendees.attendee_name
+       INSERT INTO wedding_rsvp_attendees (rsvp_id, position, full_name, meal_type, dietary_notes)
+       SELECT
+         ready.id,
+         input_attendees.position,
+         input_attendees.full_name,
+         input_attendees.meal_type,
+         input_attendees.dietary_notes
        FROM ready
        CROSS JOIN input_attendees
        RETURNING 1
@@ -660,8 +722,19 @@ export async function saveRsvp(input: {
        RETURNING id
      ),
      inserted_audit_attendees AS (
-       INSERT INTO wedding_rsvp_audit_attendees (audit_event_id, position, full_name)
-       SELECT audit_event.id, input_attendees.position, input_attendees.attendee_name
+       INSERT INTO wedding_rsvp_audit_attendees (
+         audit_event_id,
+         position,
+         full_name,
+         meal_type,
+         dietary_notes
+       )
+       SELECT
+         audit_event.id,
+         input_attendees.position,
+         input_attendees.full_name,
+         input_attendees.meal_type,
+         input_attendees.dietary_notes
        FROM audit_event
        CROSS JOIN input_attendees
        RETURNING 1
@@ -669,6 +742,13 @@ export async function saveRsvp(input: {
      SELECT
        (SELECT count(*) FROM inserted_attendees) AS attendee_rows,
        (SELECT count(*) FROM inserted_audit_attendees) AS audit_attendee_rows`,
-    [input.guestId, input.status, input.attendingCount, input.attendeeNames],
+    [
+      input.guestId,
+      input.status,
+      input.attendingCount,
+      attendeeNames,
+      attendeeMealTypes,
+      attendeeDietaryNotes,
+    ],
   );
 }

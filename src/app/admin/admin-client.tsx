@@ -15,7 +15,7 @@ import {
   type RowsChangeData,
   type SortColumn,
 } from "react-data-grid";
-import type { GuestWithRsvp, RsvpAuditEvent } from "@/lib/db";
+import type { GuestWithRsvp, RsvpAttendeeDetails, RsvpAuditEvent } from "@/lib/db";
 import { slugify } from "@/lib/slug";
 import {
   addGuest,
@@ -68,7 +68,7 @@ const BASE_COLUMN_WIDTHS = {
   inviteSent: 97,
   rsvpStatus: 112,
   attendingCount: 61,
-  attendeeNames: 200,
+  attendeeDetails: 240,
   actions: 100,
   fuckYes: 82,
 };
@@ -80,14 +80,14 @@ function getExpandedColumnWidths(gridWidth: number) {
   const nameExtra = Math.floor(extraWidth * 0.4);
   const slugExtra = Math.floor(extraWidth * 0.15);
   const notesExtra = Math.floor(extraWidth * 0.25);
-  const attendeeNamesExtra = extraWidth - nameExtra - slugExtra - notesExtra;
+  const attendeeDetailsExtra = extraWidth - nameExtra - slugExtra - notesExtra;
 
   return {
     ...BASE_COLUMN_WIDTHS,
     name: BASE_COLUMN_WIDTHS.name + nameExtra,
     slug: BASE_COLUMN_WIDTHS.slug + slugExtra,
     notes: BASE_COLUMN_WIDTHS.notes + notesExtra,
-    attendeeNames: BASE_COLUMN_WIDTHS.attendeeNames + attendeeNamesExtra,
+    attendeeDetails: BASE_COLUMN_WIDTHS.attendeeDetails + attendeeDetailsExtra,
   };
 }
 
@@ -133,6 +133,57 @@ function csvCell(value: boolean | number | string | null | undefined) {
   return `"${text.replace(/"/g, '""')}"`;
 }
 
+function mealLabel(mealType: RsvpAttendeeDetails["mealType"]) {
+  if (mealType === "beef") {
+    return "Beef";
+  }
+  if (mealType === "fish") {
+    return "Fish";
+  }
+  if (mealType === "vegetarian") {
+    return "Vegetarian";
+  }
+  return "";
+}
+
+function attendeeNameSummary(attendees: RsvpAttendeeDetails[]) {
+  return attendees.map((attendee) => attendee.fullName).filter(Boolean).join("; ");
+}
+
+function attendeeMealSummary(attendees: RsvpAttendeeDetails[]) {
+  return attendees
+    .map((attendee, index) => {
+      const meal = mealLabel(attendee.mealType);
+      return meal ? `${attendee.fullName || `Guest ${index + 1}`}: ${meal}` : "";
+    })
+    .filter(Boolean)
+    .join("; ");
+}
+
+function attendeeDietarySummary(attendees: RsvpAttendeeDetails[]) {
+  return attendees
+    .map((attendee, index) => {
+      const notes = attendee.dietaryNotes.trim();
+      return notes ? `${attendee.fullName || `Guest ${index + 1}`}: ${notes}` : "";
+    })
+    .filter(Boolean)
+    .join("; ");
+}
+
+function attendeeDetailsSummary(attendees: RsvpAttendeeDetails[]) {
+  return attendees
+    .map((attendee, index) => {
+      const name = attendee.fullName || `Guest ${index + 1}`;
+      const meal = mealLabel(attendee.mealType);
+      const notes = attendee.dietaryNotes.trim();
+      const details = [meal, notes].filter(Boolean).join(", ");
+
+      return details ? `${name} (${details})` : name;
+    })
+    .filter(Boolean)
+    .join("; ");
+}
+
 function makeAdminCsv(guests: GuestWithRsvp[], auditEvents: RsvpAuditEvent[]) {
   const headers = [
     "record_type",
@@ -148,6 +199,8 @@ function makeAdminCsv(guests: GuestWithRsvp[], auditEvents: RsvpAuditEvent[]) {
     "current_rsvp_status",
     "current_attending_count",
     "current_place_cards",
+    "current_meal_choices",
+    "current_dietary_notes",
     "guest_created_at",
     "guest_updated_at",
     "audit_event_id",
@@ -157,6 +210,8 @@ function makeAdminCsv(guests: GuestWithRsvp[], auditEvents: RsvpAuditEvent[]) {
     "audit_rsvp_status",
     "audit_attending_count",
     "audit_place_cards",
+    "audit_meal_choices",
+    "audit_dietary_notes",
     "audit_created_at",
   ];
 
@@ -173,9 +228,13 @@ function makeAdminCsv(guests: GuestWithRsvp[], auditEvents: RsvpAuditEvent[]) {
     guest.sortOrder,
     guest.rsvpStatus,
     guest.attendingCount,
-    guest.attendeeNames.join("; "),
+    attendeeNameSummary(guest.attendeeDetails),
+    attendeeMealSummary(guest.attendeeDetails),
+    attendeeDietarySummary(guest.attendeeDetails),
     guest.createdAt,
     guest.updatedAt,
+    "",
+    "",
     "",
     "",
     "",
@@ -208,7 +267,9 @@ function makeAdminCsv(guests: GuestWithRsvp[], auditEvents: RsvpAuditEvent[]) {
     event.guestNameCurrent,
     event.status,
     event.attendingCount,
-    event.attendeeNames.join("; "),
+    attendeeNameSummary(event.attendeeDetails),
+    attendeeMealSummary(event.attendeeDetails),
+    attendeeDietarySummary(event.attendeeDetails),
     event.createdAt,
   ]);
 
@@ -731,7 +792,7 @@ function RsvpCell({ row }: RenderCellProps<GuestWithRsvp>) {
 }
 
 function PlaceCardsCell({ row }: RenderCellProps<GuestWithRsvp>) {
-  return row.attendeeNames.length > 0 ? row.attendeeNames.join("; ") : "";
+  return attendeeDetailsSummary(row.attendeeDetails);
 }
 
 async function copyText(text: string) {
@@ -1107,9 +1168,9 @@ export function GuestTable({
       },
     },
     {
-      key: "attendeeNames",
-      name: "Place cards",
-      width: columnWidths.attendeeNames,
+      key: "attendeeDetails",
+      name: "Place cards / meals",
+      width: columnWidths.attendeeDetails,
       minWidth: 140,
       resizable: true,
       renderCell: PlaceCardsCell,

@@ -1,6 +1,10 @@
 import { cookies } from "next/headers";
 import { ADMIN_COOKIE_NAME, ADMIN_PASSWORD } from "@/lib/cookies";
-import { listGuestsWithRsvps, listRsvpAuditEvents } from "@/lib/db";
+import {
+  listGuestsWithRsvps,
+  listRsvpAuditEvents,
+  type RsvpAttendeeDetails,
+} from "@/lib/db";
 import {
   AddGuestForm,
   AdminCsvExportButton,
@@ -46,6 +50,33 @@ function rsvpClassName(status: string | null) {
     return "border-[#d97706] bg-[#fef3c7] text-[#92400e]";
   }
   return "border-[#64748b] bg-[#e2e8f0] text-[#334155]";
+}
+
+function mealLabel(mealType: RsvpAttendeeDetails["mealType"]) {
+  if (mealType === "beef") {
+    return "Beef";
+  }
+  if (mealType === "fish") {
+    return "Fish";
+  }
+  if (mealType === "vegetarian") {
+    return "Vegetarian";
+  }
+  return "";
+}
+
+function attendeeDetailsSummary(attendees: RsvpAttendeeDetails[]) {
+  return attendees
+    .map((attendee, index) => {
+      const name = attendee.fullName || `Guest ${index + 1}`;
+      const meal = mealLabel(attendee.mealType);
+      const notes = attendee.dietaryNotes.trim();
+      const details = [meal, notes].filter(Boolean).join(", ");
+
+      return details ? `${name} (${details})` : name;
+    })
+    .filter(Boolean)
+    .join("; ");
 }
 
 function getSearchParam(
@@ -245,7 +276,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                   <th className="w-16 border-r border-b border-[#df7fa3] px-2 py-1.5 text-right font-semibold">
                     Count
                   </th>
-                  <th className="border-b border-[#df7fa3] px-2 py-1.5 font-semibold">Place cards</th>
+                  <th className="border-b border-[#df7fa3] px-2 py-1.5 font-semibold">Place cards / meals</th>
                 </tr>
               </thead>
               <tbody>
@@ -281,7 +312,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                         {event.attendingCount ?? ""}
                       </td>
                       <td className="border-b border-[#efb5c9] px-2 py-1 text-[#4a1027]">
-                        {event.attendeeNames.length > 0 ? event.attendeeNames.join("; ") : ""}
+                        {attendeeDetailsSummary(event.attendeeDetails)}
                       </td>
                     </tr>
                   ))

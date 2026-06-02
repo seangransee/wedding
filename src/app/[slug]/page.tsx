@@ -55,11 +55,17 @@ export default async function GuestPage({ params }: PageProps) {
     notFound();
   }
 
-  const attendeeNames = Array.from(
+  const attendeeDetails = Array.from(
     { length: data.rsvp?.attendingCount ?? 0 },
-    (_, index) =>
-      data.attendees.find((attendee) => attendee.position === index + 1)
-        ?.fullName ?? "",
+    (_, index) => {
+      const attendee = data.attendees.find((entry) => entry.position === index + 1);
+
+      return {
+        fullName: attendee?.fullName ?? "",
+        mealType: attendee?.mealType ?? null,
+        dietaryNotes: attendee?.dietaryNotes ?? "",
+      };
+    },
   );
 
   return (
@@ -75,7 +81,7 @@ export default async function GuestPage({ params }: PageProps) {
           fuckYes={data.guest.fuckYes}
           initialStatus={data.rsvp?.status ?? ""}
           initialAttendingCount={data.rsvp?.attendingCount ?? null}
-          initialAttendeeNames={attendeeNames}
+          initialAttendeeDetails={attendeeDetails}
         />
       }
     />
