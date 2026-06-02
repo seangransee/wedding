@@ -157,7 +157,7 @@ function renderInlineMarkdown(text: string) {
         href={url}
         target="_blank"
         rel="noopener noreferrer"
-        className="font-semibold text-[#054f2d] underline decoration-dashed decoration-1 underline-offset-4 transition hover:text-[#8f2448]"
+        className="font-semibold text-[#044326] underline decoration-dashed decoration-1 underline-offset-4 transition hover:text-[#7a1239]"
       >
         {label}
       </a>,
@@ -181,7 +181,7 @@ function renderNodes(nodes: MarkdownNode[], lockedBlocks: boolean): ReactNode[] 
           return (
             <h2
               key={index}
-              className="text-center text-3xl font-semibold leading-tight text-[#054f2d] sm:text-5xl"
+              className="text-center text-4xl font-semibold leading-tight text-[#043d24] sm:text-6xl"
             >
               {renderInlineMarkdown(node.text)}
             </h2>
@@ -192,7 +192,7 @@ function renderNodes(nodes: MarkdownNode[], lockedBlocks: boolean): ReactNode[] 
           return (
             <h3
               key={index}
-              className="border-t border-[#b8860b]/35 pt-7 text-sm font-semibold uppercase tracking-[0.24em] text-[#8f2448] first:border-t-0 first:pt-0 sm:pt-8"
+              className="border-t border-[#b8860b]/40 pt-7 text-base font-semibold uppercase tracking-[0.18em] text-[#7a1239] first:border-t-0 first:pt-0 sm:pt-8 sm:text-lg sm:tracking-[0.22em]"
             >
               {renderInlineMarkdown(node.text)}
             </h3>
@@ -202,7 +202,7 @@ function renderNodes(nodes: MarkdownNode[], lockedBlocks: boolean): ReactNode[] 
         return (
           <h4
             key={index}
-            className="border-t border-[#b8860b]/30 pt-4 text-xl font-semibold leading-tight text-[#054f2d] first:border-t-0 first:pt-0 sm:text-2xl"
+            className="border-t border-[#b8860b]/35 pt-4 text-2xl font-semibold leading-tight text-[#043d24] first:border-t-0 first:pt-0 sm:text-3xl"
           >
             {renderInlineMarkdown(node.text)}
           </h4>
@@ -210,7 +210,7 @@ function renderNodes(nodes: MarkdownNode[], lockedBlocks: boolean): ReactNode[] 
 
       case "paragraph":
         return (
-          <p key={index} className="text-base leading-relaxed text-[#4a1f2e]/78">
+          <p key={index} className="text-lg leading-[1.85] text-[#351421] sm:text-xl">
             {renderInlineMarkdown(node.text)}
           </p>
         );
@@ -219,7 +219,7 @@ function renderNodes(nodes: MarkdownNode[], lockedBlocks: boolean): ReactNode[] 
         return (
           <ul
             key={index}
-            className="grid gap-1.5 pl-5 text-base leading-relaxed text-[#4a1f2e]/78"
+            className="grid gap-2 pl-5 text-lg leading-[1.8] text-[#351421] sm:text-xl"
           >
             {node.items.map((item) => (
               <li key={item} className="list-disc">
@@ -271,18 +271,18 @@ export function MarkdownContent({
   return (
     <section
       id={id}
-      className="relative z-10 mx-auto mt-5 max-w-4xl scroll-mt-28 sm:mt-8"
+      className="relative z-10 mx-auto mt-5 max-w-5xl scroll-mt-28 sm:mt-8"
     >
-      <article className="grid gap-5 rounded-lg border border-[#b8860b]/45 bg-[#fff6fa]/90 p-5 text-[#4a1f2e] shadow-[0_24px_65px_-42px_rgba(0,0,0,0.6)] backdrop-blur-sm sm:p-7 lg:p-9">
-        <header className="grid gap-2 border-b border-[#b8860b]/35 pb-5 text-center">
+      <article className="grid gap-6 rounded-lg border border-[#b8860b]/60 bg-[#fffafd]/96 p-5 text-[#351421] shadow-[0_26px_70px_-40px_rgba(0,0,0,0.68)] backdrop-blur-sm sm:gap-7 sm:p-8 lg:p-10">
+        <header className="grid gap-3 border-b border-[#b8860b]/45 pb-5 text-center sm:pb-6">
           {subtitle ? (
-            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-[#8f2448] sm:text-sm">
+            <p className="text-sm font-semibold uppercase tracking-[0.22em] text-[#7a1239] sm:text-base sm:tracking-[0.26em]">
               {renderInlineMarkdown(subtitle.text)}
             </p>
           ) : null}
           {firstNode ? renderNodes([firstNode], lockedBlocks) : null}
         </header>
-        <div className="grid gap-5">{renderNodes(bodyNodes, lockedBlocks)}</div>
+        <div className="grid gap-6">{renderNodes(bodyNodes, lockedBlocks)}</div>
       </article>
     </section>
   );

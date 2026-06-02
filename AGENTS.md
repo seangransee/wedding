@@ -133,7 +133,7 @@ Be careful changing validation: database constraints, server action validation, 
 - `INVITATION_BASE_URL` in `admin-client.tsx` is hardcoded to `https://sexiwedding.com` for copied links.
 - All long-form content should be driven by Markdown files in `content/`, not hard-coded in React or TypeScript. The renderer for these files lives in `src/app/markdown-content.tsx`.
 - Public `/` keeps Markdown invitation-only blocks locked behind an invitation link; guest invitation pages render those blocks.
-- Design uses a green/gold/pink wedding palette, Cormorant/Libre/Dancing Script fonts, double-happiness glyphs, and a spreadsheet-like admin UI. Keep new UI consistent with those patterns.
+- Design uses a green/gold/pink wedding palette, Cormorant/Libre/Dancing Script fonts, double-happiness glyphs, high-contrast large long-form copy, and a spreadsheet-like admin UI. Keep new UI consistent with those patterns.
 - Guests will primarily use the site on phones. Treat mobile layouts as the primary experience, especially for invitation pages, RSVP controls, forms, tap targets, safe-area spacing, and text wrapping.
 
 ## Validation Before Hand-off

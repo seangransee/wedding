@@ -13,7 +13,7 @@ type WeddingPageShellProps = {
 };
 
 const defaultPanelClassName =
-  "w-full min-w-0 rounded-lg border border-[#b8860b]/55 bg-[#fff6fa]/88 p-4 shadow-[0_30px_70px_-38px_rgba(0,0,0,0.55)] backdrop-blur-sm sm:p-7 lg:p-8 lg:shadow-[0_40px_90px_-40px_rgba(0,0,0,0.55)]";
+  "w-full min-w-0 rounded-lg border border-[#b8860b]/65 bg-[#fffafd]/96 p-4 shadow-[0_30px_70px_-38px_rgba(0,0,0,0.6)] backdrop-blur-sm sm:p-7 lg:p-8 lg:shadow-[0_40px_90px_-40px_rgba(0,0,0,0.6)]";
 
 function DoubleHappinessFrame() {
   return (
