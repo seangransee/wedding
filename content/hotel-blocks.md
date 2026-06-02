@@ -6,8 +6,8 @@ We have a few options for different price points and convenience levels. We reco
 
 The Blackstone - our venue!
 
-- Room Rate - $159-$189/day + double checking the/day amenity fee + tax
-- Parking Fees - $72/day for valet parking
+- Room Rate - $159-$189/day (no daily amenity fee) + tax
+- Parking Fees - $82/day for valet parking
 - Must book by November 12, 2026
 
 The Hilton Chicago - literally across the street from our venue.
