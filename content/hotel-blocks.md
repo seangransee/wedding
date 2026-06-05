@@ -16,13 +16,13 @@ The Hilton Chicago - literally across the street from our venue.
 - Parking Fees - $62/day for self parking or $75/day for valet
 - Must book by November 11, 2026
 
-[Le Meridien Essex Chicago](https://www.marriott.com/event-reservations/reservation-link.mi?id=1779989715329&key=GRP&app=resvlink&_branch_match_id=1494790535664723486&_branch_referrer=H4sIAAAAAAAAA8soKSkottLXTywo0MtNLCrKzC8p0UvOz9UvSi3OyczLtgdK2ALZZSCOWmaKraG5uaWlhaW5oamxkaVadmqlrXtQgFpdUWpaKlB3Xnp8UlF%2BeXFqka1zRlF%2BbioAIrX3M2AAAAA%3D)Le Meridien Essex - Just down the block (3 minute walk)
+[Le Meridien Essex Chicago](https://www.marriott.com/event-reservations/reservation-link.mi?id=1779989715329&key=GRP&app=resvlink&_branch_match_id=1494790535664723486&_branch_referrer=H4sIAAAAAAAAA8soKSkottLXTywo0MtNLCrKzC8p0UvOz9UvSi3OyczLtgdK2ALZZSCOWmaKraG5uaWlhaW5oamxkaVadmqlrXtQgFpdUWpaKlB3Xnp8UlF%2BeXFqka1zRlF%2BbioAIrX3M2AAAAA%3D) - Just down the block (3 minute walk)
 
 - Room Rate - $99/day + $15/day amenity fee + tax
 - Parking Fees - $39/day for self parking or $77/day for valet
 - Must book by November 11, 2026
 
-- [Stay at The Blackstone](https://www.marriott.com/event-reservations/reservation-link.mi?_branch_referrer=H4sIAAAAAAAAA8soKSkottLXTywo0MtNLCrKzC8p0UvOz9UvSi3OyczLtgdK2ALZZSCOWmaKraG5mbG5qYmhqYWRibladmqlrXtQgFpdUWpaKlB3Xnp8UlF%2BeXFqka1vflJmTqqqkUFwYlpiUSYAbAHTtmkAAAA%3D&id=1763754158247&key=GRP&app=resvlink&_branch_match_id=1589857826543394755)
+[Stay at The Blackstone](https://www.marriott.com/event-reservations/reservation-link.mi?_branch_referrer=H4sIAAAAAAAAA8soKSkottLXTywo0MtNLCrKzC8p0UvOz9UvSi3OyczLtgdK2ALZZSCOWmaKraG5mbG5qYmhqYWRibladmqlrXtQgFpdUWpaKlB3Xnp8UlF%2BeXFqka1vflJmTqqqkUFwYlpiUSYAbAHTtmkAAAA%3D&id=1763754158247&key=GRP&app=resvlink&_branch_match_id=1589857826543394755)
 
 [Stay at The Hilton Chicago - link coming soon]
 
