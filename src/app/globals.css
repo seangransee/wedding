@@ -105,6 +105,10 @@ body {
 .guest-hero-copy {
   border: 1px solid rgba(184, 134, 11, 0.5);
   border-radius: 0.5rem;
+  padding: 0.8rem 0.85rem;
+}
+
+.guest-hero-copy {
   background: linear-gradient(
     180deg,
     rgba(3, 27, 18, 0.82) 0%,
@@ -112,7 +116,18 @@ body {
   );
   box-shadow: 0 1.5rem 4rem -2.25rem rgba(0, 0, 0, 0.82),
     inset 0 0 0 1px rgba(255, 246, 250, 0.1);
-  padding: 0.8rem 0.85rem;
+  text-shadow: 0 0.1rem 0.2rem rgba(3, 27, 18, 0.95);
+  backdrop-filter: blur(0.4rem);
+}
+
+.guest-panel-surface {
+  background: linear-gradient(
+    180deg,
+    rgba(3, 27, 18, 0.82) 0%,
+    rgba(3, 27, 18, 0.7) 100%
+  );
+  box-shadow: 0 1.5rem 4rem -2.25rem rgba(0, 0, 0, 0.82),
+    inset 0 0 0 1px rgba(255, 246, 250, 0.1);
   text-shadow: 0 0.1rem 0.2rem rgba(3, 27, 18, 0.95);
   backdrop-filter: blur(0.4rem);
 }

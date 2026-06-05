@@ -14,7 +14,7 @@ type WeddingPageShellProps = {
 };
 
 const defaultPanelClassName =
-  "w-full min-w-0 rounded-lg border border-[#b8860b]/65 bg-[#fffafd]/96 p-5 shadow-[0_30px_70px_-38px_rgba(0,0,0,0.6)] backdrop-blur-sm sm:p-8 lg:p-10";
+  "guest-panel-surface w-full min-w-0 rounded-lg border border-[#b8860b]/65 p-5 text-[#f1b3c6] sm:p-8 lg:p-10";
 
 function DoubleHappinessFrame() {
   return (
@@ -37,7 +37,7 @@ function DoubleHappinessFrame() {
 
 function EventHeroCopy({ calendarWebsiteUrl }: { calendarWebsiteUrl: string }) {
   return (
-    <div className="guest-hero-copy mx-0 w-full max-w-none text-center text-[#fff6fa]">
+    <div className="guest-hero-copy mx-0 w-full max-w-none text-center text-[#f1b3c6]">
       <p
         className="text-3xl leading-none text-[#f1b3c6]"
         style={{ fontFamily: "var(--font-dancing-script)", fontWeight: 600 }}
@@ -64,7 +64,7 @@ function EventHeroCopy({ calendarWebsiteUrl }: { calendarWebsiteUrl: string }) {
         href={getWeddingCalendarUrl({ websiteUrl: calendarWebsiteUrl })}
         target="_blank"
         rel="noopener noreferrer"
-        className="mt-4 inline-flex min-h-11 items-center justify-center text-xs font-semibold uppercase tracking-[0.18em] text-[#f1b3c6] underline decoration-dashed decoration-1 underline-offset-4 transition hover:text-[#fff6fa]"
+        className="mt-4 inline-flex min-h-11 items-center justify-center text-xs font-semibold uppercase tracking-[0.18em] text-[#f1b3c6] underline decoration-dashed decoration-1 underline-offset-4 transition hover:text-[#ffd86e]"
       >
         Add to calendar
       </a>
@@ -89,14 +89,14 @@ function PageNav({
   return (
     <nav
       aria-label="On this page"
-      className="guest-page-nav sticky top-[calc(env(safe-area-inset-top)+0.5rem)] z-30 mx-auto rounded-lg border border-[#b8860b]/45 bg-[#031b12]/88 px-2 py-2 text-[#fff6fa] shadow-[0_18px_45px_-30px_rgba(0,0,0,0.75)] backdrop-blur-md"
+      className="guest-page-nav sticky top-[calc(env(safe-area-inset-top)+0.5rem)] z-30 mx-auto rounded-lg border border-[#b8860b]/45 bg-[#031b12]/88 px-2 py-2 text-[#f1b3c6] shadow-[0_18px_45px_-30px_rgba(0,0,0,0.75)] backdrop-blur-md"
     >
       <div className="guest-page-nav-list">
         {navItems.map((item) => (
           <a
             key={item.href}
             href={item.href}
-            className="guest-page-nav-link inline-flex min-h-9 items-center justify-center rounded-md border border-[#b8860b]/35 text-[0.6rem] font-semibold uppercase tracking-[0.08em] text-[#fff6fa] transition hover:border-[#f1b3c6] hover:text-[#f1b3c6] sm:text-[0.66rem]"
+            className="guest-page-nav-link inline-flex min-h-9 items-center justify-center rounded-md border border-[#b8860b]/35 text-[0.6rem] font-semibold uppercase tracking-[0.08em] text-[#f1b3c6] transition hover:border-[#f1b3c6] hover:text-[#ffd86e] sm:text-[0.66rem]"
           >
             {item.label}
           </a>

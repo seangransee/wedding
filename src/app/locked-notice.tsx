@@ -9,14 +9,14 @@ export function LockedNotice({
   children: ReactNode;
 }) {
   return (
-    <div className="rounded-lg border border-[#b8860b]/35 bg-white/75 p-5 text-center shadow-[inset_0_0_0_1px_rgba(255,246,250,0.35)] sm:p-7">
-      <div className="mx-auto grid size-11 place-items-center rounded-full border border-[#b8860b]/45 bg-[#054f2d] text-[#fff6fa]">
+    <div className="guest-panel-surface rounded-lg border border-[#b8860b]/45 p-5 text-center text-[#f1b3c6] sm:p-7">
+      <div className="mx-auto grid size-11 place-items-center rounded-full border border-[#b8860b]/65 bg-[#fff6fa]/8 text-[#ffd86e]">
         <Lock size={19} strokeWidth={2.2} aria-hidden="true" />
       </div>
-      <h2 className="mt-4 text-4xl font-semibold leading-tight text-[#054f2d] sm:text-6xl">
+      <h2 className="mt-4 text-4xl font-semibold leading-tight text-[#ffd86e] sm:text-6xl">
         {title}
       </h2>
-      <p className="mt-3 text-lg leading-[1.85] text-[#351421] sm:text-xl">
+      <p className="mt-3 text-lg leading-[1.85] text-[#f1b3c6] sm:text-xl">
         {children}
       </p>
     </div>
