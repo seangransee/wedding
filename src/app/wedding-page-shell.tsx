@@ -89,20 +89,18 @@ function PageNav({
   return (
     <nav
       aria-label="On this page"
-      className="sticky top-[calc(env(safe-area-inset-top)+0.5rem)] z-30 mx-auto w-[calc(100%-8rem)] max-w-[15rem] rounded-lg border border-[#b8860b]/45 bg-[#031b12]/88 px-2 py-2 text-[#fff6fa] shadow-[0_18px_45px_-30px_rgba(0,0,0,0.75)] backdrop-blur-md"
+      className="guest-page-nav sticky top-[calc(env(safe-area-inset-top)+0.5rem)] z-30 mx-auto rounded-lg border border-[#b8860b]/45 bg-[#031b12]/88 px-2 py-2 text-[#fff6fa] shadow-[0_18px_45px_-30px_rgba(0,0,0,0.75)] backdrop-blur-md"
     >
-      <div className="flex flex-wrap items-center justify-center gap-2">
-        <div className="flex flex-wrap justify-center gap-2">
-          {navItems.map((item) => (
-            <a
-              key={item.href}
-              href={item.href}
-              className="inline-flex min-h-9 items-center rounded-md border border-[#b8860b]/35 px-2.5 text-[0.68rem] font-semibold uppercase tracking-[0.08em] text-[#fff6fa] transition hover:border-[#f1b3c6] hover:text-[#f1b3c6]"
-            >
-              {item.label}
-            </a>
-          ))}
-        </div>
+      <div className="guest-page-nav-list">
+        {navItems.map((item) => (
+          <a
+            key={item.href}
+            href={item.href}
+            className="guest-page-nav-link inline-flex min-h-9 items-center justify-center rounded-md border border-[#b8860b]/35 text-[0.6rem] font-semibold uppercase tracking-[0.08em] text-[#fff6fa] transition hover:border-[#f1b3c6] hover:text-[#f1b3c6] sm:text-[0.66rem]"
+          >
+            {item.label}
+          </a>
+        ))}
       </div>
     </nav>
   );

@@ -220,7 +220,7 @@ export function RsvpForm({
       <input type="hidden" name="attendingCount" value={effectiveAttendingCount ?? ""} />
 
       <div className="min-w-0">
-        <h2 className="break-words text-4xl font-semibold leading-tight text-[#054f2d] sm:text-6xl">
+        <h2 className="break-words text-3xl font-semibold leading-tight text-[#054f2d] sm:text-5xl">
           {guestName}, you&apos;re invited!
         </h2>
       </div>
