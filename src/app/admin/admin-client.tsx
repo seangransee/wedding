@@ -472,7 +472,7 @@ export function AddGuestForm() {
           Email
           <input
             name="emailAddress"
-            type="text"
+            type="email"
             className="min-h-9 border border-[#df7fa3] bg-[#fff8fb] px-2 text-base font-normal normal-case tracking-normal text-[#4a1027] outline-none transition placeholder:text-[#4a1027]/35 focus:border-[#be185d] focus:ring-1 focus:ring-[#be185d]/30 md:min-h-7 md:text-sm"
           />
         </label>
@@ -727,15 +727,22 @@ function SpreadsheetTextEditor({
 }: RenderEditCellProps<GuestWithRsvp>) {
   const key = column.key as EditableColumnKey;
   const [value, setValue] = useState(String(row[key] ?? ""));
+  const inputRef = useRef<HTMLInputElement>(null);
 
   function commit() {
+    if (key === "emailAddress" && inputRef.current && !inputRef.current.reportValidity()) {
+      return;
+    }
+
     const nextValue = key === "slug" ? slugify(value) : value;
     onRowChange({ ...row, [key]: nextValue }, true);
   }
 
   return (
     <input
+      ref={inputRef}
       autoFocus
+      type={key === "emailAddress" ? "email" : "text"}
       value={value}
       onBlur={commit}
       onChange={(event) => setValue(key === "slug" ? slugDraftValue(event.target.value) : event.target.value)}
