@@ -1,0 +1,5 @@
+ALTER TABLE wedding_guests
+ADD COLUMN IF NOT EXISTS phone_number TEXT NOT NULL DEFAULT '';
+
+ALTER TABLE wedding_guests
+ADD COLUMN IF NOT EXISTS email_address TEXT NOT NULL DEFAULT '';

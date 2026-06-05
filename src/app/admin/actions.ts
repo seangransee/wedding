@@ -12,10 +12,12 @@ import {
   recordAdminLoginFailure,
   reorderGuestsInDefaultSort,
   updateGuestCount,
+  updateGuestEmailAddress,
   updateGuestFuckYes,
   updateGuestInviteSent,
   updateGuestName,
   updateGuestNotes,
+  updateGuestPhoneNumber,
   updateGuestSlug,
 } from "@/lib/db";
 import { isValidSlug, slugify } from "@/lib/slug";
@@ -97,6 +99,8 @@ export async function addGuest(
 
   const name = String(formData.get("name") ?? "").trim();
   const notes = String(formData.get("notes") ?? "").trim();
+  const phoneNumber = String(formData.get("phoneNumber") ?? "");
+  const emailAddress = String(formData.get("emailAddress") ?? "");
   const rawSlug = String(formData.get("slug") ?? "").trim();
   const slug = slugify(rawSlug);
   const guestCount = Number(formData.get("guestCount"));
@@ -121,7 +125,7 @@ export async function addGuest(
   }
 
   try {
-    await createGuest({ name, notes, slug, guestCount });
+    await createGuest({ name, notes, phoneNumber, emailAddress, slug, guestCount });
   } catch (error) {
     if (error instanceof Error && /duplicate key|unique/i.test(error.message)) {
       return { ok: false, message: "That URL slug is already in use." };
@@ -294,6 +298,52 @@ export async function editGuestNotes(
 
   revalidatePath("/admin");
   return { ok: true, message: "Notes saved." };
+}
+
+export async function editGuestPhoneNumber(
+  _previousState: AdminActionState,
+  formData: FormData,
+): Promise<AdminActionState> {
+  await requireAdmin();
+
+  const guestId = Number(formData.get("guestId"));
+  const phoneNumber = String(formData.get("phoneNumber") ?? "");
+
+  if (!Number.isInteger(guestId) || guestId < 1) {
+    return { ok: false, message: "Guest id is invalid." };
+  }
+
+  const updated = await updateGuestPhoneNumber(guestId, phoneNumber);
+
+  if (!updated) {
+    return { ok: false, message: "Guest was not found." };
+  }
+
+  revalidatePath("/admin");
+  return { ok: true, message: "Phone saved." };
+}
+
+export async function editGuestEmailAddress(
+  _previousState: AdminActionState,
+  formData: FormData,
+): Promise<AdminActionState> {
+  await requireAdmin();
+
+  const guestId = Number(formData.get("guestId"));
+  const emailAddress = String(formData.get("emailAddress") ?? "");
+
+  if (!Number.isInteger(guestId) || guestId < 1) {
+    return { ok: false, message: "Guest id is invalid." };
+  }
+
+  const updated = await updateGuestEmailAddress(guestId, emailAddress);
+
+  if (!updated) {
+    return { ok: false, message: "Guest was not found." };
+  }
+
+  revalidatePath("/admin");
+  return { ok: true, message: "Email saved." };
 }
 
 export async function editGuestSlug(

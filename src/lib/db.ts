@@ -15,6 +15,8 @@ export type Guest = {
   id: number;
   name: string;
   notes: string;
+  phoneNumber: string;
+  emailAddress: string;
   slug: string;
   guestCount: number;
   inviteSent: boolean;
@@ -72,6 +74,8 @@ type GuestRow = {
   id: number;
   name: string;
   notes: string;
+  phone_number: string;
+  email_address: string;
   slug: string;
   guest_count: number;
   invite_sent: boolean;
@@ -185,6 +189,8 @@ function toGuest(row: GuestRow): Guest {
     id: row.id,
     name: row.name,
     notes: row.notes,
+    phoneNumber: row.phone_number,
+    emailAddress: row.email_address,
     slug: row.slug,
     guestCount: row.guest_count,
     inviteSent: row.invite_sent,
@@ -236,7 +242,7 @@ export async function guestSlugExists(slug: string) {
 
 export async function getGuestBySlug(slug: string) {
   const rows = (await sql().query(
-    `SELECT id, name, notes, slug, guest_count, invite_sent, fuck_yes, sort_order, created_at, updated_at
+    `SELECT id, name, notes, phone_number, email_address, slug, guest_count, invite_sent, fuck_yes, sort_order, created_at, updated_at
      FROM wedding_guests
      WHERE slug = $1`,
     [slug],
@@ -248,20 +254,24 @@ export async function getGuestBySlug(slug: string) {
 export async function createGuest(input: {
   name: string;
   notes: string;
+  phoneNumber: string;
+  emailAddress: string;
   slug: string;
   guestCount: number;
 }) {
   const rows = (await sql().query(
-    `INSERT INTO wedding_guests (name, notes, slug, guest_count, sort_order)
+    `INSERT INTO wedding_guests (name, notes, phone_number, email_address, slug, guest_count, sort_order)
      VALUES (
        $1,
        $2,
        $3,
        $4,
+       $5,
+       $6,
        COALESCE((SELECT max(sort_order) + 1 FROM wedding_guests), 1)
      )
-     RETURNING id, name, notes, slug, guest_count, invite_sent, fuck_yes, sort_order, created_at, updated_at`,
-    [input.name, input.notes, input.slug, input.guestCount],
+     RETURNING id, name, notes, phone_number, email_address, slug, guest_count, invite_sent, fuck_yes, sort_order, created_at, updated_at`,
+    [input.name, input.notes, input.phoneNumber, input.emailAddress, input.slug, input.guestCount],
   )) as GuestRow[];
 
   return toGuest(rows[0]);
@@ -388,6 +398,32 @@ export async function updateGuestNotes(id: number, notes: string) {
   return rows.length > 0;
 }
 
+export async function updateGuestPhoneNumber(id: number, phoneNumber: string) {
+  const rows = (await sql().query(
+    `UPDATE wedding_guests
+     SET phone_number = $2,
+         updated_at = now()
+     WHERE id = $1
+     RETURNING id`,
+    [id, phoneNumber],
+  )) as Array<{ id: number }>;
+
+  return rows.length > 0;
+}
+
+export async function updateGuestEmailAddress(id: number, emailAddress: string) {
+  const rows = (await sql().query(
+    `UPDATE wedding_guests
+     SET email_address = $2,
+         updated_at = now()
+     WHERE id = $1
+     RETURNING id`,
+    [id, emailAddress],
+  )) as Array<{ id: number }>;
+
+  return rows.length > 0;
+}
+
 export async function updateGuestSlug(id: number, slug: string) {
   const rows = (await sql().query(
     `WITH updated AS (
@@ -450,6 +486,8 @@ export async function listGuestsWithRsvps(): Promise<GuestWithRsvp[]> {
        g.id,
        g.name,
        g.notes,
+       g.phone_number,
+       g.email_address,
        g.slug,
        g.guest_count,
        g.invite_sent,

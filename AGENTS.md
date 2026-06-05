@@ -41,7 +41,7 @@ Use npm for scripts. The repo has both `package-lock.json` and `pnpm-lock.yaml`,
 
 Core tables:
 
-- `wedding_guests` - one row per invitation link. Important columns are `name`, `slug`, `notes`, `guest_count`, `invite_sent`, `fuck_yes`, and `sort_order`.
+- `wedding_guests` - one row per invitation link. Important columns are `name`, `slug`, `notes`, `phone_number`, `email_address`, `guest_count`, `invite_sent`, `fuck_yes`, and `sort_order`.
 - `wedding_rsvps` - one current RSVP per guest, keyed by `guest_id`.
 - `wedding_rsvp_attendees` - per-person current RSVP details, keyed by RSVP and 1-based `position`; stores place-card name, optional meal type, and optional dietary/allergy notes.
 - `wedding_rsvp_audit_events` and `wedding_rsvp_audit_attendees` - append-only RSVP edit history, with soft deletion for deleted guests' audit rows.
@@ -116,10 +116,10 @@ Be careful changing validation: database constraints, server action validation, 
 - Admin auth is a simple HTTP-only cookie. The password comes from the `ADMIN_PASSWORD` environment variable, and cookie names are in `src/lib/cookies.ts`; do not duplicate the password elsewhere.
 - Admin login is rate-limited in `wedding_admin_login_attempts` by request IP: 5 wrong attempts in 15 minutes locks that IP out for 15 minutes. Successful login clears the bucket.
 - `/admin` uses `react-data-grid` with all rows rendered and a responsive width calculation.
-- Editable columns are Name, URL, Notes, and Max. URL is locked when `invite_sent` is true.
+- Editable columns are Name, URL, Notes, Phone, Email, and Max. URL is locked when `invite_sent` is true.
 - Sorting is URL-driven with `?sort=...&dir=...`. Default sort uses `sort_order`.
 - Drag-to-reorder is available only in default sort; it saves the full ordered guest id list through `reorderGuestRows`.
-- The Export CSV button downloads the loaded admin data as one CSV with `guest` rows for current invitation/RSVP state and `rsvp_audit` rows for visible RSVP edit history, including per-person place-card, meal, and dietary details.
+- The Export CSV button downloads the loaded admin data as one CSV with `guest` rows for current invitation/RSVP/contact state and `rsvp_audit` rows for visible RSVP edit history, including per-person place-card, meal, and dietary details.
 - Deleting a guest requires typing `delete`, soft-deletes visible audit events for that guest, then deletes the guest row. RSVP and attendee rows cascade from foreign keys.
 - The audit table shown in admin filters to RSVP events, hides the `Sean and Lexi` guest name, and includes compact per-person place-card, meal, and dietary details.
 

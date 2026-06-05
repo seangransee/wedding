@@ -21,8 +21,10 @@ import {
   addGuest,
   deleteGuest,
   editGuestCount,
+  editGuestEmailAddress,
   editGuestName,
   editGuestNotes,
+  editGuestPhoneNumber,
   editGuestSlug,
   loginAdmin,
   reorderGuestRows,
@@ -39,7 +41,7 @@ const initialState: AdminActionState = {
 export type AdminSortKey = "default" | "name" | "max" | "invite" | "rsvp" | "attending";
 export type AdminSortDirection = "asc" | "desc";
 
-type EditableColumnKey = "name" | "slug" | "notes" | "guestCount";
+type EditableColumnKey = "name" | "slug" | "notes" | "phoneNumber" | "emailAddress" | "guestCount";
 
 const INVITATION_BASE_URL = "https://sexiwedding.com";
 
@@ -64,6 +66,8 @@ const BASE_COLUMN_WIDTHS = {
   name: 174,
   slug: 160,
   notes: 170,
+  phoneNumber: 142,
+  emailAddress: 180,
   guestCount: 54,
   inviteSent: 97,
   rsvpStatus: 112,
@@ -79,14 +83,16 @@ function getExpandedColumnWidths(gridWidth: number) {
   const extraWidth = Math.max(0, Math.floor(gridWidth) - BASE_GRID_WIDTH);
   const nameExtra = Math.floor(extraWidth * 0.4);
   const slugExtra = Math.floor(extraWidth * 0.15);
-  const notesExtra = Math.floor(extraWidth * 0.25);
-  const attendeeDetailsExtra = extraWidth - nameExtra - slugExtra - notesExtra;
+  const notesExtra = Math.floor(extraWidth * 0.15);
+  const contactExtra = Math.floor(extraWidth * 0.1);
+  const attendeeDetailsExtra = extraWidth - nameExtra - slugExtra - notesExtra - contactExtra;
 
   return {
     ...BASE_COLUMN_WIDTHS,
     name: BASE_COLUMN_WIDTHS.name + nameExtra,
     slug: BASE_COLUMN_WIDTHS.slug + slugExtra,
     notes: BASE_COLUMN_WIDTHS.notes + notesExtra,
+    emailAddress: BASE_COLUMN_WIDTHS.emailAddress + contactExtra,
     attendeeDetails: BASE_COLUMN_WIDTHS.attendeeDetails + attendeeDetailsExtra,
   };
 }
@@ -192,6 +198,8 @@ function makeAdminCsv(guests: GuestWithRsvp[], auditEvents: RsvpAuditEvent[]) {
     "guest_slug",
     "invitation_url",
     "notes",
+    "phone_number",
+    "email_address",
     "max_guests",
     "invite_sent",
     "fuck_yes",
@@ -222,6 +230,8 @@ function makeAdminCsv(guests: GuestWithRsvp[], auditEvents: RsvpAuditEvent[]) {
     guest.slug,
     `${INVITATION_BASE_URL}/${guest.slug}`,
     guest.notes,
+    guest.phoneNumber,
+    guest.emailAddress,
     guest.guestCount,
     guest.inviteSent,
     guest.fuckYes,
@@ -251,6 +261,10 @@ function makeAdminCsv(guests: GuestWithRsvp[], auditEvents: RsvpAuditEvent[]) {
     event.guestName,
     event.guestSlug,
     `${INVITATION_BASE_URL}/${event.guestSlug}`,
+    "",
+    "",
+    "",
+    "",
     "",
     "",
     "",
@@ -413,7 +427,7 @@ export function AddGuestForm() {
 
   return (
     <form action={formAction} className="border-b border-[#df7fa3] bg-[#fff1f7]">
-      <div className="grid grid-cols-1 border-b border-[#efb5c9] md:grid-cols-[minmax(12rem,1fr)_minmax(12rem,0.95fr)_5.5rem_minmax(14rem,1fr)_minmax(12rem,0.85fr)_7rem]">
+      <div className="grid grid-cols-1 border-b border-[#efb5c9] md:grid-cols-[minmax(12rem,1fr)_minmax(12rem,0.95fr)_5.5rem_minmax(12rem,0.85fr)_minmax(14rem,1fr)_minmax(16rem,1fr)_minmax(12rem,0.85fr)_7rem]">
         <label className="grid gap-1 border-b border-[#efb5c9] px-2 py-1.5 text-[0.65rem] font-semibold uppercase tracking-[0.08em] text-[#8f2448] md:border-r md:border-b-0">
           Name
           <input
@@ -444,6 +458,22 @@ export function AddGuestForm() {
             max="10"
             defaultValue="2"
             className="min-h-9 border border-[#df7fa3] bg-[#fff8fb] px-2 text-base font-normal normal-case tracking-normal text-[#4a1027] outline-none transition focus:border-[#be185d] focus:ring-1 focus:ring-[#be185d]/30 md:min-h-7 md:text-sm"
+          />
+        </label>
+        <label className="grid gap-1 border-b border-[#efb5c9] px-2 py-1.5 text-[0.65rem] font-semibold uppercase tracking-[0.08em] text-[#8f2448] md:border-r md:border-b-0">
+          Phone
+          <input
+            name="phoneNumber"
+            type="text"
+            className="min-h-9 border border-[#df7fa3] bg-[#fff8fb] px-2 text-base font-normal normal-case tracking-normal text-[#4a1027] outline-none transition placeholder:text-[#4a1027]/35 focus:border-[#be185d] focus:ring-1 focus:ring-[#be185d]/30 md:min-h-7 md:text-sm"
+          />
+        </label>
+        <label className="grid gap-1 border-b border-[#efb5c9] px-2 py-1.5 text-[0.65rem] font-semibold uppercase tracking-[0.08em] text-[#8f2448] md:border-r md:border-b-0">
+          Email
+          <input
+            name="emailAddress"
+            type="text"
+            className="min-h-9 border border-[#df7fa3] bg-[#fff8fb] px-2 text-base font-normal normal-case tracking-normal text-[#4a1027] outline-none transition placeholder:text-[#4a1027]/35 focus:border-[#be185d] focus:ring-1 focus:ring-[#be185d]/30 md:min-h-7 md:text-sm"
           />
         </label>
         <label className="grid gap-1 border-b border-[#efb5c9] px-2 py-1.5 text-[0.65rem] font-semibold uppercase tracking-[0.08em] text-[#8f2448] md:border-r md:border-b-0">
@@ -925,6 +955,20 @@ async function saveCellChange(
     }));
   }
 
+  if (columnKey === "phoneNumber") {
+    return editGuestPhoneNumber(initialState, makeFormData({
+      guestId: previousRow.id,
+      phoneNumber: nextRow.phoneNumber,
+    }));
+  }
+
+  if (columnKey === "emailAddress") {
+    return editGuestEmailAddress(initialState, makeFormData({
+      guestId: previousRow.id,
+      emailAddress: nextRow.emailAddress,
+    }));
+  }
+
   if (columnKey === "guestCount") {
     return editGuestCount(initialState, makeFormData({
       guestId: previousRow.id,
@@ -1121,6 +1165,24 @@ export function GuestTable({
       name: "Notes",
       width: columnWidths.notes,
       minWidth: 120,
+      resizable: true,
+      editable: true,
+      renderEditCell: SpreadsheetTextEditor,
+    },
+    {
+      key: "phoneNumber",
+      name: "Phone",
+      width: columnWidths.phoneNumber,
+      minWidth: 112,
+      resizable: true,
+      editable: true,
+      renderEditCell: SpreadsheetTextEditor,
+    },
+    {
+      key: "emailAddress",
+      name: "Email",
+      width: columnWidths.emailAddress,
+      minWidth: 140,
       resizable: true,
       editable: true,
       renderEditCell: SpreadsheetTextEditor,
