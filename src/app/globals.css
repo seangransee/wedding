@@ -92,17 +92,6 @@ body {
   display: none;
 }
 
-.guest-photo-scrim {
-  background:
-    linear-gradient(
-      180deg,
-      rgba(3, 27, 18, 0.14) 0%,
-      rgba(3, 27, 18, 0.1) 43%,
-      rgba(3, 27, 18, 0.5) 70%,
-      rgba(3, 27, 18, 0.72) 100%
-    );
-}
-
 .guest-hero-copy {
   border: 1px solid rgba(255, 214, 228, 0.5);
   border-radius: 0.5rem;

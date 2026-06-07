@@ -139,10 +139,6 @@ export function WeddingPageShell({
 }: WeddingPageShellProps) {
   return (
     <main className="guest-invitation-page relative min-h-screen bg-[#031b12] px-3 py-4 pb-[calc(1rem+env(safe-area-inset-bottom))] text-[#ffd6e4]">
-      <div
-        className="guest-photo-scrim pointer-events-none fixed inset-0 z-0"
-        aria-hidden="true"
-      />
       <DoubleHappinessFrame />
       <PageNav
         panelId={panelId}

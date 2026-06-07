@@ -28,7 +28,13 @@ function chunkLongWord(word: string, maxLength: number) {
 function splitNameLines(name: string) {
   const cleanName = name.trim().replace(/\s+/g, " ") || "You're invited";
   const maxLineLength =
-    cleanName.length > 88 ? 26 : cleanName.length > 58 ? 30 : 34;
+    cleanName.length > 88
+      ? 22
+      : cleanName.length > 58
+        ? 24
+        : cleanName.length > 42
+          ? 26
+          : 30;
   const maxLines = 4;
   const words = cleanName
     .split(" ")
@@ -58,14 +64,14 @@ function splitNameLines(name: string) {
     isLong: cleanName.length > 58,
     fontSize:
       cleanName.length <= 24
-        ? 82
+        ? 76
         : cleanName.length <= 42
-          ? 68
+          ? 64
           : cleanName.length <= 66
             ? 54
             : cleanName.length <= 96
-              ? 44
-              : 38,
+              ? 46
+              : 40,
   };
 }
 
@@ -305,6 +311,37 @@ export async function generateInvitationOgImage(guestName: string) {
       invitationBackgroundData,
     ]);
   const nameLayout = splitNameLines(guestName);
+  const longestNameLineLength = Math.max(
+    ...nameLayout.lines.map(
+      (line, index) => line.length + (index === nameLayout.lines.length - 1 ? 1 : 0),
+    ),
+  );
+  const invitationNameFontSize = Math.min(
+    nameLayout.fontSize,
+    longestNameLineLength > 24
+      ? 54
+      : longestNameLineLength > 18
+        ? 64
+        : 78,
+  );
+  const invitationSubheadFontSize = Math.min(
+    invitationNameFontSize - 3,
+    Math.round(invitationNameFontSize * 0.96),
+  );
+  const invitationBoxWidth = Math.ceil(
+    Math.min(
+      976,
+      Math.max(
+        300,
+        longestNameLineLength * invitationNameFontSize * 0.58 + 44,
+        "you're invited!".length * invitationSubheadFontSize * 0.42 + 44,
+      ),
+    ),
+  );
+  const strongInvitationShadow =
+    "0 4px 0 rgba(3, 27, 18, 1), 0 -3px 0 rgba(3, 27, 18, 0.98), 4px 0 0 rgba(3, 27, 18, 0.98), -4px 0 0 rgba(3, 27, 18, 0.98), 3px 3px 0 rgba(3, 27, 18, 0.98), -3px 3px 0 rgba(3, 27, 18, 0.98), 3px -3px 0 rgba(3, 27, 18, 0.94), -3px -3px 0 rgba(3, 27, 18, 0.94), 0 0 18px rgba(3, 27, 18, 1), 0 0 34px rgba(3, 27, 18, 0.96), 0 14px 38px rgba(0, 0, 0, 1)";
+  const softInvitationShadow =
+    "0 3px 0 rgba(3, 27, 18, 1), 0 -3px 0 rgba(3, 27, 18, 0.96), 3px 0 0 rgba(3, 27, 18, 0.96), -3px 0 0 rgba(3, 27, 18, 0.96), 2px 2px 0 rgba(3, 27, 18, 0.96), -2px 2px 0 rgba(3, 27, 18, 0.96), 2px -2px 0 rgba(3, 27, 18, 0.92), -2px -2px 0 rgba(3, 27, 18, 0.92), 0 0 16px rgba(3, 27, 18, 1), 0 0 30px rgba(3, 27, 18, 0.94), 0 12px 34px rgba(0, 0, 0, 0.98)";
 
   return new ImageResponse(
     (
@@ -325,11 +362,10 @@ export async function generateInvitationOgImage(guestName: string) {
           alt=""
           style={{
             position: "absolute",
-            inset: 0,
-            width: "100%",
-            height: "100%",
-            objectFit: "cover",
-            objectPosition: "38% 33%",
+            left: 0,
+            top: "-520px",
+            width: "1340px",
+            height: "2010px",
           }}
         />
         <div
@@ -381,83 +417,87 @@ export async function generateInvitationOgImage(guestName: string) {
         ))}
         <div
           style={{
-            position: "relative",
+            position: "absolute",
+            top: "42px",
+            left: 0,
+            right: 0,
             zIndex: 2,
-            width: "100%",
-            height: "100%",
             display: "flex",
-            flexDirection: "column",
             justifyContent: "center",
-            padding: "72px 88px",
           }}
         >
           <div
             style={{
               display: "flex",
-              fontFamily: "'Great Vibes', 'Dancing Script', 'Cormorant Garamond', serif",
-              fontSize: nameLayout.isLong ? "56px" : "68px",
+              fontFamily:
+                "'Great Vibes', 'Dancing Script', 'Cormorant Garamond', serif",
+              fontSize: "70px",
               fontWeight: 400,
+              lineHeight: 1,
               color: "#ffd6e4",
               letterSpacing: "0px",
-              marginBottom: nameLayout.isLong ? "14px" : "24px",
-              textShadow: "0 4px 16px rgba(0, 0, 0, 0.42)",
+              textShadow: strongInvitationShadow,
             }}
           >
             Sean + Lexi = Sexi
           </div>
+        </div>
+        <div
+          style={{
+            position: "relative",
+            zIndex: 2,
+            width: "100%",
+            height: "100%",
+            display: "flex",
+            alignItems: "flex-end",
+            justifyContent: "center",
+            padding: "72px 112px 52px",
+          }}
+        >
           <div
             style={{
               display: "flex",
+              position: "relative",
               flexDirection: "column",
-              maxWidth: "740px",
-              gap: "6px",
-              marginBottom: nameLayout.isLong ? "14px" : "22px",
+              alignItems: "center",
+              width: `${invitationBoxWidth}px`,
+              gap: "4px",
+              marginBottom: 0,
             }}
           >
-            {nameLayout.lines.map((line) => (
+            {nameLayout.lines.map((line, index) => (
               <div
                 key={line}
                 style={{
                   display: "flex",
                   fontFamily:
                     "'Libre Baskerville', 'Cormorant Garamond', serif",
-                  fontSize: `${nameLayout.fontSize}px`,
+                  fontSize: `${invitationNameFontSize}px`,
                   fontWeight: 700,
                   lineHeight: 1.05,
                   color: "#ffd6e4",
-                  textShadow: "0 5px 22px rgba(0, 0, 0, 0.6)",
+                  whiteSpace: "nowrap",
+                  textShadow: strongInvitationShadow,
                 }}
               >
                 {line}
+                {index === nameLayout.lines.length - 1 ? "," : ""}
               </div>
             ))}
-          </div>
-          <div
-            style={{
-              display: "flex",
-              fontFamily: "'Cormorant Garamond', serif",
-              fontSize: "46px",
-              fontWeight: 600,
-              color: "#ffd6e4",
-              textShadow: "0 4px 18px rgba(0, 0, 0, 0.55)",
-            }}
-          >
-            you&apos;re invited!
-          </div>
-          <div
-            style={{
-              display: "flex",
-              marginTop: nameLayout.isLong ? "34px" : "52px",
-              fontFamily:
-                "'Libre Baskerville', 'Cormorant Garamond', serif",
-              fontSize: "28px",
-              fontWeight: 700,
-              letterSpacing: "5px",
-              textTransform: "uppercase",
-              color: "#ffd6e4",
-            }}
-          >
-            December 12, 2026 · Chicago, IL
+            <div
+              style={{
+                display: "flex",
+                fontFamily: "'Cormorant Garamond', serif",
+                fontSize: `${invitationSubheadFontSize}px`,
+                fontWeight: 600,
+                lineHeight: 1.05,
+                color: "#ffd6e4",
+                whiteSpace: "nowrap",
+                textShadow: softInvitationShadow,
+              }}
+            >
+              you&apos;re invited!
+            </div>
           </div>
         </div>
       </div>
