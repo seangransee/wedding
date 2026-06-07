@@ -14,6 +14,7 @@ type PhotoGalleryProps = {
 const transparentPixel =
   "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==";
 const thumbnailSizes = "(max-width: 640px) calc(100vw - 2.5rem), (max-width: 1024px) 45vw, 320px";
+const lightboxPreloadRadius = 4;
 
 type LazyGalleryImageProps = ComponentPropsWithoutRef<"img"> & {
   photoHeight: number;
@@ -162,7 +163,11 @@ export function PhotoGallery({ photos }: PhotoGalleryProps) {
         close={() => setIndex(-1)}
         index={index}
         slides={photos}
-        carousel={{ finite: photos.length <= 1, imageFit: "contain" }}
+        carousel={{
+          finite: photos.length <= 1,
+          imageFit: "contain",
+          preload: lightboxPreloadRadius,
+        }}
         controller={{ closeOnBackdropClick: true }}
         className="wedding-photo-lightbox"
       />
