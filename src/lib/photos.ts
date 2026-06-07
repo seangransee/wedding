@@ -2,6 +2,11 @@ import { existsSync } from "fs";
 import { readdir, stat } from "fs/promises";
 import path from "path";
 import { imageSizeFromFile } from "image-size/fromFile";
+import {
+  ensureWeddingPhotoRecords,
+  listWeddingPhotoRecords,
+  type WeddingPhotoRecord,
+} from "@/lib/db";
 
 export type WeddingPhoto = {
   filename: string;
@@ -9,6 +14,11 @@ export type WeddingPhoto = {
   width: number;
   height: number;
   alt: string;
+};
+
+export type AdminWeddingPhoto = WeddingPhoto & {
+  sortOrder: number;
+  hiddenAt: string | null;
 };
 
 const photosDirectory = path.join(process.cwd(), "photos");
@@ -92,23 +102,61 @@ export function getSafePhotoPath(filename: string) {
   return filePath;
 }
 
-export async function getWeddingPhotos(): Promise<WeddingPhoto[]> {
+async function getWeddingPhotoFilenames() {
   if (!existsSync(photosDirectory)) {
     return [];
   }
 
   const entries = await readdir(photosDirectory, { withFileTypes: true });
-  const filenames = entries
+
+  return entries
     .filter((entry) => entry.isFile() && isSupportedPhotoFilename(entry.name))
     .map((entry) => entry.name)
     .sort(comparePhotoFilenames);
+}
+
+async function getPhotoDimensions(filename: string) {
+  const filePath = path.join(photosDirectory, filename);
+  const dimensions = await imageSizeFromFile(filePath);
+
+  if (!dimensions.width || !dimensions.height) {
+    return null;
+  }
+
+  return {
+    width: dimensions.width,
+    height: dimensions.height,
+  };
+}
+
+function sortPhotoEntries<T extends { filename: string; originalIndex: number }>(
+  photos: T[],
+  metadataByFilename: Map<string, WeddingPhotoRecord>,
+) {
+  return photos.sort((first, second) => {
+    const firstMetadata = metadataByFilename.get(first.filename);
+    const secondMetadata = metadataByFilename.get(second.filename);
+    const firstSortOrder = firstMetadata?.sortOrder ?? Number.MAX_SAFE_INTEGER;
+    const secondSortOrder = secondMetadata?.sortOrder ?? Number.MAX_SAFE_INTEGER;
+
+    return (
+      firstSortOrder - secondSortOrder ||
+      first.originalIndex - second.originalIndex ||
+      filenameCollator.compare(first.filename, second.filename)
+    );
+  });
+}
+
+export async function getWeddingPhotos(): Promise<WeddingPhoto[]> {
+  const filenames = await getWeddingPhotoFilenames();
+  const records = await listWeddingPhotoRecords(filenames);
+  const metadataByFilename = new Map(records.map((record) => [record.filename, record]));
 
   const photos = await Promise.all(
     filenames.map(async (filename, index) => {
-      const filePath = path.join(photosDirectory, filename);
-      const dimensions = await imageSizeFromFile(filePath);
+      const dimensions = await getPhotoDimensions(filename);
 
-      if (!dimensions.width || !dimensions.height) {
+      if (!dimensions || metadataByFilename.get(filename)?.hiddenAt) {
         return null;
       }
 
@@ -118,11 +166,68 @@ export async function getWeddingPhotos(): Promise<WeddingPhoto[]> {
         width: dimensions.width,
         height: dimensions.height,
         alt: `Wedding photo ${index + 1}`,
+        originalIndex: index,
       };
     }),
   );
 
-  return photos.filter((photo): photo is WeddingPhoto => photo !== null);
+  return sortPhotoEntries(
+    photos.filter((photo): photo is WeddingPhoto & { originalIndex: number } => photo !== null),
+    metadataByFilename,
+  ).map((photo, index) => ({
+    filename: photo.filename,
+    src: photo.src,
+    width: photo.width,
+    height: photo.height,
+    alt: `Wedding photo ${index + 1}`,
+  }));
+}
+
+export async function getAdminWeddingPhotos(): Promise<AdminWeddingPhoto[]> {
+  const filenames = await getWeddingPhotoFilenames();
+  await ensureWeddingPhotoRecords(filenames);
+
+  const records = await listWeddingPhotoRecords(filenames);
+  const metadataByFilename = new Map(records.map((record) => [record.filename, record]));
+  const photos = await Promise.all(
+    filenames.map(async (filename, index) => {
+      const dimensions = await getPhotoDimensions(filename);
+
+      if (!dimensions) {
+        return null;
+      }
+
+      const metadata = metadataByFilename.get(filename);
+
+      return {
+        filename,
+        src: `/photos/${encodeURIComponent(filename)}`,
+        width: dimensions.width,
+        height: dimensions.height,
+        alt: `Wedding photo ${index + 1}`,
+        originalIndex: index,
+        sortOrder: metadata?.sortOrder ?? Number.MAX_SAFE_INTEGER,
+        hiddenAt: metadata?.hiddenAt ?? null,
+      };
+    }),
+  );
+
+  return sortPhotoEntries(
+    photos.filter((photo): photo is AdminWeddingPhoto & { originalIndex: number } => photo !== null),
+    metadataByFilename,
+  ).map((photo, index) => ({
+    filename: photo.filename,
+    src: photo.src,
+    width: photo.width,
+    height: photo.height,
+    alt: `Wedding photo ${index + 1}`,
+    sortOrder: photo.sortOrder,
+    hiddenAt: photo.hiddenAt,
+  }));
+}
+
+export async function getCurrentWeddingPhotoFilenames() {
+  return getWeddingPhotoFilenames();
 }
 
 export async function getPhotoFile(filename: string) {

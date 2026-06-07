@@ -70,6 +70,14 @@ export type GuestPageData = {
   attendees: RsvpAttendee[];
 };
 
+export type WeddingPhotoRecord = {
+  filename: string;
+  sortOrder: number;
+  hiddenAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
 type GuestRow = {
   id: number;
   name: string;
@@ -121,6 +129,14 @@ type RsvpAuditEventRow = {
   attending_count: number | null;
   attendee_details: string | null;
   created_at: string;
+};
+
+type WeddingPhotoRecordRow = {
+  filename: string;
+  sort_order: number;
+  hidden_at: string | null;
+  created_at: string;
+  updated_at: string;
 };
 
 const HIDDEN_RSVP_AUDIT_GUEST_NAME = "Sean and Lexi";
@@ -229,6 +245,139 @@ function parseAttendeeDetails(value: string | null): RsvpAttendeeDetails[] {
   }
 
   return JSON.parse(value) as RsvpAttendeeDetails[];
+}
+
+function toWeddingPhotoRecord(row: WeddingPhotoRecordRow): WeddingPhotoRecord {
+  return {
+    filename: row.filename,
+    sortOrder: row.sort_order,
+    hiddenAt: row.hidden_at,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+function isMissingWeddingPhotosTableError(error: unknown) {
+  return error instanceof Error && /relation "wedding_photos" does not exist/i.test(error.message);
+}
+
+export async function listWeddingPhotoRecords(
+  filenames: string[],
+): Promise<WeddingPhotoRecord[]> {
+  if (filenames.length === 0) {
+    return [];
+  }
+
+  try {
+    const rows = (await sql().query(
+      `SELECT filename, sort_order, hidden_at, created_at, updated_at
+       FROM wedding_photos
+       WHERE filename = ANY($1::text[])
+       ORDER BY sort_order ASC, filename ASC`,
+      [filenames],
+    )) as WeddingPhotoRecordRow[];
+
+    return rows.map(toWeddingPhotoRecord);
+  } catch (error) {
+    if (isMissingWeddingPhotosTableError(error)) {
+      return [];
+    }
+
+    throw error;
+  }
+}
+
+export async function ensureWeddingPhotoRecords(filenames: string[]) {
+  if (filenames.length === 0) {
+    return;
+  }
+
+  const positions = filenames.map((_, index) => index + 1);
+
+  await sql().query(
+    `WITH input_photos AS (
+       SELECT
+         filename,
+         position::integer AS position
+       FROM unnest($1::text[], $2::integer[]) AS photos(filename, position)
+     ),
+     current_max AS (
+       SELECT COALESCE(max(sort_order), 0) AS sort_order
+       FROM wedding_photos
+     )
+     INSERT INTO wedding_photos (filename, sort_order)
+     SELECT
+       input_photos.filename,
+       current_max.sort_order + input_photos.position
+     FROM input_photos
+     CROSS JOIN current_max
+     ON CONFLICT (filename) DO NOTHING`,
+    [filenames, positions],
+  );
+}
+
+export async function reorderWeddingPhotos(filenames: string[]) {
+  const rows = (await sql().query(
+    `WITH input_order AS (
+       SELECT filename, ordinality::integer AS position
+       FROM unnest($1::text[]) WITH ORDINALITY AS ordered_photos(filename, ordinality)
+     ),
+     validation AS (
+       SELECT
+         count(*)::integer AS input_count,
+         count(DISTINCT input_order.filename)::integer AS distinct_input_count,
+         count(photo.filename)::integer AS existing_input_count
+       FROM input_order
+       LEFT JOIN wedding_photos photo ON photo.filename = input_order.filename
+     ),
+     updated AS (
+       UPDATE wedding_photos photo
+       SET sort_order = input_order.position,
+           updated_at = now()
+       FROM input_order
+       WHERE photo.filename = input_order.filename
+         AND (
+           SELECT input_count = distinct_input_count
+             AND input_count = existing_input_count
+           FROM validation
+         )
+       RETURNING photo.filename
+     )
+     SELECT
+       input_count,
+       distinct_input_count,
+       existing_input_count,
+       (SELECT count(*)::integer FROM updated) AS updated_count
+     FROM validation`,
+    [filenames],
+  )) as Array<{
+    input_count: number;
+    distinct_input_count: number;
+    existing_input_count: number;
+    updated_count: number;
+  }>;
+
+  const result = rows[0];
+
+  return Boolean(
+    result &&
+      result.input_count === result.distinct_input_count &&
+      result.input_count === result.existing_input_count &&
+      result.updated_count === result.input_count,
+  );
+}
+
+export async function updateWeddingPhotoHidden(filename: string, hidden: boolean) {
+  const rows = (await sql().query(
+    `UPDATE wedding_photos
+     SET hidden_at = CASE WHEN $2 THEN COALESCE(hidden_at, now()) ELSE NULL END,
+         updated_at = now()
+     WHERE filename = $1
+     RETURNING filename`,
+    [filename, hidden],
+  )) as Array<{ filename: string }>;
+
+  return rows.length > 0;
 }
 
 export async function guestSlugExists(slug: string) {

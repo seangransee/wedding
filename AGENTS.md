@@ -47,6 +47,7 @@ Core tables:
 - `wedding_rsvps` - one current RSVP per guest, keyed by `guest_id`.
 - `wedding_rsvp_attendees` - per-person current RSVP details, keyed by RSVP and 1-based `position`; stores place-card name, optional meal type, and optional dietary/allergy notes.
 - `wedding_rsvp_audit_events` and `wedding_rsvp_audit_attendees` - append-only RSVP edit history, with soft deletion for deleted guests' audit rows.
+- `wedding_photos` - one metadata row per repo-root `photos/` image, storing manual gallery order and optional `hidden_at` visibility state.
 
 `guest_count` is the maximum attending count for the invitation and is constrained to 1-10. RSVP statuses are `yes`, `no`, and `deciding`. For `yes`, `attending_count` is required; for `no` and `deciding`, it must be null.
 
@@ -59,6 +60,7 @@ Core tables:
 - `src/app/[slug]/actions.ts`: server action that validates and persists RSVP changes.
 - `src/app/admin/page.tsx`: admin page. Without a valid admin cookie it shows the login form; with the cookie it loads guests and RSVP audit events.
 - `src/app/admin/admin-client.tsx`: spreadsheet UI for adding, editing, sorting, reordering, copying links, viewing links, deleting guests, and toggling flags.
+- `src/app/admin/photos/page.tsx`: admin photo manager for reordering Sexi Adventures photos and hiding/restoring individual images without deleting files.
 - `src/app/photos/[filename]/route.ts`: streams image assets from the repo-root `photos/` directory for the shared Sexi Adventures gallery.
 - `src/app/*/opengraph-image.tsx` and `src/lib/opengraph-image.tsx`: generated PNG Open Graph images for public save-the-date and per-guest invitation links.
 
@@ -125,6 +127,7 @@ Be careful changing validation: database constraints, server action validation, 
 - The Export CSV button downloads the loaded admin data as one CSV with `guest` rows for current invitation/RSVP/contact state and `rsvp_audit` rows for visible RSVP edit history, including per-person place-card, meal, and dietary details.
 - Deleting a guest requires typing `delete`, soft-deletes visible audit events for that guest, then deletes the guest row. RSVP and attendee rows cascade from foreign keys.
 - The audit table shown in admin filters to RSVP events, hides the `Sean and Lexi` guest name, and includes compact per-person place-card, meal, and dietary details.
+- `/admin/photos` is linked from the admin header and lets admins manually reorder the Sexi Adventures gallery or hide/restore photos. Hidden photos remain in `photos/` and can be brought back from the same page.
 
 ## Implementation Notes
 
@@ -137,7 +140,7 @@ Be careful changing validation: database constraints, server action validation, 
 - All long-form content should be driven by Markdown files in `content/`, not hard-coded in React or TypeScript. The renderer for these files lives in `src/app/markdown-content.tsx`.
 - Public `/` keeps Markdown invitation-only blocks locked behind an invitation link; guest invitation pages render those blocks.
 - FAQ questions in `content/faqs.md` render as collapsible dropdowns; keep each question as a `###` heading followed by its answer content.
-- The Sexi Adventures gallery reads supported image files from repo-root `photos/`, serves them through `/photos/[filename]`, and uses `react-photo-album` plus `yet-another-react-lightbox`. Do not hard-code gallery image lists in React.
+- The Sexi Adventures gallery reads supported image files from repo-root `photos/`, merges them with `wedding_photos` metadata for order and visibility, serves them through `/photos/[filename]`, and uses `react-photo-album` plus `yet-another-react-lightbox`. Do not hard-code gallery image lists in React.
 - `next.config.ts` includes `photos/**/*` in output file tracing so root-level gallery files are available to the image route after deployment.
 - Design uses a green/pink wedding palette, Cormorant/Libre serif fonts with Great Vibes for the `Sean + Lexi = Sexi` brand mark, pink-accent double-happiness glyphs, pink-tinted Our Story emoji, high-contrast large long-form copy, and a spreadsheet-like admin UI. Keep new UI consistent with those patterns.
 - The shared public/invitation hero foreground should keep the same single-column stack across mobile and desktop widths; only the background photo framing should make major viewport-specific shifts.

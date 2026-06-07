@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import Link from "next/link";
 import { ADMIN_COOKIE_NAME, ADMIN_PASSWORD } from "@/lib/cookies";
 import {
   listGuestsWithRsvps,
@@ -221,6 +222,12 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
             </h1>
           </div>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <Link
+              href="/admin/photos"
+              className="inline-flex h-8 items-center justify-center border border-[#df7fa3] bg-[#fff8fb] px-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#7a1239] transition hover:border-[#be185d] hover:bg-[#fff1f7]"
+            >
+              Edit photos
+            </Link>
             <AdminCsvExportButton auditEvents={auditEvents} guests={sortedGuests} />
             <div className="grid grid-cols-1 overflow-hidden border border-[#df7fa3] bg-[#fff8fb] text-xs sm:grid-cols-3">
               <div className="border-r border-[#efb5c9] px-2 py-1">
