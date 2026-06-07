@@ -14,7 +14,7 @@ type PhotoGalleryProps = {
 const transparentPixel =
   "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==";
 const thumbnailSizes = "(max-width: 640px) calc(100vw - 2.5rem), (max-width: 1024px) 45vw, 320px";
-const lightboxPreloadRadius = 2;
+const lightboxPreloadRadius = 1;
 const lightboxImageQuality = 75;
 const lightboxImageWidths = [640, 750, 1080, 1200, 1536, 1600, 1920, 2048] as const;
 
