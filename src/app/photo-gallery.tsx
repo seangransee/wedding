@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { RowsPhotoAlbum } from "react-photo-album";
 import Lightbox from "yet-another-react-lightbox";
 import type { WeddingPhoto } from "@/lib/photos";
@@ -14,7 +14,9 @@ type PhotoGalleryProps = {
 const transparentPixel =
   "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==";
 const thumbnailSizes = "(max-width: 640px) calc(100vw - 2.5rem), (max-width: 1024px) 45vw, 320px";
-const lightboxPreloadRadius = 4;
+const lightboxPreloadRadius = 2;
+const lightboxImageQuality = 75;
+const lightboxImageWidths = [640, 750, 1080, 1200, 1536, 1600, 1920, 2048] as const;
 
 type LazyGalleryImageProps = ComponentPropsWithoutRef<"img"> & {
   photoHeight: number;
@@ -112,8 +114,36 @@ function LazyGalleryImage({
   );
 }
 
+function getOptimizedImageSrc(src: string, width: number) {
+  const params = new URLSearchParams({
+    q: String(lightboxImageQuality),
+    url: src,
+    w: String(width),
+  });
+
+  return `/_next/image?${params.toString()}`;
+}
+
+function getLightboxSlides(photos: WeddingPhoto[]) {
+  return photos.map((photo) => {
+    const sourceWidths = lightboxImageWidths.filter((width) => width <= photo.width);
+    const largestWidth = sourceWidths[sourceWidths.length - 1] ?? lightboxImageWidths[0];
+
+    return {
+      ...photo,
+      src: getOptimizedImageSrc(photo.src, largestWidth),
+      srcSet: sourceWidths.map((width) => ({
+        src: getOptimizedImageSrc(photo.src, width),
+        width,
+        height: Math.round((photo.height / photo.width) * width),
+      })),
+    };
+  });
+}
+
 export function PhotoGallery({ photos }: PhotoGalleryProps) {
   const [index, setIndex] = useState(-1);
+  const lightboxSlides = useMemo(() => getLightboxSlides(photos), [photos]);
 
   return (
     <>
@@ -162,7 +192,7 @@ export function PhotoGallery({ photos }: PhotoGalleryProps) {
         open={index >= 0}
         close={() => setIndex(-1)}
         index={index}
-        slides={photos}
+        slides={lightboxSlides}
         carousel={{
           finite: photos.length <= 1,
           imageFit: "contain",
