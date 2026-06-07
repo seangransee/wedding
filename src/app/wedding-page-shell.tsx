@@ -88,7 +88,7 @@ function PageNav({
     { href: "#our-story", label: "Our Story" },
     { href: "#hotel-blocks", label: "Hotels" },
     { href: "#faqs", label: "FAQs" },
-    ...(hasPhotos ? [{ href: "#photos", label: "Photos" }] : []),
+    ...(hasPhotos ? [{ href: "#photos", label: "Sexi Adventures" }] : []),
   ];
 
   return (
