@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { RowsPhotoAlbum } from "react-photo-album";
 import Lightbox from "yet-another-react-lightbox";
@@ -12,14 +13,19 @@ type PhotoGalleryProps = {
 
 const transparentPixel =
   "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==";
+const thumbnailSizes = "(max-width: 640px) calc(100vw - 2.5rem), (max-width: 1024px) 45vw, 320px";
 
 type LazyGalleryImageProps = ComponentPropsWithoutRef<"img"> & {
+  photoHeight: number;
+  photoWidth: number;
   src: string | Blob;
 };
 
 function LazyGalleryImage({
   alt,
   className,
+  photoHeight,
+  photoWidth,
   onLoad,
   src,
   ...props
@@ -28,7 +34,6 @@ function LazyGalleryImage({
   const imageSrc = String(src);
   const [canLoad, setCanLoad] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
-  const currentSrc = canLoad ? imageSrc : transparentPixel;
 
   useEffect(() => {
     const element = wrapperRef.current;
@@ -68,21 +73,40 @@ function LazyGalleryImage({
         aria-hidden="true"
         data-loaded={isLoaded}
       />
-      {/* react-photo-album renders plain images; this custom renderer delays the real src until the tile is near the viewport. */}
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        {...props}
-        alt={alt ?? ""}
-        src={currentSrc}
-        className={className}
-        data-loaded={isLoaded}
-        onLoad={(event) => {
-          if (canLoad) {
+      {canLoad ? (
+        <Image
+          alt={alt ?? ""}
+          className={className}
+          data-loaded={isLoaded}
+          decoding={props.decoding}
+          height={photoHeight}
+          loading="lazy"
+          quality={68}
+          sizes={thumbnailSizes}
+          src={imageSrc}
+          title={props.title}
+          width={photoWidth}
+          onLoad={(event) => {
             setIsLoaded(true);
-          }
-          onLoad?.(event);
-        }}
-      />
+            onLoad?.(event);
+          }}
+        />
+      ) : (
+        // This transparent image preserves the react-photo-album aspect-ratio box without requesting the full photo.
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          alt={alt ?? ""}
+          className={className}
+          data-loaded={false}
+          decoding={props.decoding}
+          height={photoHeight}
+          loading="lazy"
+          sizes={props.sizes}
+          src={transparentPixel}
+          title={props.title}
+          width={photoWidth}
+        />
+      )}
     </span>
   );
 }
@@ -112,7 +136,13 @@ export function PhotoGallery({ photos }: PhotoGalleryProps) {
         }}
         onClick={({ index: photoIndex }) => setIndex(photoIndex)}
         render={{
-          image: (props) => <LazyGalleryImage {...props} />,
+          image: (props, { photo }) => (
+            <LazyGalleryImage
+              {...props}
+              photoHeight={photo.height}
+              photoWidth={photo.width}
+            />
+          ),
         }}
         componentsProps={{
           button: ({ photo }) => ({
