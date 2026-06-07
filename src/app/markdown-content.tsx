@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { Fragment, type ReactNode } from "react";
 import { readFileSync } from "fs";
 import path from "path";
 import { LockedNotice } from "./locked-notice";
@@ -29,6 +29,7 @@ type MarkdownNode =
 type MarkdownContentProps = {
   fileName: string;
   id: string;
+  collapsibleQuestions?: boolean;
   emphasizeHeadings?: boolean;
   lockedBlocks?: boolean;
   subtitleFromFirstParagraph?: boolean;
@@ -158,7 +159,7 @@ function renderInlineMarkdown(text: string) {
         href={url}
         target="_blank"
         rel="noopener noreferrer"
-        className="font-semibold text-[#f1b3c6] underline decoration-dashed decoration-1 underline-offset-4 transition hover:text-[#ffd86e]"
+        className="font-semibold text-[#ffd6e4] underline decoration-dashed decoration-1 underline-offset-4 transition hover:text-[#fff6fa]"
       >
         {label}
       </a>,
@@ -178,7 +179,12 @@ function renderNodes(
   nodes: MarkdownNode[],
   lockedBlocks: boolean,
   emphasizeHeadings: boolean,
+  collapsibleQuestions = false,
 ): ReactNode[] {
+  if (collapsibleQuestions) {
+    return renderCollapsibleQuestionNodes(nodes, lockedBlocks, emphasizeHeadings);
+  }
+
   return nodes.map((node, index) => {
     switch (node.type) {
       case "heading":
@@ -186,7 +192,7 @@ function renderNodes(
           return (
             <h2
               key={index}
-              className="text-center text-4xl font-semibold leading-tight text-[#ffd86e] sm:text-6xl"
+              className="text-center text-4xl font-semibold leading-tight text-[#ffd6e4] sm:text-6xl"
             >
               {renderInlineMarkdown(node.text)}
             </h2>
@@ -199,8 +205,8 @@ function renderNodes(
               key={index}
               className={
                 emphasizeHeadings
-                  ? "border-y border-[#b8860b]/55 bg-[#fff6fa]/8 px-3 py-3 text-center text-base font-bold uppercase tracking-[0.2em] text-[#f1b3c6] shadow-[inset_0_1px_0_rgba(255,246,250,0.12)] first:mt-0 sm:px-5 sm:py-4 sm:text-lg sm:tracking-[0.24em]"
-                  : "border-t border-[#b8860b]/40 pt-7 text-base font-semibold uppercase tracking-[0.18em] text-[#f1b3c6] first:border-t-0 first:pt-0 sm:pt-8 sm:text-lg sm:tracking-[0.22em]"
+                  ? "border-y border-[#ffd6e4]/55 bg-[#031b12]/55 px-3 py-3 text-center text-sm font-bold uppercase tracking-[0.28em] text-[#fff6fa] shadow-[inset_0_1px_0_rgba(255,246,250,0.12)] first:mt-0 sm:px-5 sm:py-4 sm:text-base sm:tracking-[0.34em]"
+                  : "border-t border-[#ffd6e4]/40 pt-7 text-base font-semibold uppercase tracking-[0.18em] text-[#ffd6e4] first:border-t-0 first:pt-0 sm:pt-8 sm:text-lg sm:tracking-[0.22em]"
               }
             >
               {renderInlineMarkdown(node.text)}
@@ -213,8 +219,8 @@ function renderNodes(
             key={index}
             className={
               emphasizeHeadings
-                ? "border-l-4 border-[#b8860b] bg-[#fff6fa]/8 py-3 pl-4 pr-3 text-[1.7rem] font-semibold leading-tight text-[#ffd86e] shadow-[inset_0_1px_0_rgba(255,246,250,0.12)] sm:pl-5 sm:text-3xl"
-                : "border-t border-[#b8860b]/35 pt-4 text-2xl font-semibold leading-tight text-[#ffd86e] first:border-t-0 first:pt-0 sm:text-3xl"
+                ? "border-y border-[#ffd6e4]/55 bg-[#031b12]/55 px-3 py-3 text-center text-sm font-bold uppercase tracking-[0.28em] text-[#fff6fa] shadow-[inset_0_1px_0_rgba(255,246,250,0.12)] sm:px-5 sm:py-4 sm:text-base sm:tracking-[0.34em]"
+                : "border-t border-[#ffd6e4]/35 pt-4 text-2xl font-semibold leading-tight text-[#ffd6e4] first:border-t-0 first:pt-0 sm:text-3xl"
             }
           >
             {renderInlineMarkdown(node.text)}
@@ -223,7 +229,7 @@ function renderNodes(
 
       case "paragraph":
         return (
-          <p key={index} className="text-lg leading-[1.85] text-[#f1b3c6] sm:text-xl">
+          <p key={index} className="text-lg leading-[1.85] text-[#ffd6e4] sm:text-xl">
             {renderInlineMarkdown(node.text)}
           </p>
         );
@@ -232,7 +238,7 @@ function renderNodes(
         return (
           <ul
             key={index}
-            className="grid gap-2 pl-5 text-lg leading-[1.8] text-[#f1b3c6] sm:text-xl"
+            className="grid gap-2 pl-5 text-lg leading-[1.8] text-[#ffd6e4] sm:text-xl"
           >
             {node.items.map((item) => (
               <li key={item} className="list-disc">
@@ -244,7 +250,7 @@ function renderNodes(
 
       case "rule":
         return (
-          <hr key={index} className="border-t border-[#b8860b]/35" />
+          <hr key={index} className="border-t border-[#ffd6e4]/35" />
         );
 
       case "invitationOnly":
@@ -267,7 +273,69 @@ function renderNodes(
   });
 }
 
+function renderCollapsibleQuestionNodes(
+  nodes: MarkdownNode[],
+  lockedBlocks: boolean,
+  emphasizeHeadings: boolean,
+): ReactNode[] {
+  const renderedNodes: ReactNode[] = [];
+  let index = 0;
+
+  while (index < nodes.length) {
+    const node = nodes[index];
+
+    if (node.type === "heading" && node.level >= 3) {
+      const answerNodes: MarkdownNode[] = [];
+      let answerIndex = index + 1;
+
+      while (answerIndex < nodes.length) {
+        const nextNode = nodes[answerIndex];
+
+        if (nextNode.type === "heading" && nextNode.level <= node.level) {
+          break;
+        }
+
+        answerNodes.push(nextNode);
+        answerIndex += 1;
+      }
+
+      renderedNodes.push(
+        <details
+          key={`question-${index}`}
+          className="group rounded-md border border-[#ffd6e4]/45 bg-[#fff6fa]/8 shadow-[inset_0_1px_0_rgba(255,246,250,0.1)]"
+        >
+          <summary className="grid min-h-16 cursor-pointer list-none grid-cols-[1fr_auto] items-center gap-4 px-4 py-3 text-left text-[1.45rem] font-semibold leading-tight text-[#ffd6e4] transition hover:bg-[#fff6fa]/8 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#ffd6e4] [&::-webkit-details-marker]:hidden sm:px-5 sm:py-4 sm:text-2xl">
+            <span>{renderInlineMarkdown(node.text)}</span>
+            <span
+              aria-hidden="true"
+              className="grid size-10 place-items-center rounded-full border border-[#ffd6e4]/95 bg-[#031b12]/90 font-serif text-[1.45rem] font-bold leading-none text-[#ffd6e4] shadow-[0_0.6rem_1.2rem_rgba(3,27,18,0.45),inset_0_0_0_1px_rgba(255,246,250,0.16)] transition group-open:scale-110 sm:size-11 sm:text-[1.6rem]"
+            >
+              囍
+            </span>
+          </summary>
+          <div className="grid gap-4 border-t border-[#ffd6e4]/30 px-4 py-4 sm:px-5 sm:py-5">
+            {renderNodes(answerNodes, lockedBlocks, emphasizeHeadings)}
+          </div>
+        </details>,
+      );
+
+      index = answerIndex;
+      continue;
+    }
+
+    renderedNodes.push(
+      <Fragment key={`node-${index}`}>
+        {renderNodes([node], lockedBlocks, emphasizeHeadings)[0]}
+      </Fragment>,
+    );
+    index += 1;
+  }
+
+  return renderedNodes;
+}
+
 export function MarkdownContent({
+  collapsibleQuestions = false,
   fileName,
   emphasizeHeadings = false,
   id,
@@ -287,10 +355,10 @@ export function MarkdownContent({
       id={id}
       className="relative z-10 mx-auto mt-12 max-w-5xl scroll-mt-28 sm:mt-16 lg:mt-20"
     >
-      <article className="guest-panel-surface grid gap-6 rounded-lg border border-[#b8860b]/60 p-5 text-[#f1b3c6] sm:gap-7 sm:p-8 lg:p-10">
-        <header className="grid gap-3 border-b border-[#b8860b]/45 pb-5 text-center sm:pb-6">
+      <article className="guest-panel-surface grid gap-6 rounded-lg border border-[#ffd6e4]/60 p-5 text-[#ffd6e4] sm:gap-7 sm:p-8 lg:p-10">
+        <header className="grid gap-3 border-b border-[#ffd6e4]/45 pb-5 text-center sm:pb-6">
           {subtitle ? (
-            <p className="text-sm font-semibold uppercase tracking-[0.22em] text-[#f1b3c6] sm:text-base sm:tracking-[0.26em]">
+            <p className="text-sm font-semibold uppercase tracking-[0.22em] text-[#ffd6e4] sm:text-base sm:tracking-[0.26em]">
               {renderInlineMarkdown(subtitle.text)}
             </p>
           ) : null}
@@ -299,7 +367,12 @@ export function MarkdownContent({
             : null}
         </header>
         <div className="grid gap-6">
-          {renderNodes(bodyNodes, lockedBlocks, emphasizeHeadings)}
+          {renderNodes(
+            bodyNodes,
+            lockedBlocks,
+            emphasizeHeadings,
+            collapsibleQuestions,
+          )}
         </div>
       </article>
     </section>

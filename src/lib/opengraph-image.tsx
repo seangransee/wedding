@@ -98,9 +98,9 @@ export async function generateOgImage({
             width: "92%",
             height: "82%",
             borderRadius: "48px",
-            border: "1px solid rgba(241, 179, 198, 0.45)",
+            border: "1px solid rgba(255, 214, 228, 0.45)",
             background:
-              "linear-gradient(135deg, rgba(184, 134, 11, 0.9), rgba(184, 134, 11, 0.72))",
+              "linear-gradient(135deg, rgba(255, 214, 228, 0.9), rgba(255, 214, 228, 0.72))",
             boxShadow: "0 45px 90px rgba(5, 79, 45, 0.32)",
             display: "flex",
             flexDirection: "column",
@@ -116,7 +116,7 @@ export async function generateOgImage({
               position: "absolute",
               inset: "0",
               background:
-                "radial-gradient(circle at top center, rgba(241, 179, 198, 0.32), transparent 58%)",
+                "radial-gradient(circle at top center, rgba(255, 214, 228, 0.32), transparent 58%)",
             }}
           />
           <div
@@ -124,7 +124,7 @@ export async function generateOgImage({
               position: "absolute",
               inset: "0",
               backgroundImage:
-                "repeating-linear-gradient(120deg, rgba(241, 179, 198, 0.1), rgba(241, 179, 198, 0.1) 2px, transparent 2px, transparent 24px)",
+                "repeating-linear-gradient(120deg, rgba(255, 214, 228, 0.1), rgba(255, 214, 228, 0.1) 2px, transparent 2px, transparent 24px)",
               opacity: 0.55,
             }}
           />
@@ -134,7 +134,7 @@ export async function generateOgImage({
               width: "1200px",
               height: "1200px",
               borderRadius: "50%",
-              border: "1px solid rgba(241, 179, 198, 0.28)",
+              border: "1px solid rgba(255, 214, 228, 0.28)",
               top: "-60%",
               left: "50%",
               marginLeft: "-600px",
@@ -147,7 +147,7 @@ export async function generateOgImage({
               width: "1400px",
               height: "1400px",
               borderRadius: "50%",
-              border: "1px solid rgba(241, 179, 198, 0.18)",
+              border: "1px solid rgba(255, 214, 228, 0.18)",
               top: "-68%",
               left: "50%",
               marginLeft: "-700px",
@@ -174,7 +174,7 @@ export async function generateOgImage({
                 gap: "18px",
                 textTransform: "uppercase",
                 letterSpacing: "12px",
-                color: "#f1b3c6",
+                color: "#ffd6e4",
                 fontSize: "32px",
                 fontFamily: "'Libre Baskerville', 'Cormorant Garamond', serif",
                 fontWeight: 700,
@@ -186,7 +186,7 @@ export async function generateOgImage({
                   display: "block",
                   height: "1px",
                   width: "120px",
-                  background: "rgba(241, 179, 198, 0.45)",
+                  background: "rgba(255, 214, 228, 0.45)",
                 }}
               />
               {badge}
@@ -195,7 +195,7 @@ export async function generateOgImage({
                   display: "block",
                   height: "1px",
                   width: "120px",
-                  background: "rgba(241, 179, 198, 0.45)",
+                  background: "rgba(255, 214, 228, 0.45)",
                 }}
               />
             </div>
@@ -205,7 +205,7 @@ export async function generateOgImage({
                   fontFamily: "'Dancing Script', 'Cormorant Garamond', serif",
                   fontSize: "110px",
                   letterSpacing: "6px",
-                  color: "#f1b3c6",
+                  color: "#ffd6e4",
                   fontWeight: 600,
                   textShadow: "0 6px 18px rgba(5, 79, 45, 0.35)",
                 }}
@@ -335,7 +335,7 @@ export async function generateInvitationOgImage(guestName: string) {
           style={{
             position: "absolute",
             inset: "34px",
-            border: "2px solid rgba(184, 134, 11, 0.78)",
+            border: "2px solid rgba(255, 214, 228, 0.78)",
           }}
         />
         {[
@@ -353,9 +353,9 @@ export async function generateInvitationOgImage(guestName: string) {
               width: "52px",
               height: "52px",
               borderRadius: "999px",
-              border: "1px solid rgba(184, 134, 11, 0.82)",
+              border: "1px solid rgba(255, 214, 228, 0.82)",
               background: "rgba(3, 27, 18, 0.66)",
-              color: "#f1c96d",
+              color: "#ffd6e4",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -388,7 +388,7 @@ export async function generateInvitationOgImage(guestName: string) {
               fontFamily: "'Dancing Script', 'Cormorant Garamond', serif",
               fontSize: nameLayout.isLong ? "56px" : "68px",
               fontWeight: 600,
-              color: "#f1b3c6",
+              color: "#ffd6e4",
               letterSpacing: "2px",
               marginBottom: nameLayout.isLong ? "14px" : "24px",
               textShadow: "0 4px 16px rgba(0, 0, 0, 0.42)",
@@ -429,7 +429,7 @@ export async function generateInvitationOgImage(guestName: string) {
               fontFamily: "'Cormorant Garamond', serif",
               fontSize: "46px",
               fontWeight: 600,
-              color: "#f1c96d",
+              color: "#ffd6e4",
               textShadow: "0 4px 18px rgba(0, 0, 0, 0.55)",
             }}
           >
@@ -445,7 +445,7 @@ export async function generateInvitationOgImage(guestName: string) {
               fontWeight: 700,
               letterSpacing: "5px",
               textTransform: "uppercase",
-              color: "#f1b3c6",
+              color: "#ffd6e4",
             }}
           >
             December 12, 2026 · Chicago, IL

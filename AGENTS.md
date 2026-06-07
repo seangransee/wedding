@@ -10,7 +10,7 @@ Next.js app for Sean and Lexi's wedding website. The app has four main surfaces:
 Long-form public/invitation copy lives in Markdown files under `content/` so non-technical editors can update it without touching React code. Current files:
 
 - `content/our-story.md` - the Our Story section.
-- `content/hotel-blocks.md` - the dedicated Hotels section. Use `<!-- invitation-only-start title="Hotels" -->` and `<!-- invitation-only-end -->` around booking details that should be hidden on public `/` and shown only on guest invitation pages.
+- `content/hotel-blocks.md` - the dedicated Hotels section. Use `<!-- invitation-only-start title="Hotels" -->` and `<!-- invitation-only-end -->` around booking details that should be hidden on public `/` and shown only on guest invitation pages. Keep individual hotel names as `###` headings so they render as prominent hotel blocks.
 - `content/faqs.md` - the FAQ section. Keep hotel block booking details in `content/hotel-blocks.md`, not in FAQs.
 
 The package currently uses `next` 16.x with React 19, Tailwind CSS 4, TypeScript, Neon/Postgres, and `react-data-grid`.
@@ -133,7 +133,8 @@ Be careful changing validation: database constraints, server action validation, 
 - `INVITATION_BASE_URL` in `admin-client.tsx` is hardcoded to `https://sexiwedding.com` for copied links.
 - All long-form content should be driven by Markdown files in `content/`, not hard-coded in React or TypeScript. The renderer for these files lives in `src/app/markdown-content.tsx`.
 - Public `/` keeps Markdown invitation-only blocks locked behind an invitation link; guest invitation pages render those blocks.
-- Design uses a green/gold/pink wedding palette, Cormorant/Libre/Dancing Script fonts, double-happiness glyphs, high-contrast large long-form copy, and a spreadsheet-like admin UI. Keep new UI consistent with those patterns.
+- FAQ questions in `content/faqs.md` render as collapsible dropdowns; keep each question as a `###` heading followed by its answer content.
+- Design uses a green/pink wedding palette, Cormorant/Libre/Dancing Script fonts, pink-accent double-happiness glyphs, high-contrast large long-form copy, and a spreadsheet-like admin UI. Keep new UI consistent with those patterns.
 - The shared public/invitation hero foreground should keep the same single-column stack across mobile and desktop widths; only the background photo framing should make major viewport-specific shifts.
 - Guests will primarily use the site on phones. Treat mobile layouts as the primary experience, especially for invitation pages, RSVP controls, forms, tap targets, safe-area spacing, and text wrapping.
 

@@ -33,25 +33,25 @@ export default function SaveTheDate() {
   return (
     <main className="relative min-h-screen overflow-hidden bg-[#054f2d] flex items-center justify-center py-8 px-6 text-white sm:py-12 md:py-16">
       <span
-        className="pointer-events-none absolute top-6 left-6 text-4xl text-[#b8860b] opacity-85 sm:text-5xl md:text-6xl"
+        className="pointer-events-none absolute top-6 left-6 text-4xl text-[#ffd6e4] opacity-85 sm:text-5xl md:text-6xl"
         aria-hidden="true"
       >
         囍
       </span>
       <span
-        className="pointer-events-none absolute top-6 right-6 text-4xl text-[#b8860b] opacity-85 sm:text-5xl md:text-6xl"
+        className="pointer-events-none absolute top-6 right-6 text-4xl text-[#ffd6e4] opacity-85 sm:text-5xl md:text-6xl"
         aria-hidden="true"
       >
         囍
       </span>
       <span
-        className="pointer-events-none absolute bottom-6 left-6 text-4xl text-[#b8860b] opacity-85 sm:text-5xl md:text-6xl"
+        className="pointer-events-none absolute bottom-6 left-6 text-4xl text-[#ffd6e4] opacity-85 sm:text-5xl md:text-6xl"
         aria-hidden="true"
       >
         囍
       </span>
       <span
-        className="pointer-events-none absolute bottom-6 right-6 text-4xl text-[#b8860b] opacity-85 sm:text-5xl md:text-6xl"
+        className="pointer-events-none absolute bottom-6 right-6 text-4xl text-[#ffd6e4] opacity-85 sm:text-5xl md:text-6xl"
         aria-hidden="true"
       >
         囍
@@ -69,24 +69,24 @@ export default function SaveTheDate() {
           className="absolute inset-0 rounded-[40px] bg-white/30 blur-3xl"
           aria-hidden="true"
         />
-        <div className="hero-card relative overflow-hidden rounded-[40px] border border-[#b8860b]/45 bg-[#b8860b]/70 backdrop-blur-md shadow-2xl p-8 text-center text-[#054f2d] sm:p-10 md:p-12">
+        <div className="hero-card relative overflow-hidden rounded-[40px] border border-[#ffd6e4]/45 bg-[#ffd6e4]/70 backdrop-blur-md shadow-2xl p-8 text-center text-[#054f2d] sm:p-10 md:p-12">
           <div
-            className="hero-halo absolute -top-32 left-1/2 h-64 w-64 -translate-x-1/2 rounded-full bg-[#f1b3c6]/22 blur-3xl"
+            className="hero-halo absolute -top-32 left-1/2 h-64 w-64 -translate-x-1/2 rounded-full bg-[#ffd6e4]/22 blur-3xl"
             aria-hidden="true"
           />
           <span
-            className="pointer-events-none absolute inset-0 -z-10 flex items-center justify-center text-[min(45vw,28rem)] font-semibold text-[#b8860b] opacity-10"
+            className="pointer-events-none absolute inset-0 -z-10 flex items-center justify-center text-[min(45vw,28rem)] font-semibold text-[#ffd6e4] opacity-10"
             aria-hidden="true"
           >
             囍
           </span>
           <div className="deco-header mx-auto flex max-w-md items-center justify-center gap-3 text-[0.65rem] uppercase tracking-[0.55em]">
             <span className="deco-line" aria-hidden="true" />
-            <span className="deco-badge text-[#f1b3c6]">SAVE THE DATE</span>
+            <span className="deco-badge text-[#ffd6e4]">SAVE THE DATE</span>
             <span className="deco-line" aria-hidden="true" />
           </div>
           <p
-            className="mt-3 text-3xl text-[#f1b3c6] sm:text-4xl md:text-5xl"
+            className="mt-3 text-4xl leading-tight text-[#ffd6e4] sm:text-6xl"
             style={{
               fontFamily: "var(--font-dancing-script)",
               fontWeight: 600,
@@ -97,7 +97,7 @@ export default function SaveTheDate() {
           </p>
           <h1 className="mt-6 text-3xl font-semibold leading-tight sm:text-4xl md:text-5xl lg:text-6xl">
             <span className="block">Sean and Lexi are</span>
-            <span className="font-semibold text-[#f1b3c6]">finally</span>{" "}
+            <span className="font-semibold text-[#ffd6e4]">finally</span>{" "}
             getting married!
           </h1>
           <div className="mt-8 flex flex-col gap-6 md:flex-row md:items-start md:justify-center md:gap-16">
@@ -107,13 +107,13 @@ export default function SaveTheDate() {
                   href={WEDDING_DETAILS.calendarUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-current underline decoration-dashed decoration-1 decoration-[#054f2d]/50 underline-offset-6 transition-colors hover:text-[#f1b3c6] hover:decoration-[#f1b3c6]"
+                  className="text-current underline decoration-dashed decoration-1 decoration-[#054f2d]/50 underline-offset-6 transition-colors hover:text-[#ffd6e4] hover:decoration-[#ffd6e4]"
                 >
                   December 12, 2026
                 </a>
               </p>
             </div>
-            <div className="md:hidden text-xs uppercase tracking-[0.4em] text-[#f1b3c6]">
+            <div className="md:hidden text-xs uppercase tracking-[0.4em] text-[#ffd6e4]">
               at
             </div>
             <div>
@@ -122,12 +122,12 @@ export default function SaveTheDate() {
                   href="https://maps.app.goo.gl/UKgUKENz1W4efCC7A"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-current underline decoration-dashed decoration-1 decoration-[#054f2d]/50 underline-offset-6 transition-colors hover:text-[#f1b3c6] hover:decoration-[#f1b3c6]"
+                  className="text-current underline decoration-dashed decoration-1 decoration-[#054f2d]/50 underline-offset-6 transition-colors hover:text-[#ffd6e4] hover:decoration-[#ffd6e4]"
                 >
                   The Blackstone Hotel
                 </a>
               </p>
-              <p className="mt-2 text-base uppercase tracking-[0.25em] text-[#f1b3c6] sm:text-lg">
+              <p className="mt-2 text-base uppercase tracking-[0.25em] text-[#ffd6e4] sm:text-lg">
                 Chicago, IL
               </p>
             </div>
@@ -137,7 +137,7 @@ export default function SaveTheDate() {
               href={WEDDING_DETAILS.calendarUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-block text-sm font-semibold uppercase tracking-[0.2em] text-[#054f2d]/80 underline decoration-dashed decoration-1 underline-offset-4 transition-colors hover:text-[#f1b3c6] hover:decoration-[#f1b3c6]"
+              className="inline-block text-sm font-semibold uppercase tracking-[0.2em] text-[#054f2d]/80 underline decoration-dashed decoration-1 underline-offset-4 transition-colors hover:text-[#ffd6e4] hover:decoration-[#ffd6e4]"
             >
               Add to calendar
             </a>

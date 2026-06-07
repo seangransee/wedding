@@ -47,7 +47,7 @@ type ErrorLocation = "status" | "count" | "names" | "global" | null;
 function ErrorNote({ children }: { children: ReactNode }) {
   return (
     <div
-      className="rounded-md border border-[#f1b3c6]/55 bg-[#fff6fa]/10 px-4 py-3 text-lg font-semibold leading-relaxed text-[#f1b3c6] shadow-[inset_3px_0_0_#f1b3c6] sm:text-xl"
+      className="rounded-md border border-[#ffd6e4]/55 bg-[#fff6fa]/10 px-4 py-3 text-lg font-semibold leading-relaxed text-[#ffd6e4] shadow-[inset_3px_0_0_#ffd6e4] sm:text-xl"
       role="alert"
     >
       {children}
@@ -220,26 +220,26 @@ export function RsvpForm({
       <input type="hidden" name="attendingCount" value={effectiveAttendingCount ?? ""} />
 
       <div className="min-w-0">
-        <h2 className="break-words text-3xl font-semibold leading-tight text-[#ffd86e] sm:text-5xl">
+        <h2 className="break-words text-3xl font-semibold leading-tight text-[#ffd6e4] sm:text-5xl">
           {guestName}, you&apos;re invited!
         </h2>
       </div>
 
       <div className="grid gap-4">
-        <p className="text-lg font-semibold leading-[1.65] text-[#f1b3c6] sm:text-xl">
+        <p className="text-lg font-semibold leading-[1.65] text-[#ffd6e4] sm:text-xl">
           Will you be attending?
         </p>
-        <p className="text-lg leading-[1.85] text-[#f1b3c6] sm:text-xl">
+        <p className="text-lg leading-[1.85] text-[#ffd6e4] sm:text-xl">
           {fuckYes ? (
             <>
               Please RSVP with a final answer by{" "}
-              <strong className="font-semibold text-[#ffd86e]">November 1st</strong>.
+              <strong className="font-semibold text-[#ffd6e4]">November 1st</strong>.
             </>
           ) : (
             <>
               If you&apos;re not sure, select &quot;still deciding&quot; so we know
               you saw this. Please RSVP with a final answer by{" "}
-              <strong className="font-semibold text-[#ffd86e]">November 1st</strong>.
+              <strong className="font-semibold text-[#ffd6e4]">November 1st</strong>.
             </>
           )}
         </p>
@@ -279,10 +279,10 @@ export function RsvpForm({
                   });
                 }}
                 aria-pressed={selected}
-                className={`min-h-14 rounded-md border px-4 text-base font-semibold uppercase tracking-[0.12em] transition sm:text-lg ${
+                className={`min-h-14 rounded-md border px-4 text-base font-semibold tracking-normal transition sm:text-lg ${
                   selected
-                    ? "border-[#ffd86e] bg-[#fff6fa]/12 text-[#ffd86e]"
-                    : "border-[#b8860b]/45 bg-[#fff6fa]/6 text-[#f1b3c6] hover:border-[#f1b3c6] hover:text-[#ffd86e]"
+                    ? "border-[#ffd6e4] bg-[#fff6fa]/12 text-[#ffd6e4]"
+                    : "border-[#ffd6e4]/45 bg-[#fff6fa]/6 text-[#ffd6e4] hover:border-[#fff6fa] hover:text-[#fff6fa]"
                 }`}
               >
                 {option.label}
@@ -299,7 +299,7 @@ export function RsvpForm({
         <div className="grid gap-5">
           {guestCount > 1 ? (
             <div className="grid gap-4">
-              <p className="text-lg font-semibold leading-[1.65] text-[#f1b3c6] sm:text-xl">
+              <p className="text-lg font-semibold leading-[1.65] text-[#ffd6e4] sm:text-xl">
                 How many attending?
               </p>
               <div className="grid grid-cols-5 gap-2">
@@ -332,8 +332,8 @@ export function RsvpForm({
                         aria-pressed={selected}
                         className={`min-h-12 rounded-md border text-lg font-semibold transition sm:min-h-14 sm:text-xl ${
                           selected
-                            ? "border-[#ffd86e] bg-[#fff6fa]/12 text-[#ffd86e]"
-                            : "border-[#b8860b]/45 bg-[#fff6fa]/6 text-[#f1b3c6] hover:border-[#f1b3c6] hover:text-[#ffd86e]"
+                            ? "border-[#ffd6e4] bg-[#fff6fa]/12 text-[#ffd6e4]"
+                            : "border-[#ffd6e4]/45 bg-[#fff6fa]/6 text-[#ffd6e4] hover:border-[#fff6fa] hover:text-[#fff6fa]"
                         }`}
                         aria-label={`${count} attending`}
                       >
@@ -351,12 +351,12 @@ export function RsvpForm({
 
           {visibleAttendeeDetails.length > 0 ? (
             <div className="grid gap-4">
-              <p className="text-lg leading-[1.85] text-[#f1b3c6] sm:text-xl">
+              <p className="text-lg leading-[1.85] text-[#ffd6e4] sm:text-xl">
                 {visibleAttendeeDetails.length === 1
                   ? "Enter your full name exactly as it should appear on the place card."
                   : "Enter each full name exactly as it should appear on the place card."}
               </p>
-              <p className="text-lg leading-[1.85] text-[#f1b3c6] sm:text-xl">
+              <p className="text-lg leading-[1.85] text-[#ffd6e4] sm:text-xl">
                 Please select your meal type and note below if you have any dietary restrictions or allergies we need to be aware of.
               </p>
               {currentErrorLocation === "names" ? (
@@ -365,10 +365,10 @@ export function RsvpForm({
               {visibleAttendeeDetails.map((attendee, index) => (
                 <div
                   key={index}
-                  className="grid gap-4 rounded-md border border-[#b8860b]/40 bg-[#fff6fa]/8 p-4 text-lg font-semibold leading-[1.5] text-[#f1b3c6] sm:text-xl"
+                  className="grid gap-4 rounded-md border border-[#ffd6e4]/40 bg-[#fff6fa]/8 p-4 text-lg font-semibold leading-[1.5] text-[#ffd6e4] sm:text-xl"
                 >
                   <label htmlFor={`attendee-name-${index}`}>
-                    {visibleAttendeeDetails.length === 1 ? "Full name" : `Full name ${index + 1}`}
+                    {visibleAttendeeDetails.length === 1 ? "Full Name" : `Full Name ${index + 1}`}
                   </label>
                   <div className="grid grid-cols-[1fr_auto] gap-2">
                     <input
@@ -391,7 +391,7 @@ export function RsvpForm({
                         setAttendeeDetails(next);
                       }}
                       autoComplete="name"
-                      className="min-h-12 min-w-0 rounded-md border border-[#b8860b]/35 bg-[#fffafd] px-3 text-lg font-normal text-[#4a1f2e] outline-none transition focus:border-[#f1b3c6] focus:ring-2 focus:ring-[#f1b3c6]/25 sm:min-h-14 sm:text-xl"
+                      className="min-h-12 min-w-0 rounded-md border border-[#ffd6e4]/55 bg-[#031b12]/55 px-3 text-lg font-normal text-[#fff6fa] outline-none transition focus:border-[#ffd6e4] focus:ring-2 focus:ring-[#ffd6e4]/25 sm:min-h-14 sm:text-xl"
                     />
                     <button
                       type="button"
@@ -402,7 +402,7 @@ export function RsvpForm({
                           attendingCount: effectiveAttendingCount,
                         });
                       }}
-                      className="min-h-12 rounded-md border border-[#b8860b]/65 bg-[#fff6fa]/10 px-3 text-sm font-semibold uppercase tracking-[0.1em] text-[#ffd86e] transition hover:border-[#f1b3c6] hover:text-[#f1b3c6] disabled:cursor-not-allowed disabled:opacity-60 sm:min-h-14 sm:px-4 sm:text-base"
+                      className="min-h-12 rounded-md border border-[#ffd6e4]/65 bg-[#fff6fa]/10 px-3 text-sm font-semibold uppercase tracking-[0.1em] text-[#ffd6e4] transition hover:border-[#fff6fa] hover:text-[#fff6fa] disabled:cursor-not-allowed disabled:opacity-60 sm:min-h-14 sm:px-4 sm:text-base"
                     >
                       Save
                     </button>
@@ -412,8 +412,8 @@ export function RsvpForm({
                     aria-labelledby={`attendee-meal-label-${index}`}
                     className="grid gap-2"
                   >
-                    <legend id={`attendee-meal-label-${index}`} className="text-lg font-semibold text-[#ffd86e] sm:text-xl">
-                      Meal type
+                    <legend id={`attendee-meal-label-${index}`} className="text-lg font-semibold text-[#ffd6e4] sm:text-xl">
+                      Meal Type
                     </legend>
                     <input
                       type="hidden"
@@ -447,16 +447,16 @@ export function RsvpForm({
                             }}
                             className={`grid min-h-12 grid-cols-[auto_1fr] items-center gap-3 rounded-md border px-3 text-left text-lg font-semibold transition sm:min-h-14 sm:text-xl ${
                               selected
-                                ? "border-[#ffd86e] bg-[#fff6fa]/12 text-[#ffd86e]"
-                                : "border-[#b8860b]/40 bg-[#fff6fa]/6 text-[#f1b3c6] hover:border-[#f1b3c6] hover:text-[#ffd86e]"
+                                ? "border-[#ffd6e4] bg-[#fff6fa]/12 text-[#ffd6e4]"
+                                : "border-[#ffd6e4]/40 bg-[#fff6fa]/6 text-[#ffd6e4] hover:border-[#fff6fa] hover:text-[#fff6fa]"
                             }`}
                           >
                             <span
                               aria-hidden="true"
                               className={`grid size-4 place-items-center rounded-[3px] border ${
                                 selected
-                                  ? "border-[#ffd86e] bg-[#ffd86e]"
-                                  : "border-[#b8860b]/55 bg-[#fff6fa]/10"
+                                  ? "border-[#ffd6e4] bg-[#ffd6e4]"
+                                  : "border-[#ffd6e4]/55 bg-[#fff6fa]/10"
                               }`}
                             >
                               {selected ? (
@@ -471,7 +471,7 @@ export function RsvpForm({
                   </fieldset>
                   <div className="grid gap-2">
                     <label htmlFor={`attendee-dietary-notes-${index}`}>
-                      Dietary restrictions or allergies
+                      Dietary Restrictions/Allergies
                     </label>
                     <textarea
                       id={`attendee-dietary-notes-${index}`}
@@ -493,7 +493,7 @@ export function RsvpForm({
                         };
                         setAttendeeDetails(next);
                       }}
-                      className="min-h-28 min-w-0 resize-y rounded-md border border-[#b8860b]/35 bg-[#fffafd] px-3 py-2 text-lg font-normal text-[#4a1f2e] outline-none transition focus:border-[#f1b3c6] focus:ring-2 focus:ring-[#f1b3c6]/25 sm:text-xl"
+                      className="min-h-28 min-w-0 resize-y rounded-md border border-[#ffd6e4]/55 bg-[#031b12]/55 px-3 py-2 text-lg font-normal text-[#fff6fa] outline-none transition focus:border-[#ffd6e4] focus:ring-2 focus:ring-[#ffd6e4]/25 sm:text-xl"
                     />
                   </div>
                 </div>
@@ -503,12 +503,12 @@ export function RsvpForm({
         </div>
       ) : null}
 
-      <div className="-mx-5 -mb-5 grid gap-2 border-t border-[#b8860b]/35 bg-[#fff6fa]/6 px-5 py-4 pb-[calc(1rem+env(safe-area-inset-bottom))] text-center text-lg font-semibold backdrop-blur-sm sm:-mx-8 sm:-mb-8 sm:px-8 sm:text-xl lg:-mx-10 lg:-mb-10 lg:px-10">
-        <p className="text-[#f1b3c6]" role="status" aria-live="polite">
+      <div className="-mx-5 -mb-5 grid gap-2 border-t border-[#ffd6e4]/35 bg-[#fff6fa]/6 px-5 py-4 pb-[calc(1rem+env(safe-area-inset-bottom))] text-center text-lg font-semibold backdrop-blur-sm sm:-mx-8 sm:-mb-8 sm:px-8 sm:text-xl lg:-mx-10 lg:-mb-10 lg:px-10">
+        <p className="text-[#ffd6e4]" role="status" aria-live="polite">
           {isSaving ? "Saving..." : saveState.ok ? "Saved" : ""}
         </p>
         {currentErrorLocation === "global" ? (
-          <p className="text-[#f1b3c6]" role="alert">
+          <p className="text-[#ffd6e4]" role="alert">
             {displayedError}
           </p>
         ) : null}

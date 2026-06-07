@@ -103,7 +103,7 @@ body {
 }
 
 .guest-hero-copy {
-  border: 1px solid rgba(184, 134, 11, 0.5);
+  border: 1px solid rgba(255, 214, 228, 0.5);
   border-radius: 0.5rem;
   padding: 0.8rem 0.85rem;
 }
@@ -190,16 +190,16 @@ body {
   inline-size: 2.65rem;
   block-size: 2.65rem;
   place-items: center;
-  border: 1px solid rgba(241, 201, 109, 0.95);
+  border: 1px solid rgba(255, 214, 228, 0.95);
   border-radius: 999px;
   background: rgba(3, 27, 18, 0.86);
-  color: #ffd86e;
+  color: #ffd6e4;
   font-family: "Times New Roman", "PingFang SC", "Hiragino Sans GB", "Heiti SC", serif;
   font-size: 1.75rem;
   font-weight: 700;
   line-height: 1;
   box-shadow: 0 0.6rem 1.2rem rgba(3, 27, 18, 0.45), inset 0 0 0 1px rgba(255, 246, 250, 0.16);
-  text-shadow: 0 1px 0 rgba(3, 27, 18, 0.9), 0 0 0.8rem rgba(255, 216, 110, 0.72);
+  text-shadow: 0 1px 0 rgba(3, 27, 18, 0.9), 0 0 0.8rem rgba(255, 214, 228, 0.72);
 }
 
 .guest-double-happiness-top-left {

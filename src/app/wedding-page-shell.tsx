@@ -14,7 +14,7 @@ type WeddingPageShellProps = {
 };
 
 const defaultPanelClassName =
-  "guest-panel-surface w-full min-w-0 rounded-lg border border-[#b8860b]/65 p-5 text-[#f1b3c6] sm:p-8 lg:p-10";
+  "guest-panel-surface w-full min-w-0 rounded-lg border border-[#ffd6e4]/65 p-5 text-[#ffd6e4] sm:p-8 lg:p-10";
 
 function DoubleHappinessFrame() {
   return (
@@ -37,14 +37,14 @@ function DoubleHappinessFrame() {
 
 function EventHeroCopy({ calendarWebsiteUrl }: { calendarWebsiteUrl: string }) {
   return (
-    <div className="guest-hero-copy mx-0 w-full max-w-none text-center text-[#f1b3c6]">
+    <div className="guest-hero-copy mx-0 w-full max-w-none text-center text-[#ffd6e4]">
       <p
-        className="text-3xl leading-none text-[#f1b3c6]"
+        className="text-4xl leading-tight text-[#ffd6e4] sm:text-6xl"
         style={{ fontFamily: "var(--font-dancing-script)", fontWeight: 600 }}
       >
         {WEDDING_DETAILS.brand}
       </p>
-      <h1 className="mt-3 text-4xl font-semibold leading-none text-[#ffd86e]">
+      <h1 className="mt-3 text-4xl font-semibold leading-none text-[#ffd6e4]">
         {WEDDING_DETAILS.dateLabel}
       </h1>
       <div className="mt-4 grid gap-2 text-lg font-semibold">
@@ -52,11 +52,11 @@ function EventHeroCopy({ calendarWebsiteUrl }: { calendarWebsiteUrl: string }) {
           href={WEDDING_DETAILS.mapUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex min-h-11 items-center justify-center underline decoration-dashed decoration-1 underline-offset-6 transition hover:text-[#f1b3c6]"
+          className="inline-flex min-h-11 items-center justify-center underline decoration-dashed decoration-1 underline-offset-6 transition hover:text-[#ffd6e4]"
         >
           {WEDDING_DETAILS.venueName}
         </a>
-        <p className="text-xs uppercase tracking-[0.25em] text-[#f1b3c6]">
+        <p className="text-xs uppercase tracking-[0.25em] text-[#ffd6e4]">
           {WEDDING_DETAILS.locationLabel}
         </p>
       </div>
@@ -64,7 +64,7 @@ function EventHeroCopy({ calendarWebsiteUrl }: { calendarWebsiteUrl: string }) {
         href={getWeddingCalendarUrl({ websiteUrl: calendarWebsiteUrl })}
         target="_blank"
         rel="noopener noreferrer"
-        className="mt-4 inline-flex min-h-11 items-center justify-center text-xs font-semibold uppercase tracking-[0.18em] text-[#f1b3c6] underline decoration-dashed decoration-1 underline-offset-4 transition hover:text-[#ffd86e]"
+        className="mt-4 inline-flex min-h-11 items-center justify-center text-xs font-semibold uppercase tracking-[0.18em] text-[#ffd6e4] underline decoration-dashed decoration-1 underline-offset-4 transition hover:text-[#fff6fa]"
       >
         Add to calendar
       </a>
@@ -82,21 +82,21 @@ function PageNav({
   const navItems = [
     { href: `#${panelId}`, label: panelNavLabel },
     { href: "#our-story", label: "Our Story" },
-    { href: "#faqs", label: "FAQs" },
     { href: "#hotel-blocks", label: "Hotels" },
+    { href: "#faqs", label: "FAQs" },
   ];
 
   return (
     <nav
       aria-label="On this page"
-      className="guest-page-nav sticky top-[calc(env(safe-area-inset-top)+0.5rem)] z-30 mx-auto rounded-lg border border-[#b8860b]/45 bg-[#031b12]/88 px-2 py-2 text-[#f1b3c6] shadow-[0_18px_45px_-30px_rgba(0,0,0,0.75)] backdrop-blur-md"
+      className="guest-page-nav sticky top-[calc(env(safe-area-inset-top)+0.5rem)] z-30 mx-auto rounded-lg border border-[#ffd6e4]/45 bg-[#031b12]/88 px-2 py-2 text-[#ffd6e4] shadow-[0_18px_45px_-30px_rgba(0,0,0,0.75)] backdrop-blur-md"
     >
       <div className="guest-page-nav-list">
         {navItems.map((item) => (
           <a
             key={item.href}
             href={item.href}
-            className="guest-page-nav-link inline-flex min-h-9 items-center justify-center rounded-md border border-[#b8860b]/35 text-[0.6rem] font-semibold uppercase tracking-[0.08em] text-[#f1b3c6] transition hover:border-[#f1b3c6] hover:text-[#ffd86e] sm:text-[0.66rem]"
+            className="guest-page-nav-link inline-flex min-h-9 items-center justify-center rounded-md border border-[#ffd6e4]/35 text-[0.6rem] font-semibold uppercase tracking-[0.08em] text-[#ffd6e4] transition hover:border-[#fff6fa] hover:text-[#fff6fa] sm:text-[0.66rem]"
           >
             {item.label}
           </a>
@@ -113,12 +113,14 @@ function LongFormSections({ showHotelBlocks }: { showHotelBlocks: boolean }) {
       <MarkdownContent
         id="faqs"
         fileName="faqs.md"
+        collapsibleQuestions
         emphasizeHeadings
         lockedBlocks={!showHotelBlocks}
       />
       <MarkdownContent
         id="hotel-blocks"
         fileName="hotel-blocks.md"
+        emphasizeHeadings
         lockedBlocks={!showHotelBlocks}
       />
     </div>
