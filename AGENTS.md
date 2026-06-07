@@ -13,6 +13,8 @@ Long-form public/invitation copy lives in Markdown files under `content/` so non
 - `content/hotel-blocks.md` - the dedicated Hotels section. Use `<!-- invitation-only-start title="Hotels" -->` and `<!-- invitation-only-end -->` around booking details that should be hidden on public `/` and shown only on guest invitation pages. Keep individual hotel names as `###` headings so they render as prominent hotel blocks.
 - `content/faqs.md` - the FAQ section. Keep hotel block booking details in `content/hotel-blocks.md`, not in FAQs.
 
+The shared Photos gallery is driven by image files in the repo-root `photos/` directory, not Markdown or hard-coded arrays. Adding or removing supported image files there changes the rendered gallery.
+
 The package currently uses `next` 16.x with React 19, Tailwind CSS 4, TypeScript, Neon/Postgres, and `react-data-grid`.
 
 ## Commands
@@ -57,9 +59,10 @@ Core tables:
 - `src/app/[slug]/actions.ts`: server action that validates and persists RSVP changes.
 - `src/app/admin/page.tsx`: admin page. Without a valid admin cookie it shows the login form; with the cookie it loads guests and RSVP audit events.
 - `src/app/admin/admin-client.tsx`: spreadsheet UI for adding, editing, sorting, reordering, copying links, viewing links, deleting guests, and toggling flags.
+- `src/app/photos/[filename]/route.ts`: streams image assets from the repo-root `photos/` directory for the shared Photos gallery.
 - `src/app/*/opengraph-image.tsx` and `src/lib/opengraph-image.tsx`: generated PNG Open Graph images for public save-the-date and per-guest invitation links.
 
-Global styling lives in `src/app/globals.css`. The shared public/invitation page shell lives in `src/app/wedding-page-shell.tsx`, includes sticky in-page section navigation, renders long-form Markdown content from `content/`, and uses `public/sexi-background.jpg`; Open Graph image generation uses local fonts from `public/fonts/`.
+Global styling lives in `src/app/globals.css`. The shared public/invitation page shell lives in `src/app/wedding-page-shell.tsx`, includes sticky in-page section navigation, renders long-form Markdown content from `content/`, renders the filesystem-backed Photos gallery when `photos/` contains images, and uses `public/sexi-background.jpg`; Open Graph image generation uses local fonts from `public/fonts/`.
 
 ## Open Graph Images
 
@@ -134,6 +137,8 @@ Be careful changing validation: database constraints, server action validation, 
 - All long-form content should be driven by Markdown files in `content/`, not hard-coded in React or TypeScript. The renderer for these files lives in `src/app/markdown-content.tsx`.
 - Public `/` keeps Markdown invitation-only blocks locked behind an invitation link; guest invitation pages render those blocks.
 - FAQ questions in `content/faqs.md` render as collapsible dropdowns; keep each question as a `###` heading followed by its answer content.
+- The Photos gallery reads supported image files from repo-root `photos/`, serves them through `/photos/[filename]`, and uses `react-photo-album` plus `yet-another-react-lightbox`. Do not hard-code gallery image lists in React.
+- `next.config.ts` includes `photos/**/*` in output file tracing so root-level gallery files are available to the image route after deployment.
 - Design uses a green/pink wedding palette, Cormorant/Libre serif fonts with Great Vibes for the `Sean + Lexi = Sexi` brand mark, pink-accent double-happiness glyphs, pink-tinted Our Story emoji, high-contrast large long-form copy, and a spreadsheet-like admin UI. Keep new UI consistent with those patterns.
 - The shared public/invitation hero foreground should keep the same single-column stack across mobile and desktop widths; only the background photo framing should make major viewport-specific shifts.
 - Guests will primarily use the site on phones. Treat mobile layouts as the primary experience, especially for invitation pages, RSVP controls, forms, tap targets, safe-area spacing, and text wrapping.

@@ -5,6 +5,8 @@ import {
   Great_Vibes,
 } from "next/font/google";
 import "react-data-grid/lib/styles.css";
+import "react-photo-album/rows.css";
+import "yet-another-react-lightbox/styles.css";
 import "./globals.css";
 
 const primarySerif = Cormorant_Garamond({

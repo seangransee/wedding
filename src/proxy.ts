@@ -3,7 +3,7 @@ import { cookieOptions, GUEST_COOKIE_NAME } from "@/lib/cookies";
 import { guestSlugExists } from "@/lib/db";
 import { isValidSlug } from "@/lib/slug";
 
-const RESERVED_TOP_LEVEL_PATHS = new Set(["admin", "savethedate"]);
+const RESERVED_TOP_LEVEL_PATHS = new Set(["admin", "photos", "savethedate"]);
 
 function isGuestSlugPath(pathname: string) {
   const segments = pathname.split("/").filter(Boolean);

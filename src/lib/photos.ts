@@ -1,0 +1,150 @@
+import { existsSync } from "fs";
+import { readdir, stat } from "fs/promises";
+import path from "path";
+import { imageSizeFromFile } from "image-size/fromFile";
+
+export type WeddingPhoto = {
+  filename: string;
+  src: string;
+  width: number;
+  height: number;
+  alt: string;
+};
+
+const photosDirectory = path.join(process.cwd(), "photos");
+const supportedPhotoExtensions = new Set([
+  ".avif",
+  ".gif",
+  ".jpeg",
+  ".jpg",
+  ".png",
+  ".webp",
+]);
+
+const contentTypes = new Map([
+  [".avif", "image/avif"],
+  [".gif", "image/gif"],
+  [".jpeg", "image/jpeg"],
+  [".jpg", "image/jpeg"],
+  [".png", "image/png"],
+  [".webp", "image/webp"],
+]);
+
+const filenameCollator = new Intl.Collator("en", {
+  numeric: true,
+  sensitivity: "base",
+});
+
+const deterministicPhotoSeed = "sexi-wedding-photo-gallery-v2";
+
+function deterministicPhotoRank(filename: string) {
+  let hash = 0x811c9dc5;
+  const value = `${deterministicPhotoSeed}:${filename.toLowerCase()}`;
+
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 0x01000193);
+  }
+
+  return hash >>> 0;
+}
+
+function comparePhotoFilenames(first: string, second: string) {
+  const rankDifference = deterministicPhotoRank(first) - deterministicPhotoRank(second);
+
+  if (rankDifference !== 0) {
+    return rankDifference;
+  }
+
+  return filenameCollator.compare(first, second);
+}
+
+export function getPhotosDirectory() {
+  return photosDirectory;
+}
+
+export function isSupportedPhotoFilename(filename: string) {
+  return supportedPhotoExtensions.has(path.extname(filename).toLowerCase());
+}
+
+export function getPhotoContentType(filename: string) {
+  return contentTypes.get(path.extname(filename).toLowerCase()) ?? "application/octet-stream";
+}
+
+export function getSafePhotoPath(filename: string) {
+  if (
+    !filename ||
+    filename !== path.basename(filename) ||
+    filename.includes("/") ||
+    filename.includes("\\") ||
+    !isSupportedPhotoFilename(filename)
+  ) {
+    return null;
+  }
+
+  const filePath = path.join(photosDirectory, filename);
+  const relativePath = path.relative(photosDirectory, filePath);
+
+  if (relativePath.startsWith("..") || path.isAbsolute(relativePath)) {
+    return null;
+  }
+
+  return filePath;
+}
+
+export async function getWeddingPhotos(): Promise<WeddingPhoto[]> {
+  if (!existsSync(photosDirectory)) {
+    return [];
+  }
+
+  const entries = await readdir(photosDirectory, { withFileTypes: true });
+  const filenames = entries
+    .filter((entry) => entry.isFile() && isSupportedPhotoFilename(entry.name))
+    .map((entry) => entry.name)
+    .sort(comparePhotoFilenames);
+
+  const photos = await Promise.all(
+    filenames.map(async (filename, index) => {
+      const filePath = path.join(photosDirectory, filename);
+      const dimensions = await imageSizeFromFile(filePath);
+
+      if (!dimensions.width || !dimensions.height) {
+        return null;
+      }
+
+      return {
+        filename,
+        src: `/photos/${encodeURIComponent(filename)}`,
+        width: dimensions.width,
+        height: dimensions.height,
+        alt: `Wedding photo ${index + 1}`,
+      };
+    }),
+  );
+
+  return photos.filter((photo): photo is WeddingPhoto => photo !== null);
+}
+
+export async function getPhotoFile(filename: string) {
+  const filePath = getSafePhotoPath(filename);
+
+  if (!filePath) {
+    return null;
+  }
+
+  try {
+    const fileStats = await stat(filePath);
+
+    if (!fileStats.isFile()) {
+      return null;
+    }
+
+    return {
+      filePath,
+      size: fileStats.size,
+      contentType: getPhotoContentType(filename),
+    };
+  } catch {
+    return null;
+  }
+}

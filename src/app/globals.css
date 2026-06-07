@@ -201,6 +201,88 @@ body {
   transform: translateY(0.03em);
 }
 
+.wedding-photo-button {
+  overflow: hidden;
+  inline-size: 100%;
+  block-size: 100%;
+  border: 1px solid rgba(255, 214, 228, 0.46);
+  border-radius: 0.45rem;
+  background: rgba(255, 246, 250, 0.06);
+  box-shadow:
+    0 1rem 2rem -1.6rem rgba(0, 0, 0, 0.9),
+    inset 0 0 0 1px rgba(255, 246, 250, 0.08);
+  cursor: zoom-in;
+}
+
+.wedding-photo-button:focus-visible {
+  outline: 2px solid var(--blush-pink);
+  outline-offset: 3px;
+}
+
+.wedding-photo-lazy-frame {
+  position: relative;
+  display: block;
+  inline-size: 100%;
+  overflow: hidden;
+  background:
+    linear-gradient(135deg, rgba(255, 214, 228, 0.1), rgba(255, 246, 250, 0.03) 42%, rgba(3, 27, 18, 0.45)),
+    rgba(3, 27, 18, 0.7);
+}
+
+.wedding-photo-placeholder {
+  position: absolute;
+  inset: 0;
+  opacity: 1;
+  background:
+    linear-gradient(110deg, transparent 0%, rgba(255, 214, 228, 0.12) 42%, transparent 72%),
+    radial-gradient(circle at 28% 22%, rgba(255, 214, 228, 0.16), transparent 32%),
+    rgba(255, 246, 250, 0.04);
+  background-size: 180% 100%, 100% 100%, 100% 100%;
+  transition: opacity 240ms ease;
+  animation: weddingPhotoPlaceholder 1.8s ease-in-out infinite;
+}
+
+.wedding-photo-placeholder[data-loaded="true"] {
+  opacity: 0;
+}
+
+.wedding-photo-image {
+  display: block;
+  inline-size: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transform: scale(1);
+  transition:
+    opacity 240ms ease,
+    transform 220ms ease;
+}
+
+.wedding-photo-image[data-loaded="true"] {
+  opacity: 1;
+}
+
+.wedding-photo-button:hover .wedding-photo-image[data-loaded="true"] {
+  transform: scale(1.035);
+}
+
+.wedding-photo-lightbox {
+  --yarl__color_backdrop: rgba(3, 27, 18, 0.96);
+  --yarl__slide_captions_container_background: rgba(3, 27, 18, 0.84);
+  --yarl__button_color: #ffd6e4;
+  --yarl__button_color_active: #fff6fa;
+  --yarl__button_filter: drop-shadow(0 0.2rem 0.4rem rgba(0, 0, 0, 0.85));
+}
+
+@keyframes weddingPhotoPlaceholder {
+  0% {
+    background-position: 160% 0, 0 0, 0 0;
+  }
+
+  100% {
+    background-position: -80% 0, 0 0, 0 0;
+  }
+}
+
 .guest-double-happiness-top-left {
   left: 0.75rem;
   top: calc(env(safe-area-inset-top) + 0.75rem);

@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
+import { getWeddingPhotos } from "@/lib/photos";
 import { MarkdownContent } from "./markdown-content";
 import { getWeddingCalendarUrl, WEDDING_DETAILS } from "./wedding-details";
+import { PhotosSection } from "./photos-section";
 
 export { LockedNotice } from "./locked-notice";
 
@@ -73,9 +75,11 @@ function EventHeroCopy({ calendarWebsiteUrl }: { calendarWebsiteUrl: string }) {
 }
 
 function PageNav({
+  hasPhotos,
   panelId,
   panelNavLabel,
 }: {
+  hasPhotos: boolean;
   panelId: string;
   panelNavLabel: string;
 }) {
@@ -84,6 +88,7 @@ function PageNav({
     { href: "#our-story", label: "Our Story" },
     { href: "#hotel-blocks", label: "Hotels" },
     { href: "#faqs", label: "FAQs" },
+    ...(hasPhotos ? [{ href: "#photos", label: "Photos" }] : []),
   ];
 
   return (
@@ -106,7 +111,13 @@ function PageNav({
   );
 }
 
-function LongFormSections({ showHotelBlocks }: { showHotelBlocks: boolean }) {
+function LongFormSections({
+  photos,
+  showHotelBlocks,
+}: {
+  photos: Awaited<ReturnType<typeof getWeddingPhotos>>;
+  showHotelBlocks: boolean;
+}) {
   return (
     <div className="pb-16">
       <MarkdownContent id="our-story" fileName="our-story.md" styleEmojis />
@@ -125,11 +136,12 @@ function LongFormSections({ showHotelBlocks }: { showHotelBlocks: boolean }) {
         emphasizeHeadings
         lockedBlocks={!showHotelBlocks}
       />
+      <PhotosSection photos={photos} />
     </div>
   );
 }
 
-export function WeddingPageShell({
+export async function WeddingPageShell({
   panel,
   calendarWebsiteUrl = WEDDING_DETAILS.websiteUrl,
   panelClassName = defaultPanelClassName,
@@ -137,10 +149,13 @@ export function WeddingPageShell({
   panelNavLabel = "Wedding Details",
   showHotelBlocks = false,
 }: WeddingPageShellProps) {
+  const photos = await getWeddingPhotos();
+
   return (
     <main className="guest-invitation-page relative min-h-screen bg-[#031b12] px-3 py-4 pb-[calc(1rem+env(safe-area-inset-bottom))] text-[#ffd6e4]">
       <DoubleHappinessFrame />
       <PageNav
+        hasPhotos={photos.length > 0}
         panelId={panelId}
         panelNavLabel={panelNavLabel}
       />
@@ -152,7 +167,7 @@ export function WeddingPageShell({
         </div>
       </section>
 
-      <LongFormSections showHotelBlocks={showHotelBlocks} />
+      <LongFormSections photos={photos} showHotelBlocks={showHotelBlocks} />
     </main>
   );
 }
