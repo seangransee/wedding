@@ -18,9 +18,9 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import clsx from "clsx";
-import { ArrowDown, ArrowUp, Eye, EyeOff, GripVertical, RotateCcw, Save } from "lucide-react";
+import { ArrowDown, ArrowUp, Eye, EyeOff, GripVertical } from "lucide-react";
 import Image from "next/image";
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useRef, useState, useTransition } from "react";
 import type { AdminWeddingPhoto } from "@/lib/photos";
 import { reorderPhotoRows, setPhotoHidden } from "./actions";
 
@@ -63,7 +63,7 @@ function SortablePhotoCard({
     <article
       ref={setNodeRef}
       className={clsx(
-        "grid gap-2 border bg-[#fff8fb] p-2 shadow-[0_14px_28px_-24px_rgba(143,36,72,0.85)]",
+        "grid gap-1.5 border bg-[#fff8fb] p-1.5 shadow-[0_14px_28px_-24px_rgba(143,36,72,0.85)] sm:gap-2 sm:p-2",
         isDragging ? "relative z-20 border-[#be185d] opacity-90" : "border-[#df7fa3]",
         isHidden && "bg-[#f7d8e4] opacity-70",
       )}
@@ -89,16 +89,11 @@ function SortablePhotoCard({
           </div>
         ) : null}
       </div>
-      <div className="grid gap-2">
-        <div className="min-w-0 text-xs font-semibold text-[#7a1239]">
-          <p className="truncate" title={photo.filename}>
-            {photo.filename}
-          </p>
-        </div>
+      <div className="grid gap-1.5 sm:gap-2">
         <div className="grid grid-cols-[auto_1fr_auto_auto] gap-1">
           <button
             type="button"
-            className="grid size-9 cursor-grab place-items-center border border-[#df7fa3] bg-[#fff1f7] text-[#7a1239] transition hover:border-[#be185d] hover:bg-[#f4bfd2]"
+            className="grid size-8 cursor-grab place-items-center border border-[#df7fa3] bg-[#fff1f7] text-[#7a1239] transition hover:border-[#be185d] hover:bg-[#f4bfd2] sm:size-9"
             title="Drag to reorder"
             {...attributes}
             {...listeners}
@@ -108,7 +103,7 @@ function SortablePhotoCard({
           </button>
           <button
             type="button"
-            className="inline-flex h-9 items-center justify-center gap-1 border border-[#df7fa3] bg-[#fff1f7] px-2 text-xs font-semibold text-[#7a1239] transition hover:border-[#be185d] hover:bg-[#f4bfd2] disabled:cursor-not-allowed disabled:opacity-45"
+            className="inline-flex h-8 min-w-0 items-center justify-center gap-1 border border-[#df7fa3] bg-[#fff1f7] px-1.5 text-[0.7rem] font-semibold text-[#7a1239] transition hover:border-[#be185d] hover:bg-[#f4bfd2] disabled:cursor-not-allowed disabled:opacity-45 sm:h-9 sm:px-2 sm:text-xs"
             onClick={onToggleHidden}
             disabled={toggling}
           >
@@ -117,7 +112,7 @@ function SortablePhotoCard({
           </button>
           <button
             type="button"
-            className="grid size-9 place-items-center border border-[#df7fa3] bg-[#fff1f7] text-[#7a1239] transition hover:border-[#be185d] hover:bg-[#f4bfd2] disabled:cursor-not-allowed disabled:opacity-45"
+            className="grid size-8 place-items-center border border-[#df7fa3] bg-[#fff1f7] text-[#7a1239] transition hover:border-[#be185d] hover:bg-[#f4bfd2] disabled:cursor-not-allowed disabled:opacity-45 sm:size-9"
             onClick={onMoveUp}
             disabled={isFirst}
             title="Move up"
@@ -127,7 +122,7 @@ function SortablePhotoCard({
           </button>
           <button
             type="button"
-            className="grid size-9 place-items-center border border-[#df7fa3] bg-[#fff1f7] text-[#7a1239] transition hover:border-[#be185d] hover:bg-[#f4bfd2] disabled:cursor-not-allowed disabled:opacity-45"
+            className="grid size-8 place-items-center border border-[#df7fa3] bg-[#fff1f7] text-[#7a1239] transition hover:border-[#be185d] hover:bg-[#f4bfd2] disabled:cursor-not-allowed disabled:opacity-45 sm:size-9"
             onClick={onMoveDown}
             disabled={isLast}
             title="Move down"
@@ -143,10 +138,14 @@ function SortablePhotoCard({
 
 export function PhotoAdminClient({ photos }: PhotoAdminClientProps) {
   const [orderedPhotos, setOrderedPhotos] = useState(photos);
-  const [message, setMessage] = useState("Drag photos or use the arrow buttons, then save the order.");
-  const [dirty, setDirty] = useState(false);
+  const [message, setMessage] = useState("Drag photos or use the arrow buttons. Changes autosave.");
+  const [isOrderSaving, setIsOrderSaving] = useState(false);
   const [pendingFilename, setPendingFilename] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const orderSaveRef = useRef<{ queuedFilenames: string[] | null; saving: boolean }>({
+    queuedFilenames: null,
+    saving: false,
+  });
   const visibleCount = useMemo(
     () => orderedPhotos.filter((photo) => !photo.hiddenAt).length,
     [orderedPhotos],
@@ -156,14 +155,45 @@ export function PhotoAdminClient({ photos }: PhotoAdminClientProps) {
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 
+  async function saveOrderLoop(initialFilenames: string[]) {
+    orderSaveRef.current.saving = true;
+    setIsOrderSaving(true);
+    setMessage("Saving photo order...");
+
+    let filenamesToSave: string[] | null = initialFilenames;
+    let latestResult = await reorderPhotoRows(filenamesToSave);
+
+    while (orderSaveRef.current.queuedFilenames) {
+      filenamesToSave = orderSaveRef.current.queuedFilenames;
+      orderSaveRef.current.queuedFilenames = null;
+      latestResult = await reorderPhotoRows(filenamesToSave);
+    }
+
+    orderSaveRef.current.saving = false;
+    setIsOrderSaving(false);
+    setMessage(latestResult.message);
+  }
+
+  function autosaveOrder(nextPhotos: AdminWeddingPhoto[]) {
+    const filenames = nextPhotos.map((photo) => photo.filename);
+
+    if (orderSaveRef.current.saving) {
+      orderSaveRef.current.queuedFilenames = filenames;
+      setMessage("Saving photo order...");
+      return;
+    }
+
+    void saveOrderLoop(filenames);
+  }
+
   function movePhoto(fromIndex: number, toIndex: number) {
     if (toIndex < 0 || toIndex >= orderedPhotos.length) {
       return;
     }
 
-    setOrderedPhotos((current) => arrayMove(current, fromIndex, toIndex));
-    setDirty(true);
-    setMessage("Order changed. Save when it looks right.");
+    const nextPhotos = arrayMove(orderedPhotos, fromIndex, toIndex);
+    setOrderedPhotos(nextPhotos);
+    autosaveOrder(nextPhotos);
   }
 
   function handleDragEnd(event: DragEndEvent) {
@@ -181,24 +211,6 @@ export function PhotoAdminClient({ photos }: PhotoAdminClientProps) {
     }
 
     movePhoto(oldIndex, newIndex);
-  }
-
-  function handleSaveOrder() {
-    startTransition(async () => {
-      setMessage("Saving photo order...");
-      const result = await reorderPhotoRows(orderedPhotos.map((photo) => photo.filename));
-      setMessage(result.message);
-
-      if (result.ok) {
-        setDirty(false);
-      }
-    });
-  }
-
-  function handleResetOrder() {
-    setOrderedPhotos(photos);
-    setDirty(false);
-    setMessage("Order reset to the last saved order.");
   }
 
   function handleToggleHidden(photo: AdminWeddingPhoto) {
@@ -248,29 +260,11 @@ export function PhotoAdminClient({ photos }: PhotoAdminClientProps) {
           <span className="border border-[#df7fa3] bg-[#fff8fb] px-2 py-1 tabular-nums">
             {orderedPhotos.length - visibleCount} hidden
           </span>
-          <button
-            type="button"
-            className="inline-flex h-9 items-center gap-1 border border-[#df7fa3] bg-[#fff8fb] px-3 font-semibold text-[#7a1239] transition hover:border-[#be185d] hover:bg-[#fff1f7] disabled:cursor-not-allowed disabled:opacity-50"
-            onClick={handleResetOrder}
-            disabled={!dirty || isPending}
-          >
-            <RotateCcw size={15} aria-hidden="true" />
-            Reset
-          </button>
-          <button
-            type="button"
-            className="inline-flex h-9 items-center gap-1 border border-[#be185d] bg-[#8f2448] px-3 font-semibold text-white transition hover:bg-[#7a1239] disabled:cursor-not-allowed disabled:opacity-50"
-            onClick={handleSaveOrder}
-            disabled={!dirty || isPending}
-          >
-            <Save size={15} aria-hidden="true" />
-            Save order
-          </button>
         </div>
       </div>
       <div className="px-3">
         <p className="min-h-6 text-sm font-semibold text-[#8f2448]" role="status">
-          {isPending ? "Saving..." : message}
+          {isPending || isOrderSaving ? "Saving..." : message}
         </p>
       </div>
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
