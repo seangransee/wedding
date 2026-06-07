@@ -370,43 +370,28 @@ export function RsvpForm({
                   <label htmlFor={`attendee-name-${index}`}>
                     {visibleAttendeeDetails.length === 1 ? "Full Name" : `Full Name ${index + 1}`}
                   </label>
-                  <div className="grid grid-cols-[1fr_auto] gap-2">
-                    <input
-                      id={`attendee-name-${index}`}
-                      name="attendeeNames"
-                      value={attendee.fullName}
-                      onBlur={() => {
-                        void saveDraft({
-                          status: "yes",
-                          attendingCount: effectiveAttendingCount,
-                        });
-                      }}
-                      onChange={(event) => {
-                        setLocalError("");
-                        const next = [...visibleAttendeeDetails];
-                        next[index] = {
-                          ...next[index],
-                          fullName: event.target.value,
-                        };
-                        setAttendeeDetails(next);
-                      }}
-                      autoComplete="name"
-                      className="min-h-12 min-w-0 rounded-md border border-[#ffd6e4]/55 bg-[#031b12]/55 px-3 text-lg font-normal text-[#ffd6e4] outline-none transition focus:border-[#ffd6e4] focus:ring-2 focus:ring-[#ffd6e4]/25 sm:min-h-14 sm:text-xl"
-                    />
-                    <button
-                      type="button"
-                      disabled={isSaving}
-                      onClick={() => {
-                        void saveDraft({
-                          status: "yes",
-                          attendingCount: effectiveAttendingCount,
-                        });
-                      }}
-                      className="min-h-12 rounded-md border border-[#ffd6e4]/65 bg-[#fff6fa]/10 px-3 text-sm font-semibold uppercase tracking-[0.1em] text-[#ffd6e4] transition hover:border-[#ffd6e4] hover:text-[#ffd6e4] disabled:cursor-not-allowed disabled:opacity-60 sm:min-h-14 sm:px-4 sm:text-base"
-                    >
-                      Save
-                    </button>
-                  </div>
+                  <input
+                    id={`attendee-name-${index}`}
+                    name="attendeeNames"
+                    value={attendee.fullName}
+                    onBlur={() => {
+                      void saveDraft({
+                        status: "yes",
+                        attendingCount: effectiveAttendingCount,
+                      });
+                    }}
+                    onChange={(event) => {
+                      setLocalError("");
+                      const next = [...visibleAttendeeDetails];
+                      next[index] = {
+                        ...next[index],
+                        fullName: event.target.value,
+                      };
+                      setAttendeeDetails(next);
+                    }}
+                    autoComplete="name"
+                    className="min-h-12 min-w-0 rounded-md border border-[#ffd6e4]/55 bg-[#031b12]/55 px-3 text-lg font-normal text-[#ffd6e4] outline-none transition focus:border-[#ffd6e4] focus:ring-2 focus:ring-[#ffd6e4]/25 sm:min-h-14 sm:text-xl"
+                  />
                   <fieldset
                     role="radiogroup"
                     aria-labelledby={`attendee-meal-label-${index}`}
@@ -504,8 +489,18 @@ export function RsvpForm({
       ) : null}
 
       <div className="-mx-5 -mb-5 grid gap-2 border-t border-[#ffd6e4]/35 bg-[#fff6fa]/6 px-5 py-4 pb-[calc(1rem+env(safe-area-inset-bottom))] text-center text-lg font-semibold backdrop-blur-sm sm:-mx-8 sm:-mb-8 sm:px-8 sm:text-xl lg:-mx-10 lg:-mb-10 lg:px-10">
+        <button
+          type="button"
+          disabled={isSaving}
+          onClick={() => {
+            void saveDraft();
+          }}
+          className="mx-auto min-h-12 w-full max-w-sm rounded-md border border-[#ffd6e4]/65 bg-[#fff6fa]/10 px-5 text-lg font-semibold tracking-normal text-[#ffd6e4] transition hover:border-[#ffd6e4] hover:bg-[#fff6fa]/14 hover:text-[#ffd6e4] disabled:cursor-not-allowed disabled:opacity-60 sm:min-h-14 sm:text-xl"
+        >
+          Save
+        </button>
         <p className="text-[#ffd6e4]" role="status" aria-live="polite">
-          {isSaving ? "Saving..." : saveState.ok ? "Saved" : ""}
+          {isSaving ? "Saving..." : ""}
         </p>
         {currentErrorLocation === "global" ? (
           <p className="text-[#ffd6e4]" role="alert">
