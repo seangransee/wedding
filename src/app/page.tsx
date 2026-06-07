@@ -10,28 +10,6 @@ export const metadata: Metadata = {
   title: "Sexi Wedding",
   description:
     "Sean and Lexi are getting married on December 12, 2026 at The Blackstone Hotel in Chicago, IL.",
-  openGraph: {
-    title: "Sexi Wedding",
-    description:
-      "Sean and Lexi are getting married on December 12, 2026 at The Blackstone Hotel in Chicago, IL.",
-    type: "website",
-    locale: "en_US",
-    images: [
-      {
-        url: "/opengraph-image",
-        width: 1200,
-        height: 630,
-        alt: "Sean and Lexi's wedding in Chicago on December 12, 2026.",
-      },
-    ],
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "Sexi Wedding",
-    description:
-      "Sean and Lexi are getting married on December 12, 2026 at The Blackstone Hotel in Chicago, IL.",
-    images: ["/opengraph-image"],
-  },
 };
 
 export default async function Home() {

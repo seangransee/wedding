@@ -62,13 +62,13 @@ Core tables:
 - `src/app/admin/admin-client.tsx`: spreadsheet UI for adding, editing, sorting, reordering, copying links, viewing links, deleting guests, and toggling flags.
 - `src/app/admin/photos/page.tsx`: admin photo manager for reordering Sexi Adventures photos and hiding/restoring individual images without deleting files.
 - `src/app/photos/[filename]/route.ts`: streams image assets from the repo-root `photos/` directory for the shared Sexi Adventures gallery.
-- `src/app/*/opengraph-image.tsx` and `src/lib/opengraph-image.tsx`: generated PNG Open Graph images for public save-the-date and per-guest invitation links.
+- `src/app/[slug]/opengraph-image.tsx`, `src/app/savethedate/opengraph-image.tsx`, and `src/lib/opengraph-image.tsx`: generated PNG Open Graph images for per-guest invitation links and the public save-the-date link.
 
 Global styling lives in `src/app/globals.css`. The shared public/invitation page shell lives in `src/app/wedding-page-shell.tsx`, includes sticky in-page section navigation, renders long-form Markdown content from `content/`, renders the filesystem-backed Sexi Adventures gallery when `photos/` contains images, and uses `public/sexi-background.jpg`; Open Graph image generation uses local fonts from `public/fonts/`.
 
 ## Open Graph Images
 
-Open Graph images are a high-priority part of the experience because these links are shared directly with guests.
+Open Graph images are a high-priority part of the experience for invitation and save-the-date links because these are shared directly with guests. Other pages should not add generated OG images unless explicitly requested.
 
 - `/savethedate/opengraph-image` must look polished for the public save-the-date link.
 - `/{slug}/opengraph-image` must look polished for each unique invitation link and include the guest name cleanly.

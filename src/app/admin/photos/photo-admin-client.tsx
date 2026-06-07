@@ -250,7 +250,7 @@ export function PhotoAdminClient({ photos }: PhotoAdminClientProps) {
             Sean + Lexi = Sexi
           </p>
           <h1 className="mt-1 text-xl font-semibold leading-none text-[#7a1239]">
-            Edit Sexi Adventures
+            Edit Photos
           </h1>
         </div>
         <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-[#7a1239]">

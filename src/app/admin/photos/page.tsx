@@ -6,6 +6,9 @@ import { AdminLoginForm } from "../admin-client";
 import { PhotoAdminClient } from "./photo-admin-client";
 
 export const dynamic = "force-dynamic";
+export const metadata = {
+  title: "Edit Photos",
+};
 
 async function getIsAdminLoggedIn() {
   const cookieStore = await cookies();
@@ -23,7 +26,7 @@ function AdminLoginNotice() {
           Sean + Lexi
         </p>
         <h1 className="mt-5 text-4xl font-semibold text-[#8f2448] sm:text-5xl">
-          Photo admin
+          Edit Photos
         </h1>
         <p className="mt-4 max-w-md text-base text-[#4a1027]/75">
           Enter the admin password to manage Sexi Adventures photos.
