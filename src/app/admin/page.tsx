@@ -162,7 +162,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
         <section className="mx-auto flex min-h-[calc(100vh-6rem)] max-w-xl flex-col items-center justify-center text-center">
           <p
             className="text-4xl text-[#be185d] sm:text-5xl"
-            style={{ fontFamily: "var(--font-dancing-script)", fontWeight: 600 }}
+            style={{ fontFamily: "var(--font-brand-script)", fontWeight: 400 }}
           >
             Sean + Lexi
           </p>
@@ -212,7 +212,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
           <div>
             <p
               className="text-xl leading-none text-[#be185d]"
-              style={{ fontFamily: "var(--font-dancing-script)", fontWeight: 600 }}
+              style={{ fontFamily: "var(--font-brand-script)", fontWeight: 400 }}
             >
               Sean + Lexi = Sexi
             </p>

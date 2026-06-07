@@ -10,6 +10,7 @@ const fontPath = (...segments: string[]) =>
 const fontDataCormorant = readFile(fontPath("CormorantGaramond-SemiBold.ttf"));
 const fontDataLibre = readFile(fontPath("LibreBaskerville-Bold.ttf"));
 const fontDataDancing = readFile(fontPath("DancingScript-SemiBold.ttf"));
+const fontDataGreatVibes = readFile(fontPath("GreatVibes-Regular.ttf"));
 const invitationBackgroundData = readFile(
   path.join(process.cwd(), "public", "sexi-background.jpg"),
 ).then((data) => `data:image/jpeg;base64,${data.toString("base64")}`);
@@ -75,10 +76,11 @@ type PublicOgImageOptions = {
 export async function generateOgImage({
   badge = "SAVE THE DATE",
 }: PublicOgImageOptions = {}) {
-  const [cormorantFont, libreFont, dancingFont] = await Promise.all([
+  const [cormorantFont, libreFont, dancingFont, greatVibesFont] = await Promise.all([
     fontDataCormorant,
     fontDataLibre,
     fontDataDancing,
+    fontDataGreatVibes,
   ]);
 
   return new ImageResponse(
@@ -202,11 +204,11 @@ export async function generateOgImage({
             <div style={{ flex: 1, display: "flex", alignItems: "center" }}>
               <div
                 style={{
-                  fontFamily: "'Dancing Script', 'Cormorant Garamond', serif",
+                  fontFamily: "'Great Vibes', 'Dancing Script', 'Cormorant Garamond', serif",
                   fontSize: "110px",
-                  letterSpacing: "6px",
+                  letterSpacing: "0px",
                   color: "#ffd6e4",
-                  fontWeight: 600,
+                  fontWeight: 400,
                   textShadow: "0 6px 18px rgba(5, 79, 45, 0.35)",
                 }}
               >
@@ -282,17 +284,24 @@ export async function generateOgImage({
           style: "normal",
           weight: 600,
         },
+        {
+          name: "Great Vibes",
+          data: greatVibesFont,
+          style: "normal",
+          weight: 400,
+        },
       ],
     }
   );
 }
 
 export async function generateInvitationOgImage(guestName: string) {
-  const [cormorantFont, libreFont, dancingFont, backgroundImage] =
+  const [cormorantFont, libreFont, dancingFont, greatVibesFont, backgroundImage] =
     await Promise.all([
       fontDataCormorant,
       fontDataLibre,
       fontDataDancing,
+      fontDataGreatVibes,
       invitationBackgroundData,
     ]);
   const nameLayout = splitNameLines(guestName);
@@ -307,7 +316,7 @@ export async function generateInvitationOgImage(guestName: string) {
           position: "relative",
           overflow: "hidden",
           background: "#054f2d",
-          color: "#fff6fa",
+          color: "#ffd6e4",
         }}
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -385,11 +394,11 @@ export async function generateInvitationOgImage(guestName: string) {
           <div
             style={{
               display: "flex",
-              fontFamily: "'Dancing Script', 'Cormorant Garamond', serif",
+              fontFamily: "'Great Vibes', 'Dancing Script', 'Cormorant Garamond', serif",
               fontSize: nameLayout.isLong ? "56px" : "68px",
-              fontWeight: 600,
+              fontWeight: 400,
               color: "#ffd6e4",
-              letterSpacing: "2px",
+              letterSpacing: "0px",
               marginBottom: nameLayout.isLong ? "14px" : "24px",
               textShadow: "0 4px 16px rgba(0, 0, 0, 0.42)",
             }}
@@ -415,7 +424,7 @@ export async function generateInvitationOgImage(guestName: string) {
                   fontSize: `${nameLayout.fontSize}px`,
                   fontWeight: 700,
                   lineHeight: 1.05,
-                  color: "#fff6fa",
+                  color: "#ffd6e4",
                   textShadow: "0 5px 22px rgba(0, 0, 0, 0.6)",
                 }}
               >
@@ -473,6 +482,12 @@ export async function generateInvitationOgImage(guestName: string) {
           data: dancingFont,
           style: "normal",
           weight: 600,
+        },
+        {
+          name: "Great Vibes",
+          data: greatVibesFont,
+          style: "normal",
+          weight: 400,
         },
       ],
     },

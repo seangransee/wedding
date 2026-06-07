@@ -1,5 +1,9 @@
 import type { Metadata } from "next";
-import { Cormorant_Garamond, Libre_Baskerville, Dancing_Script } from "next/font/google";
+import {
+  Cormorant_Garamond,
+  Libre_Baskerville,
+  Great_Vibes,
+} from "next/font/google";
 import "react-data-grid/lib/styles.css";
 import "./globals.css";
 
@@ -15,8 +19,9 @@ const secondarySerif = Libre_Baskerville({
   subsets: ["latin"],
 });
 
-const dancingScript = Dancing_Script({
-  variable: "--font-dancing-script",
+const brandScript = Great_Vibes({
+  variable: "--font-brand-script",
+  weight: "400",
   subsets: ["latin"],
 });
 
@@ -38,7 +43,7 @@ export default function RootLayout({
         <link rel="shortcut icon" href="/favicon.ico" />
       </head>
       <body
-        className={`${primarySerif.variable} ${secondarySerif.variable} ${dancingScript.variable} antialiased`}
+        className={`${primarySerif.variable} ${secondarySerif.variable} ${brandScript.variable} antialiased`}
       >
         {children}
       </body>

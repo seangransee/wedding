@@ -282,7 +282,7 @@ export function RsvpForm({
                 className={`min-h-14 rounded-md border px-4 text-base font-semibold tracking-normal transition sm:text-lg ${
                   selected
                     ? "border-[#ffd6e4] bg-[#fff6fa]/12 text-[#ffd6e4]"
-                    : "border-[#ffd6e4]/45 bg-[#fff6fa]/6 text-[#ffd6e4] hover:border-[#fff6fa] hover:text-[#fff6fa]"
+                    : "border-[#ffd6e4]/45 bg-[#fff6fa]/6 text-[#ffd6e4] hover:border-[#ffd6e4] hover:text-[#ffd6e4]"
                 }`}
               >
                 {option.label}
@@ -333,7 +333,7 @@ export function RsvpForm({
                         className={`min-h-12 rounded-md border text-lg font-semibold transition sm:min-h-14 sm:text-xl ${
                           selected
                             ? "border-[#ffd6e4] bg-[#fff6fa]/12 text-[#ffd6e4]"
-                            : "border-[#ffd6e4]/45 bg-[#fff6fa]/6 text-[#ffd6e4] hover:border-[#fff6fa] hover:text-[#fff6fa]"
+                            : "border-[#ffd6e4]/45 bg-[#fff6fa]/6 text-[#ffd6e4] hover:border-[#ffd6e4] hover:text-[#ffd6e4]"
                         }`}
                         aria-label={`${count} attending`}
                       >
@@ -391,7 +391,7 @@ export function RsvpForm({
                         setAttendeeDetails(next);
                       }}
                       autoComplete="name"
-                      className="min-h-12 min-w-0 rounded-md border border-[#ffd6e4]/55 bg-[#031b12]/55 px-3 text-lg font-normal text-[#fff6fa] outline-none transition focus:border-[#ffd6e4] focus:ring-2 focus:ring-[#ffd6e4]/25 sm:min-h-14 sm:text-xl"
+                      className="min-h-12 min-w-0 rounded-md border border-[#ffd6e4]/55 bg-[#031b12]/55 px-3 text-lg font-normal text-[#ffd6e4] outline-none transition focus:border-[#ffd6e4] focus:ring-2 focus:ring-[#ffd6e4]/25 sm:min-h-14 sm:text-xl"
                     />
                     <button
                       type="button"
@@ -402,7 +402,7 @@ export function RsvpForm({
                           attendingCount: effectiveAttendingCount,
                         });
                       }}
-                      className="min-h-12 rounded-md border border-[#ffd6e4]/65 bg-[#fff6fa]/10 px-3 text-sm font-semibold uppercase tracking-[0.1em] text-[#ffd6e4] transition hover:border-[#fff6fa] hover:text-[#fff6fa] disabled:cursor-not-allowed disabled:opacity-60 sm:min-h-14 sm:px-4 sm:text-base"
+                      className="min-h-12 rounded-md border border-[#ffd6e4]/65 bg-[#fff6fa]/10 px-3 text-sm font-semibold uppercase tracking-[0.1em] text-[#ffd6e4] transition hover:border-[#ffd6e4] hover:text-[#ffd6e4] disabled:cursor-not-allowed disabled:opacity-60 sm:min-h-14 sm:px-4 sm:text-base"
                     >
                       Save
                     </button>
@@ -448,7 +448,7 @@ export function RsvpForm({
                             className={`grid min-h-12 grid-cols-[auto_1fr] items-center gap-3 rounded-md border px-3 text-left text-lg font-semibold transition sm:min-h-14 sm:text-xl ${
                               selected
                                 ? "border-[#ffd6e4] bg-[#fff6fa]/12 text-[#ffd6e4]"
-                                : "border-[#ffd6e4]/40 bg-[#fff6fa]/6 text-[#ffd6e4] hover:border-[#fff6fa] hover:text-[#fff6fa]"
+                                : "border-[#ffd6e4]/40 bg-[#fff6fa]/6 text-[#ffd6e4] hover:border-[#ffd6e4] hover:text-[#ffd6e4]"
                             }`}
                           >
                             <span
@@ -493,7 +493,7 @@ export function RsvpForm({
                         };
                         setAttendeeDetails(next);
                       }}
-                      className="min-h-28 min-w-0 resize-y rounded-md border border-[#ffd6e4]/55 bg-[#031b12]/55 px-3 py-2 text-lg font-normal text-[#fff6fa] outline-none transition focus:border-[#ffd6e4] focus:ring-2 focus:ring-[#ffd6e4]/25 sm:text-xl"
+                      className="min-h-28 min-w-0 resize-y rounded-md border border-[#ffd6e4]/55 bg-[#031b12]/55 px-3 py-2 text-lg font-normal text-[#ffd6e4] outline-none transition focus:border-[#ffd6e4] focus:ring-2 focus:ring-[#ffd6e4]/25 sm:text-xl"
                     />
                   </div>
                 </div>

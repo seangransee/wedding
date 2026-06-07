@@ -5,6 +5,7 @@
   --foreground: #4a1f2e;
   --accent-soft: #f9dce8;
   --accent-strong: #d48dad;
+  --blush-pink: #ffd6e4;
 }
 
 @theme inline {
@@ -190,16 +191,25 @@ body {
   inline-size: 2.65rem;
   block-size: 2.65rem;
   place-items: center;
-  border: 1px solid rgba(255, 214, 228, 0.95);
+  border: 1px solid color-mix(in srgb, var(--blush-pink) 95%, transparent);
   border-radius: 999px;
   background: rgba(3, 27, 18, 0.86);
-  color: #ffd6e4;
+  color: var(--blush-pink);
   font-family: "Times New Roman", "PingFang SC", "Hiragino Sans GB", "Heiti SC", serif;
   font-size: 1.75rem;
   font-weight: 700;
   line-height: 1;
   box-shadow: 0 0.6rem 1.2rem rgba(3, 27, 18, 0.45), inset 0 0 0 1px rgba(255, 246, 250, 0.16);
-  text-shadow: 0 1px 0 rgba(3, 27, 18, 0.9), 0 0 0.8rem rgba(255, 214, 228, 0.72);
+  text-shadow: 0 1px 0 rgba(3, 27, 18, 0.9), 0 0 0.8rem color-mix(in srgb, var(--blush-pink) 72%, transparent);
+}
+
+.guest-story-emoji {
+  display: inline-block;
+  color: var(--blush-pink);
+  filter: sepia(1) saturate(4.5) hue-rotate(292deg) brightness(1.06);
+  font-style: normal;
+  text-shadow: 0 0 0.5rem rgba(255, 214, 228, 0.42);
+  transform: translateY(0.03em);
 }
 
 .guest-double-happiness-top-left {

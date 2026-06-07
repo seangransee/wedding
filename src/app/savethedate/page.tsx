@@ -31,7 +31,7 @@ export const metadata: Metadata = {
 
 export default function SaveTheDate() {
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[#054f2d] flex items-center justify-center py-8 px-6 text-white sm:py-12 md:py-16">
+    <main className="relative min-h-screen overflow-hidden bg-[#054f2d] flex items-center justify-center py-8 px-6 text-[#ffd6e4] sm:py-12 md:py-16">
       <span
         className="pointer-events-none absolute top-6 left-6 text-4xl text-[#ffd6e4] opacity-85 sm:text-5xl md:text-6xl"
         aria-hidden="true"
@@ -69,7 +69,7 @@ export default function SaveTheDate() {
           className="absolute inset-0 rounded-[40px] bg-white/30 blur-3xl"
           aria-hidden="true"
         />
-        <div className="hero-card relative overflow-hidden rounded-[40px] border border-[#ffd6e4]/45 bg-[#ffd6e4]/70 backdrop-blur-md shadow-2xl p-8 text-center text-[#054f2d] sm:p-10 md:p-12">
+        <div className="hero-card relative overflow-hidden rounded-[40px] border border-[#ffd6e4]/45 bg-[#031b12]/72 backdrop-blur-md shadow-2xl p-8 text-center text-[#ffd6e4] sm:p-10 md:p-12">
           <div
             className="hero-halo absolute -top-32 left-1/2 h-64 w-64 -translate-x-1/2 rounded-full bg-[#ffd6e4]/22 blur-3xl"
             aria-hidden="true"
@@ -88,9 +88,8 @@ export default function SaveTheDate() {
           <p
             className="mt-3 text-4xl leading-tight text-[#ffd6e4] sm:text-6xl"
             style={{
-              fontFamily: "var(--font-dancing-script)",
-              fontWeight: 600,
-              letterSpacing: "0.05em",
+              fontFamily: "var(--font-brand-script)",
+              fontWeight: 400,
             }}
           >
             Sean + Lexi = Sexi
@@ -107,7 +106,7 @@ export default function SaveTheDate() {
                   href={WEDDING_DETAILS.calendarUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-current underline decoration-dashed decoration-1 decoration-[#054f2d]/50 underline-offset-6 transition-colors hover:text-[#ffd6e4] hover:decoration-[#ffd6e4]"
+                  className="text-[#ffd6e4] underline decoration-dashed decoration-1 decoration-[#ffd6e4]/60 underline-offset-6 transition-colors hover:text-[#ffd6e4] hover:decoration-[#ffd6e4]"
                 >
                   December 12, 2026
                 </a>
@@ -122,7 +121,7 @@ export default function SaveTheDate() {
                   href="https://maps.app.goo.gl/UKgUKENz1W4efCC7A"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-current underline decoration-dashed decoration-1 decoration-[#054f2d]/50 underline-offset-6 transition-colors hover:text-[#ffd6e4] hover:decoration-[#ffd6e4]"
+                  className="text-[#ffd6e4] underline decoration-dashed decoration-1 decoration-[#ffd6e4]/60 underline-offset-6 transition-colors hover:text-[#ffd6e4] hover:decoration-[#ffd6e4]"
                 >
                   The Blackstone Hotel
                 </a>
@@ -137,7 +136,7 @@ export default function SaveTheDate() {
               href={WEDDING_DETAILS.calendarUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-block text-sm font-semibold uppercase tracking-[0.2em] text-[#054f2d]/80 underline decoration-dashed decoration-1 underline-offset-4 transition-colors hover:text-[#ffd6e4] hover:decoration-[#ffd6e4]"
+              className="inline-block text-sm font-semibold uppercase tracking-[0.2em] text-[#ffd6e4] underline decoration-dashed decoration-1 underline-offset-4 transition-colors hover:text-[#ffd6e4] hover:decoration-[#ffd6e4]"
             >
               Add to calendar
             </a>

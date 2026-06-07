@@ -40,7 +40,7 @@ function EventHeroCopy({ calendarWebsiteUrl }: { calendarWebsiteUrl: string }) {
     <div className="guest-hero-copy mx-0 w-full max-w-none text-center text-[#ffd6e4]">
       <p
         className="text-4xl leading-tight text-[#ffd6e4] sm:text-6xl"
-        style={{ fontFamily: "var(--font-dancing-script)", fontWeight: 600 }}
+        style={{ fontFamily: "var(--font-brand-script)", fontWeight: 400 }}
       >
         {WEDDING_DETAILS.brand}
       </p>
@@ -64,7 +64,7 @@ function EventHeroCopy({ calendarWebsiteUrl }: { calendarWebsiteUrl: string }) {
         href={getWeddingCalendarUrl({ websiteUrl: calendarWebsiteUrl })}
         target="_blank"
         rel="noopener noreferrer"
-        className="mt-4 inline-flex min-h-11 items-center justify-center text-xs font-semibold uppercase tracking-[0.18em] text-[#ffd6e4] underline decoration-dashed decoration-1 underline-offset-4 transition hover:text-[#fff6fa]"
+        className="mt-4 inline-flex min-h-11 items-center justify-center text-xs font-semibold uppercase tracking-[0.18em] text-[#ffd6e4] underline decoration-dashed decoration-1 underline-offset-4 transition hover:text-[#ffd6e4]"
       >
         Add to calendar
       </a>
@@ -96,7 +96,7 @@ function PageNav({
           <a
             key={item.href}
             href={item.href}
-            className="guest-page-nav-link inline-flex min-h-9 items-center justify-center rounded-md border border-[#ffd6e4]/35 text-[0.6rem] font-semibold uppercase tracking-[0.08em] text-[#ffd6e4] transition hover:border-[#fff6fa] hover:text-[#fff6fa] sm:text-[0.66rem]"
+            className="guest-page-nav-link inline-flex min-h-9 items-center justify-center rounded-md border border-[#ffd6e4]/35 text-[0.6rem] font-semibold uppercase tracking-[0.08em] text-[#ffd6e4] transition hover:border-[#ffd6e4] hover:text-[#ffd6e4] sm:text-[0.66rem]"
           >
             {item.label}
           </a>
@@ -109,17 +109,19 @@ function PageNav({
 function LongFormSections({ showHotelBlocks }: { showHotelBlocks: boolean }) {
   return (
     <div className="pb-16">
-      <MarkdownContent id="our-story" fileName="our-story.md" />
+      <MarkdownContent id="our-story" fileName="our-story.md" styleEmojis />
+      <MarkdownContent
+        id="hotel-blocks"
+        fileName="hotel-blocks.md"
+        emphasizeHeadings
+        splitDetailedHeadings
+        buttonizeBookingLinks
+        lockedBlocks={!showHotelBlocks}
+      />
       <MarkdownContent
         id="faqs"
         fileName="faqs.md"
         collapsibleQuestions
-        emphasizeHeadings
-        lockedBlocks={!showHotelBlocks}
-      />
-      <MarkdownContent
-        id="hotel-blocks"
-        fileName="hotel-blocks.md"
         emphasizeHeadings
         lockedBlocks={!showHotelBlocks}
       />
@@ -136,7 +138,7 @@ export function WeddingPageShell({
   showHotelBlocks = false,
 }: WeddingPageShellProps) {
   return (
-    <main className="guest-invitation-page relative min-h-screen bg-[#031b12] px-3 py-4 pb-[calc(1rem+env(safe-area-inset-bottom))] text-[#4a1f2e]">
+    <main className="guest-invitation-page relative min-h-screen bg-[#031b12] px-3 py-4 pb-[calc(1rem+env(safe-area-inset-bottom))] text-[#ffd6e4]">
       <div
         className="guest-photo-scrim pointer-events-none fixed inset-0 z-0"
         aria-hidden="true"
