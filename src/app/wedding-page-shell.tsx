@@ -160,7 +160,7 @@ export async function WeddingPageShell({
         panelNavLabel={panelNavLabel}
       />
 
-      <section className="guest-hero-section relative z-10 mx-auto grid min-h-[calc(100svh-2rem)] max-w-5xl items-end gap-4 pt-[42svh]">
+      <section className="guest-hero-section relative z-10 mx-auto grid min-h-[calc(100svh-2rem)] max-w-5xl items-end gap-4 pt-[36svh]">
         <EventHeroCopy calendarWebsiteUrl={calendarWebsiteUrl} />
         <div id={panelId} className={`${panelClassName} scroll-mt-28`}>
           {panel}
