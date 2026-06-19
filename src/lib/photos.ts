@@ -1,19 +1,25 @@
-import { existsSync } from "fs";
-import { readdir, stat } from "fs/promises";
-import path from "path";
-import { imageSizeFromFile } from "image-size/fromFile";
 import {
   ensureWeddingPhotoRecords,
   listWeddingPhotoRecords,
   type WeddingPhotoRecord,
 } from "@/lib/db";
+import photoManifest from "@/lib/generated/photo-manifest.json";
+
+export type PhotoSource = {
+  src: string;
+  width: number;
+  height: number;
+};
 
 export type WeddingPhoto = {
   filename: string;
   src: string;
+  srcSet: PhotoSource[];
   width: number;
   height: number;
   alt: string;
+  lightboxSrc: string;
+  lightboxSrcSet: PhotoSource[];
 };
 
 export type AdminWeddingPhoto = WeddingPhoto & {
@@ -21,113 +27,22 @@ export type AdminWeddingPhoto = WeddingPhoto & {
   hiddenAt: string | null;
 };
 
-const photosDirectory = path.join(process.cwd(), "photos");
-const supportedPhotoExtensions = new Set([
-  ".avif",
-  ".gif",
-  ".jpeg",
-  ".jpg",
-  ".png",
-  ".webp",
-]);
+type PhotoManifestEntry = {
+  filename: string;
+  width: number;
+  height: number;
+  thumbnail: PhotoSource[];
+  lightbox: PhotoSource[];
+};
 
-const contentTypes = new Map([
-  [".avif", "image/avif"],
-  [".gif", "image/gif"],
-  [".jpeg", "image/jpeg"],
-  [".jpg", "image/jpeg"],
-  [".png", "image/png"],
-  [".webp", "image/webp"],
-]);
-
+const manifestEntries = photoManifest as PhotoManifestEntry[];
+const manifestByFilename = new Map(
+  manifestEntries.map((entry) => [entry.filename, entry]),
+);
 const filenameCollator = new Intl.Collator("en", {
   numeric: true,
   sensitivity: "base",
 });
-
-const deterministicPhotoSeed = "sexi-wedding-photo-gallery-v2";
-
-function deterministicPhotoRank(filename: string) {
-  let hash = 0x811c9dc5;
-  const value = `${deterministicPhotoSeed}:${filename.toLowerCase()}`;
-
-  for (let index = 0; index < value.length; index += 1) {
-    hash ^= value.charCodeAt(index);
-    hash = Math.imul(hash, 0x01000193);
-  }
-
-  return hash >>> 0;
-}
-
-function comparePhotoFilenames(first: string, second: string) {
-  const rankDifference = deterministicPhotoRank(first) - deterministicPhotoRank(second);
-
-  if (rankDifference !== 0) {
-    return rankDifference;
-  }
-
-  return filenameCollator.compare(first, second);
-}
-
-export function getPhotosDirectory() {
-  return photosDirectory;
-}
-
-export function isSupportedPhotoFilename(filename: string) {
-  return supportedPhotoExtensions.has(path.extname(filename).toLowerCase());
-}
-
-export function getPhotoContentType(filename: string) {
-  return contentTypes.get(path.extname(filename).toLowerCase()) ?? "application/octet-stream";
-}
-
-export function getSafePhotoPath(filename: string) {
-  if (
-    !filename ||
-    filename !== path.basename(filename) ||
-    filename.includes("/") ||
-    filename.includes("\\") ||
-    !isSupportedPhotoFilename(filename)
-  ) {
-    return null;
-  }
-
-  const filePath = path.join(photosDirectory, filename);
-  const relativePath = path.relative(photosDirectory, filePath);
-
-  if (relativePath.startsWith("..") || path.isAbsolute(relativePath)) {
-    return null;
-  }
-
-  return filePath;
-}
-
-async function getWeddingPhotoFilenames() {
-  if (!existsSync(photosDirectory)) {
-    return [];
-  }
-
-  const entries = await readdir(photosDirectory, { withFileTypes: true });
-
-  return entries
-    .filter((entry) => entry.isFile() && isSupportedPhotoFilename(entry.name))
-    .map((entry) => entry.name)
-    .sort(comparePhotoFilenames);
-}
-
-async function getPhotoDimensions(filename: string) {
-  const filePath = path.join(photosDirectory, filename);
-  const dimensions = await imageSizeFromFile(filePath);
-
-  if (!dimensions.width || !dimensions.height) {
-    return null;
-  }
-
-  return {
-    width: dimensions.width,
-    height: dimensions.height,
-  };
-}
 
 function sortPhotoEntries<T extends { filename: string; originalIndex: number }>(
   photos: T[],
@@ -147,80 +62,100 @@ function sortPhotoEntries<T extends { filename: string; originalIndex: number }>
   });
 }
 
+function getPrimarySource(sources: PhotoSource[]) {
+  return sources.at(-1) ?? null;
+}
+
+function toWeddingPhoto(entry: PhotoManifestEntry, alt: string) {
+  const thumbnail = getPrimarySource(entry.thumbnail);
+  const lightbox = getPrimarySource(entry.lightbox) ?? thumbnail;
+
+  if (!thumbnail || !lightbox) {
+    return null;
+  }
+
+  return {
+    filename: entry.filename,
+    src: thumbnail.src,
+    srcSet: entry.thumbnail,
+    width: entry.width,
+    height: entry.height,
+    alt,
+    lightboxSrc: lightbox.src,
+    lightboxSrcSet: entry.lightbox.length > 0 ? entry.lightbox : [lightbox],
+  };
+}
+
+function getWeddingPhotoFilenames() {
+  return manifestEntries.map((entry) => entry.filename);
+}
+
+export function isKnownWeddingPhotoFilename(filename: string) {
+  return manifestByFilename.has(filename);
+}
+
 export async function getWeddingPhotos(): Promise<WeddingPhoto[]> {
-  const filenames = await getWeddingPhotoFilenames();
+  const filenames = getWeddingPhotoFilenames();
   const records = await listWeddingPhotoRecords(filenames);
   const metadataByFilename = new Map(records.map((record) => [record.filename, record]));
 
-  const photos = await Promise.all(
-    filenames.map(async (filename, index) => {
-      const dimensions = await getPhotoDimensions(filename);
-
-      if (!dimensions || metadataByFilename.get(filename)?.hiddenAt) {
+  const photos = manifestEntries
+    .map((entry, index) => {
+      if (metadataByFilename.get(entry.filename)?.hiddenAt) {
         return null;
       }
 
-      return {
-        filename,
-        src: `/photos/${encodeURIComponent(filename)}`,
-        width: dimensions.width,
-        height: dimensions.height,
-        alt: `Wedding photo ${index + 1}`,
-        originalIndex: index,
-      };
-    }),
-  );
+      const photo = toWeddingPhoto(entry, `Wedding photo ${index + 1}`);
 
-  return sortPhotoEntries(
-    photos.filter((photo): photo is WeddingPhoto & { originalIndex: number } => photo !== null),
-    metadataByFilename,
-  ).map((photo, index) => ({
+      return photo ? { ...photo, originalIndex: index } : null;
+    })
+    .filter((photo): photo is WeddingPhoto & { originalIndex: number } => photo !== null);
+
+  return sortPhotoEntries(photos, metadataByFilename).map((photo, index) => ({
     filename: photo.filename,
     src: photo.src,
+    srcSet: photo.srcSet,
     width: photo.width,
     height: photo.height,
     alt: `Wedding photo ${index + 1}`,
+    lightboxSrc: photo.lightboxSrc,
+    lightboxSrcSet: photo.lightboxSrcSet,
   }));
 }
 
 export async function getAdminWeddingPhotos(): Promise<AdminWeddingPhoto[]> {
-  const filenames = await getWeddingPhotoFilenames();
+  const filenames = getWeddingPhotoFilenames();
   await ensureWeddingPhotoRecords(filenames);
 
   const records = await listWeddingPhotoRecords(filenames);
   const metadataByFilename = new Map(records.map((record) => [record.filename, record]));
-  const photos = await Promise.all(
-    filenames.map(async (filename, index) => {
-      const dimensions = await getPhotoDimensions(filename);
+  const photos = manifestEntries
+    .map((entry, index) => {
+      const metadata = metadataByFilename.get(entry.filename);
+      const photo = toWeddingPhoto(entry, `Wedding photo ${index + 1}`);
 
-      if (!dimensions) {
+      if (!photo) {
         return null;
       }
 
-      const metadata = metadataByFilename.get(filename);
-
       return {
-        filename,
-        src: `/photos/${encodeURIComponent(filename)}`,
-        width: dimensions.width,
-        height: dimensions.height,
-        alt: `Wedding photo ${index + 1}`,
+        ...photo,
         originalIndex: index,
         sortOrder: metadata?.sortOrder ?? Number.MAX_SAFE_INTEGER,
         hiddenAt: metadata?.hiddenAt ?? null,
       };
-    }),
-  );
+    })
+    .filter((photo): photo is AdminWeddingPhoto & { originalIndex: number } => photo !== null);
 
-  return sortPhotoEntries(
-    photos.filter((photo): photo is AdminWeddingPhoto & { originalIndex: number } => photo !== null),
-    metadataByFilename,
-  ).map((photo, index) => ({
+  return sortPhotoEntries(photos, metadataByFilename).map((photo, index) => ({
     filename: photo.filename,
     src: photo.src,
+    srcSet: photo.srcSet,
     width: photo.width,
     height: photo.height,
     alt: `Wedding photo ${index + 1}`,
+    lightboxSrc: photo.lightboxSrc,
+    lightboxSrcSet: photo.lightboxSrcSet,
     sortOrder: photo.sortOrder,
     hiddenAt: photo.hiddenAt,
   }));
@@ -228,28 +163,4 @@ export async function getAdminWeddingPhotos(): Promise<AdminWeddingPhoto[]> {
 
 export async function getCurrentWeddingPhotoFilenames() {
   return getWeddingPhotoFilenames();
-}
-
-export async function getPhotoFile(filename: string) {
-  const filePath = getSafePhotoPath(filename);
-
-  if (!filePath) {
-    return null;
-  }
-
-  try {
-    const fileStats = await stat(filePath);
-
-    if (!fileStats.isFile()) {
-      return null;
-    }
-
-    return {
-      filePath,
-      size: fileStats.size,
-      contentType: getPhotoContentType(filename),
-    };
-  } catch {
-    return null;
-  }
 }

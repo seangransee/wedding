@@ -1,10 +1,10 @@
 "use client";
 
-import Image from "next/image";
+/* eslint-disable @next/next/no-img-element */
 import { useEffect, useMemo, useRef, useState } from "react";
 import { RowsPhotoAlbum } from "react-photo-album";
 import Lightbox from "yet-another-react-lightbox";
-import type { WeddingPhoto } from "@/lib/photos";
+import type { PhotoSource, WeddingPhoto } from "@/lib/photos";
 import type { ComponentPropsWithoutRef } from "react";
 
 type PhotoGalleryProps = {
@@ -15,19 +15,23 @@ const transparentPixel =
   "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==";
 const thumbnailSizes = "(max-width: 640px) calc(100vw - 2.5rem), (max-width: 1024px) 45vw, 320px";
 const lightboxPreloadRadius = 1;
-const lightboxImageQuality = 75;
-const lightboxImageWidths = [640, 750, 1080, 1200, 1536, 1600, 1920, 2048] as const;
 
 type LazyGalleryImageProps = ComponentPropsWithoutRef<"img"> & {
   photoHeight: number;
+  photoSrcSet: string;
   photoWidth: number;
   src: string | Blob;
 };
+
+function formatSrcSet(sources: readonly PhotoSource[]) {
+  return sources.map((source) => `${source.src} ${source.width}w`).join(", ");
+}
 
 function LazyGalleryImage({
   alt,
   className,
   photoHeight,
+  photoSrcSet,
   photoWidth,
   onLoad,
   src,
@@ -77,16 +81,16 @@ function LazyGalleryImage({
         data-loaded={isLoaded}
       />
       {canLoad ? (
-        <Image
+        <img
           alt={alt ?? ""}
           className={className}
           data-loaded={isLoaded}
           decoding={props.decoding}
           height={photoHeight}
           loading="lazy"
-          quality={68}
-          sizes={thumbnailSizes}
+          sizes={props.sizes ?? thumbnailSizes}
           src={imageSrc}
+          srcSet={photoSrcSet}
           title={props.title}
           width={photoWidth}
           onLoad={(event) => {
@@ -96,7 +100,6 @@ function LazyGalleryImage({
         />
       ) : (
         // This transparent image preserves the react-photo-album aspect-ratio box without requesting the full photo.
-        // eslint-disable-next-line @next/next/no-img-element
         <img
           alt={alt ?? ""}
           className={className}
@@ -114,31 +117,14 @@ function LazyGalleryImage({
   );
 }
 
-function getOptimizedImageSrc(src: string, width: number) {
-  const params = new URLSearchParams({
-    q: String(lightboxImageQuality),
-    url: src,
-    w: String(width),
-  });
-
-  return `/_next/image?${params.toString()}`;
-}
-
 function getLightboxSlides(photos: WeddingPhoto[]) {
-  return photos.map((photo) => {
-    const sourceWidths = lightboxImageWidths.filter((width) => width <= photo.width);
-    const largestWidth = sourceWidths[sourceWidths.length - 1] ?? lightboxImageWidths[0];
-
-    return {
-      ...photo,
-      src: getOptimizedImageSrc(photo.src, largestWidth),
-      srcSet: sourceWidths.map((width) => ({
-        src: getOptimizedImageSrc(photo.src, width),
-        width,
-        height: Math.round((photo.height / photo.width) * width),
-      })),
-    };
-  });
+  return photos.map((photo) => ({
+    alt: photo.alt,
+    height: photo.height,
+    src: photo.lightboxSrc,
+    srcSet: photo.lightboxSrcSet,
+    width: photo.width,
+  }));
 }
 
 export function PhotoGallery({ photos }: PhotoGalleryProps) {
@@ -171,6 +157,7 @@ export function PhotoGallery({ photos }: PhotoGalleryProps) {
             <LazyGalleryImage
               {...props}
               photoHeight={photo.height}
+              photoSrcSet={formatSrcSet(photo.srcSet)}
               photoWidth={photo.width}
             />
           ),

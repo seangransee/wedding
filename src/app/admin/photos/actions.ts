@@ -9,7 +9,7 @@ import {
 } from "@/lib/db";
 import {
   getCurrentWeddingPhotoFilenames,
-  getSafePhotoPath,
+  isKnownWeddingPhotoFilename,
 } from "@/lib/photos";
 import type { AdminActionState } from "../actions";
 
@@ -47,7 +47,7 @@ export async function reorderPhotoRows(filenames: string[]): Promise<AdminAction
 
   if (
     filenames.length === 0 ||
-    filenames.some((filename) => !getSafePhotoPath(filename))
+    filenames.some((filename) => !isKnownWeddingPhotoFilename(filename))
   ) {
     return { ok: false, message: "Photo order is invalid." };
   }
@@ -74,7 +74,7 @@ export async function setPhotoHidden(
 ): Promise<AdminActionState> {
   await requireAdmin();
 
-  if (!getSafePhotoPath(filename)) {
+  if (!isKnownWeddingPhotoFilename(filename)) {
     return { ok: false, message: "Photo filename is invalid." };
   }
 

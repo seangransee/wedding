@@ -13,7 +13,7 @@ Long-form public/invitation copy lives in Markdown files under `content/` so non
 - `content/hotel-blocks.md` - the dedicated Hotels section. Use `<!-- invitation-only-start title="Hotels" -->` and `<!-- invitation-only-end -->` around booking details that should be hidden on public `/` and shown only on guest invitation pages. Keep individual hotel names as `###` headings so they render as prominent hotel blocks.
 - `content/faqs.md` - the FAQ section. Keep hotel block booking details in `content/hotel-blocks.md`, not in FAQs.
 
-The shared Sexi Adventures gallery is driven by image files in the repo-root `photos/` directory, not Markdown or hard-coded arrays. Adding or removing supported image files there changes the rendered gallery.
+The shared Sexi Adventures gallery is driven by image files in the repo-root `photos/` directory, not Markdown or hard-coded arrays. After adding, removing, or replacing supported image files there, run `npm run photos:generate` so the rendered gallery uses the updated static WebP assets and manifest.
 
 The package currently uses `next` 16.x with React 19, Tailwind CSS 4, TypeScript, Neon/Postgres, and `react-data-grid`.
 
@@ -23,6 +23,7 @@ The package currently uses `next` 16.x with React 19, Tailwind CSS 4, TypeScript
 - `npm run build` - Build for production with Turbopack.
 - `npm run lint` - Run ESLint.
 - `npm run db:migrate` - Run every SQL file in `migrations/` against `DATABASE_URL`.
+- `npm run photos:generate` - Regenerate static WebP gallery assets and `src/lib/generated/photo-manifest.json` from repo-root `photos/`.
 
 Use npm for scripts. The repo has both `package-lock.json` and `pnpm-lock.yaml`, but the documented workflow is npm.
 
@@ -61,10 +62,9 @@ Core tables:
 - `src/app/admin/page.tsx`: admin page. Without a valid admin cookie it shows the login form; with the cookie it loads guests and RSVP audit events.
 - `src/app/admin/admin-client.tsx`: spreadsheet UI for adding, editing, sorting, reordering, copying links, viewing links, deleting guests, and toggling flags.
 - `src/app/admin/photos/page.tsx`: admin photo manager for reordering Sexi Adventures photos and hiding/restoring individual images without deleting files.
-- `src/app/photos/[filename]/route.ts`: streams image assets from the repo-root `photos/` directory for the shared Sexi Adventures gallery.
 - `src/app/[slug]/opengraph-image.tsx`, `src/app/savethedate/opengraph-image.tsx`, and `src/lib/opengraph-image.tsx`: generated PNG Open Graph images for per-guest invitation links and the public save-the-date link.
 
-Global styling lives in `src/app/globals.css`. The shared public/invitation page shell lives in `src/app/wedding-page-shell.tsx`, includes sticky in-page section navigation, renders long-form Markdown content from `content/`, renders the filesystem-backed Sexi Adventures gallery when `photos/` contains images, and uses `public/sexi-background.jpg`; Open Graph image generation uses local fonts from `public/fonts/`.
+Global styling lives in `src/app/globals.css`. The shared public/invitation page shell lives in `src/app/wedding-page-shell.tsx`, includes sticky in-page section navigation, renders long-form Markdown content from `content/`, renders the static-manifest-backed Sexi Adventures gallery when generated photo assets exist, and uses `public/sexi-background.jpg`; Open Graph image generation uses local fonts from `public/fonts/`.
 
 ## Open Graph Images
 
@@ -140,8 +140,8 @@ Be careful changing validation: database constraints, server action validation, 
 - All long-form content should be driven by Markdown files in `content/`, not hard-coded in React or TypeScript. The renderer for these files lives in `src/app/markdown-content.tsx`.
 - Public `/` keeps Markdown invitation-only blocks locked behind an invitation link; guest invitation pages render those blocks.
 - FAQ questions in `content/faqs.md` render as collapsible dropdowns; keep each question as a `###` heading followed by its answer content.
-- The Sexi Adventures gallery reads supported image files from repo-root `photos/`, merges them with `wedding_photos` metadata for order and visibility, serves them through `/photos/[filename]`, and uses `react-photo-album` plus `yet-another-react-lightbox`. Do not hard-code gallery image lists in React.
-- `next.config.ts` includes `photos/**/*` in output file tracing so root-level gallery files are available to the image route after deployment.
+- The Sexi Adventures gallery source files live in repo-root `photos/`. Run `npm run photos:generate` after adding, removing, or replacing supported files there; the app renders committed static WebP assets from `public/optimized-photos/` plus `src/lib/generated/photo-manifest.json`, merges that manifest with `wedding_photos` metadata for order and visibility, and uses `react-photo-album` plus `yet-another-react-lightbox`. Do not hard-code gallery image lists in React.
+- Keep public gallery and admin photo thumbnails off `next/image` and `/_next/image`; the static generated assets avoid Vercel Image Optimization usage and origin-function image transfer.
 - Design uses a green/pink wedding palette, Cormorant/Libre serif fonts with Great Vibes for the `Sean + Lexi = Sexi` brand mark, pink-accent double-happiness glyphs, pink-tinted Our Story emoji, high-contrast large long-form copy, and a spreadsheet-like admin UI. Keep new UI consistent with those patterns.
 - The shared public/invitation hero foreground should keep the same single-column stack across mobile and desktop widths; only the background photo framing should make major viewport-specific shifts.
 - Guests will primarily use the site on phones. Treat mobile layouts as the primary experience, especially for invitation pages, RSVP controls, forms, tap targets, safe-area spacing, and text wrapping.

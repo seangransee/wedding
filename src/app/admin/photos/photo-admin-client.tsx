@@ -1,5 +1,6 @@
 "use client";
 
+/* eslint-disable @next/next/no-img-element */
 import {
   closestCenter,
   DndContext,
@@ -19,7 +20,6 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import clsx from "clsx";
 import { ArrowDown, ArrowUp, Eye, EyeOff, GripVertical } from "lucide-react";
-import Image from "next/image";
 import { useMemo, useRef, useState, useTransition } from "react";
 import type { AdminWeddingPhoto } from "@/lib/photos";
 import { reorderPhotoRows, setPhotoHidden } from "./actions";
@@ -38,6 +38,12 @@ type SortablePhotoCardProps = {
   position: number;
   toggling: boolean;
 };
+
+function formatSrcSet(photo: AdminWeddingPhoto) {
+  return photo.srcSet
+    .map((source) => `${source.src} ${source.width}w`)
+    .join(", ");
+}
 
 function SortablePhotoCard({
   isFirst,
@@ -73,12 +79,14 @@ function SortablePhotoCard({
       }}
     >
       <div className="relative aspect-[4/5] overflow-hidden border border-[#efb5c9] bg-[#f4bfd2]">
-        <Image
+        <img
           alt={photo.alt}
-          className={clsx("object-cover", isHidden && "grayscale")}
-          fill
+          className={clsx("h-full w-full object-cover", isHidden && "grayscale")}
+          decoding="async"
+          loading="lazy"
           sizes="(max-width: 640px) 45vw, (max-width: 1024px) 22vw, 180px"
           src={photo.src}
+          srcSet={formatSrcSet(photo)}
         />
         <div className="absolute left-2 top-2 rounded-sm border border-[#df7fa3] bg-[#fff8fb]/95 px-2 py-1 text-xs font-bold tabular-nums text-[#7a1239]">
           {position}
