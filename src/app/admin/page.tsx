@@ -15,6 +15,7 @@ import {
   type AdminSortDirection,
   type AdminSortKey,
 } from "./admin-client";
+import { calculateRsvpSummaryCounts } from "./rsvp-summary";
 
 export const dynamic = "force-dynamic";
 
@@ -190,21 +191,8 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
   const activeDirection = getSortDirection(getSearchParam(resolvedSearchParams, "dir"));
   const sortedGuests = sortGuests(guests, activeSortKey, activeDirection);
   const isDefaultSort = activeSortKey === "default";
-  const yesCount = guests.reduce(
-    (total, guest) => total + (guest.rsvpStatus === "yes" ? guest.attendingCount ?? 0 : 0),
-    0,
-  );
-  const maybeCount = guests.reduce(
-    (total, guest) => total + (guest.rsvpStatus === "deciding" ? guest.guestCount : 0),
-    0,
-  );
-  const invitedCount = guests.reduce(
-    (total, guest) =>
-      total + (guest.rsvpStatus === null ? guest.guestCount : 0),
-    0,
-  );
-  const yesMaybeCount = yesCount + maybeCount;
-  const yesMaybeInvitedCount = yesMaybeCount + invitedCount;
+  const { yesCount, yesMaybeCount, yesMaybeNoResponseCount } =
+    calculateRsvpSummaryCounts(guests);
 
   return (
     <main className="min-h-screen bg-[#f9d8e6] px-3 py-3 text-[#4a1027] sm:px-4">
@@ -245,7 +233,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
               <div className="px-2 py-1">
                 <span className="text-[#8f5070]">Yes+Maybe+No Response</span>
                 <span className="ml-2 font-semibold tabular-nums text-[#7a1239]">
-                  {yesMaybeInvitedCount}
+                  {yesMaybeNoResponseCount}
                 </span>
               </div>
             </div>
