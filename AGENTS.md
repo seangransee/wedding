@@ -25,7 +25,7 @@ The package currently uses `next` 16.x with React 19, Tailwind CSS 4, TypeScript
 - `npm run db:migrate` - Run every SQL file in `migrations/` against `DATABASE_URL`.
 - `npm run photos:generate` - Regenerate static WebP gallery assets and `src/lib/generated/photo-manifest.json` from repo-root `photos/`.
 
-Use npm for scripts. The repo has both `package-lock.json` and `pnpm-lock.yaml`, but the documented workflow is npm.
+Use npm for scripts and dependency installs. `package-lock.json` is the lockfile of record.
 
 ## Environment and Database
 
