@@ -113,6 +113,8 @@ The admin `Invite sent` checkbox is important for link stability. Once `invite_s
 - The server stores attendee rows when any per-person detail is present. It does not enforce that every attending slot has a place-card name or meal choice, even though the UI asks guests to provide them.
 - Every successful RSVP save upserts `wedding_rsvps`, replaces current attendee rows, and inserts an RSVP audit event plus audit attendee rows.
 - RSVP saves call `revalidatePath("/{slug}")`.
+- Autosaves stay silent, but an explicit **Save** button click that succeeds shows a persistent "Saved!" confirmation that stays until the guest changes any field. The Save button turns obviously gray while a save is in flight.
+- A `yes` status with a missing/out-of-range attending count silently declines to save (no inline error); the "How many attending?" prompt is the only guidance. Server-side count validation still applies.
 
 Be careful changing validation: database constraints, server action validation, and client form behavior all need to agree.
 

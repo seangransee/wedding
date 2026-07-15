@@ -108,6 +108,7 @@ export function RsvpForm({
     useState<RsvpAttendeeDetails[]>(initialAttendeeDetails);
   const [localError, setLocalError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [justSaved, setJustSaved] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
   const saveSequence = useRef(0);
   const effectiveAttendingCount = status === "yes" && guestCount === 1
@@ -152,11 +153,14 @@ export function RsvpForm({
     }));
   }
 
-  async function saveDraft(nextValues?: {
-    status?: RsvpStatus | "";
-    attendingCount?: number | null;
-    attendeeDetails?: RsvpAttendeeDetails[];
-  }) {
+  async function saveDraft(
+    nextValues?: {
+      status?: RsvpStatus | "";
+      attendingCount?: number | null;
+      attendeeDetails?: RsvpAttendeeDetails[];
+    },
+    explicit = false,
+  ) {
     const nextStatus = nextValues?.status ?? status;
     const nextAttendingCount =
       nextStatus === "yes" && guestCount === 1
@@ -174,7 +178,7 @@ export function RsvpForm({
 
     if (nextStatus === "yes") {
       if (!nextAttendingCount || nextAttendingCount < 1 || nextAttendingCount > guestCount) {
-        setLocalError(`Choose a count from 1 to ${guestCount}.`);
+        // The "How many attending?" question is enough guidance; don't surface an error.
         return;
       }
     }
@@ -210,6 +214,9 @@ export function RsvpForm({
       setSaveState(result);
       setLocalError(result.ok ? "" : result.message);
       setIsSaving(false);
+      if (explicit && result.ok) {
+        setJustSaved(true);
+      }
     }
   }
 
@@ -273,6 +280,7 @@ export function RsvpForm({
                     : [];
 
                   setLocalError("");
+                  setJustSaved(false);
                   setSelectedOptionId(option.id);
                   setStatus(option.value);
                   setAttendingCount(nextCount);
@@ -326,6 +334,7 @@ export function RsvpForm({
                           );
 
                           setLocalError("");
+                          setJustSaved(false);
                           setAttendingCount(count);
                           setAttendeeDetails(nextNames);
                           void saveDraft({
@@ -348,9 +357,6 @@ export function RsvpForm({
                   },
                 )}
               </div>
-              {currentErrorLocation === "count" ? (
-                <ErrorNote>{displayedError}</ErrorNote>
-              ) : null}
             </div>
           ) : null}
 
@@ -387,6 +393,7 @@ export function RsvpForm({
                     }}
                     onChange={(event) => {
                       setLocalError("");
+                      setJustSaved(false);
                       const next = [...visibleAttendeeDetails];
                       next[index] = {
                         ...next[index],
@@ -428,6 +435,7 @@ export function RsvpForm({
                               };
 
                               setLocalError("");
+                              setJustSaved(false);
                               setAttendeeDetails(next);
                               void saveDraft({
                                 status: "yes",
@@ -476,6 +484,7 @@ export function RsvpForm({
                       }}
                       onChange={(event) => {
                         setLocalError("");
+                        setJustSaved(false);
                         const next = [...visibleAttendeeDetails];
                         next[index] = {
                           ...next[index],
@@ -498,15 +507,32 @@ export function RsvpForm({
           type="button"
           disabled={isSaving}
           onClick={() => {
-            void saveDraft();
+            void saveDraft(undefined, true);
           }}
-          className="mx-auto min-h-12 w-full max-w-sm rounded-md border border-[#ffd6e4]/65 bg-[#fff6fa]/10 px-5 text-lg font-semibold tracking-normal text-[#ffd6e4] transition hover:border-[#ffd6e4] hover:bg-[#fff6fa]/14 hover:text-[#ffd6e4] disabled:cursor-not-allowed disabled:opacity-60 sm:min-h-14 sm:text-xl"
+          className="mx-auto min-h-12 w-full max-w-sm rounded-md border border-[#ffd6e4]/65 bg-[#fff6fa]/10 px-5 text-lg font-semibold tracking-normal text-[#ffd6e4] transition hover:border-[#ffd6e4] hover:bg-[#fff6fa]/14 hover:text-[#ffd6e4] disabled:cursor-not-allowed disabled:border-[#565b62] disabled:bg-[#3a3f45] disabled:text-[#9ba1a9] disabled:hover:border-[#565b62] disabled:hover:bg-[#3a3f45] disabled:hover:text-[#9ba1a9] sm:min-h-14 sm:text-xl"
         >
           Save
         </button>
-        <p className="text-[#ffd6e4]" role="status" aria-live="polite">
-          {isSaving ? "Saving..." : ""}
-        </p>
+        <div className="min-h-[1.75rem]" role="status" aria-live="polite">
+          {isSaving ? (
+            <p className="text-[#ffd6e4]">Saving...</p>
+          ) : justSaved ? (
+            <div className="mx-auto flex w-full max-w-sm items-center justify-center gap-2.5 rounded-md border-2 border-[#ffd6e4] bg-[#ffd6e4] px-4 py-3 text-lg font-bold text-[#052018] sm:text-xl">
+              <span
+                aria-hidden="true"
+                className="grid size-6 shrink-0 place-items-center rounded-full bg-[#052018] text-sm font-bold text-[#ffd6e4]"
+              >
+                ✓
+              </span>
+              Saved!
+            </div>
+          ) : null}
+        </div>
+        {justSaved && !isSaving ? (
+          <p className="text-base font-normal text-[#ffd6e4]/85 sm:text-lg">
+            Your RSVP is recorded. Change anything above to update it.
+          </p>
+        ) : null}
         {currentErrorLocation === "global" ? (
           <p className="text-[#ffd6e4]" role="alert">
             {displayedError}
