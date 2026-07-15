@@ -1,7 +1,7 @@
 "use client";
 
 import clsx from "clsx";
-import { ArrowUpDown, Check, Copy, Download, Eye, GripVertical, Trash2 } from "lucide-react";
+import { ArrowUpDown, Check, Copy, Download, Eye, GripVertical, Search, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useActionState, useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { createPortal, useFormStatus } from "react-dom";
@@ -1003,6 +1003,7 @@ export function GuestTable({
   const [draggedGuestId, setDraggedGuestId] = useState<number | null>(null);
   const [gridWidth, setGridWidth] = useState(BASE_GRID_WIDTH);
   const [message, setMessage] = useState("");
+  const [query, setQuery] = useState("");
   const [isSaving, startTransition] = useTransition();
 
   useEffect(() => {
@@ -1028,6 +1029,32 @@ export function GuestTable({
     return () => resizeObserver.disconnect();
   }, []);
 
+  const queryTokens = useMemo(() => {
+    const normalized = query.trim().toLowerCase();
+    return normalized ? normalized.split(/\s+/) : [];
+  }, [query]);
+  const isSearching = queryTokens.length > 0;
+
+  const visibleRows = useMemo(() => {
+    if (queryTokens.length === 0) {
+      return rows;
+    }
+
+    return rows.filter((row) => {
+      // Match every token somewhere in the guest name or any RSVP place-card name,
+      // so "Sean" and "Lexi" both find the "Sean and Lexi" invitation.
+      const haystack = [row.name, ...row.attendeeDetails.map((attendee) => attendee.fullName)]
+        .join(" ")
+        .toLowerCase();
+
+      return queryTokens.every((token) => haystack.includes(token));
+    });
+  }, [queryTokens, rows]);
+
+  // Drag-to-reorder saves the full ordered id list, so only allow it when the
+  // complete, unfiltered list is shown.
+  const canReorder = isDefaultSort && !isSearching;
+
   const sortColumns = useMemo<SortColumn[]>(() => {
     if (activeSortKey === "default") {
       return [];
@@ -1040,7 +1067,7 @@ export function GuestTable({
   }, [activeDirection, activeSortKey]);
 
   const handleRowDrop = useCallback((targetGuestId: number, sourceGuestId: number | null) => {
-    if (!isDefaultSort || isSaving || sourceGuestId === null || sourceGuestId === targetGuestId) {
+    if (!canReorder || isSaving || sourceGuestId === null || sourceGuestId === targetGuestId) {
       return;
     }
 
@@ -1071,7 +1098,7 @@ export function GuestTable({
           setMessage("Row order could not be saved.");
         });
     });
-  }, [isDefaultSort, isSaving, rows]);
+  }, [canReorder, isSaving, rows]);
 
   const handleDefaultSort = useCallback(() => {
     if (!isDefaultSort) {
@@ -1108,7 +1135,7 @@ export function GuestTable({
           <div
             className="flex h-full items-center justify-center"
             onDragOver={(event) => {
-              if (isDefaultSort && draggedGuestId !== null) {
+              if (canReorder && draggedGuestId !== null) {
                 event.preventDefault();
                 event.dataTransfer.dropEffect = "move";
               }
@@ -1120,7 +1147,7 @@ export function GuestTable({
               setDraggedGuestId(null);
             }}
           >
-            {isDefaultSort ? (
+            {canReorder ? (
               <button
                 type="button"
                 draggable={!isSaving}
@@ -1260,20 +1287,31 @@ export function GuestTable({
       resizable: true,
       renderCell: FuckYesCell,
     },
-  ], [columnWidths, draggedGuestId, handleDefaultSort, handleRowDrop, isDefaultSort, isSaving]);
+  ], [canReorder, columnWidths, draggedGuestId, handleDefaultSort, handleRowDrop, isDefaultSort, isSaving]);
 
   function handleRowsChange(
-    nextRows: GuestWithRsvp[],
+    nextVisibleRows: GuestWithRsvp[],
     { indexes, column }: RowsChangeData<GuestWithRsvp>,
   ) {
     const previousRows = rows;
-    setRows(nextRows);
+    const previousVisibleRows = visibleRows;
+
+    // The grid edits the filtered view, so merge changes back into the full row
+    // list by id rather than replacing it wholesale.
+    const editedById = new Map<number, GuestWithRsvp>();
+    for (const rowIndex of indexes) {
+      const nextRow = nextVisibleRows[rowIndex];
+      if (nextRow) {
+        editedById.set(nextRow.id, nextRow);
+      }
+    }
+    setRows(previousRows.map((row) => editedById.get(row.id) ?? row));
 
     startTransition(() => {
       void Promise.all(
         indexes.map(async (rowIndex) => {
-          const previousRow = previousRows[rowIndex];
-          const nextRow = nextRows[rowIndex];
+          const previousRow = previousVisibleRows[rowIndex];
+          const nextRow = nextVisibleRows[rowIndex];
 
           if (!previousRow || !nextRow) {
             return { ok: false, message: "Row changed before it could be saved." };
@@ -1331,31 +1369,63 @@ export function GuestTable({
   }
 
   return (
-    <div ref={spreadsheetShellRef} className="admin-spreadsheet-shell">
-      <DataGrid
-        aria-label="Guest RSVP spreadsheet"
-        className="rdg-light admin-spreadsheet"
-        columns={columns}
-        rows={rows}
-        rowKeyGetter={rowKeyGetter}
-        onRowsChange={handleRowsChange}
-        sortColumns={sortColumns}
-        onSortColumnsChange={handleSortColumnsChange}
-        onCellClick={handleCellClick}
-        defaultColumnOptions={{ resizable: true }}
-        rowHeight={50}
-        headerRowHeight={42}
-        enableVirtualization={false}
-        renderers={{
-          noRowsFallback: (
-            <div className="grid h-full place-items-center px-3 py-8 text-sm text-[#8f5070]">
-              No guests have been added yet.
-            </div>
-          ),
-        }}
-      />
-      <div className="flex min-h-7 items-center border-t border-[#df7fa3] bg-[#fff1f7] px-2 text-xs font-semibold text-[#8f2448]">
-        {isSaving ? "Saving cell..." : message}
+    <div>
+      <div className="flex flex-col gap-2 border-b border-[#df7fa3] bg-[#f4bfd2] px-3 py-2 sm:flex-row sm:items-center">
+        <div className="relative w-full sm:max-w-sm">
+          <Search
+            aria-hidden="true"
+            className="pointer-events-none absolute left-2 top-1/2 size-4 -translate-y-1/2 text-[#a33a62]"
+          />
+          <input
+            type="search"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            aria-label="Search guests by name"
+            placeholder="Search by name (Sean, Lexi, place-card name…)"
+            className="min-h-8 w-full border border-[#df7fa3] bg-[#fff8fb] pl-8 pr-3 text-sm font-normal normal-case tracking-normal text-[#4a1027] outline-none transition placeholder:text-[#4a1027]/40 focus:border-[#be185d] focus:ring-1 focus:ring-[#be185d]/30"
+          />
+        </div>
+        {isSearching ? (
+          <div className="flex items-center gap-2 text-xs font-semibold text-[#7a1239]">
+            <span className="tabular-nums" role="status" aria-live="polite">
+              {visibleRows.length} of {rows.length} shown
+            </span>
+            <button
+              type="button"
+              onClick={() => setQuery("")}
+              className="inline-flex min-h-7 items-center border border-[#df7fa3] bg-[#fff8fb] px-2 uppercase tracking-[0.08em] text-[#7a1239] transition hover:border-[#be185d] hover:bg-[#ffe0ec]"
+            >
+              Clear
+            </button>
+          </div>
+        ) : null}
+      </div>
+      <div ref={spreadsheetShellRef} className="admin-spreadsheet-shell">
+        <DataGrid
+          aria-label="Guest RSVP spreadsheet"
+          className="rdg-light admin-spreadsheet"
+          columns={columns}
+          rows={visibleRows}
+          rowKeyGetter={rowKeyGetter}
+          onRowsChange={handleRowsChange}
+          sortColumns={sortColumns}
+          onSortColumnsChange={handleSortColumnsChange}
+          onCellClick={handleCellClick}
+          defaultColumnOptions={{ resizable: true }}
+          rowHeight={50}
+          headerRowHeight={42}
+          enableVirtualization={false}
+          renderers={{
+            noRowsFallback: (
+              <div className="grid h-full place-items-center px-3 py-8 text-sm text-[#8f5070]">
+                {isSearching ? "No guests match your search." : "No guests have been added yet."}
+              </div>
+            ),
+          }}
+        />
+        <div className="flex min-h-7 items-center border-t border-[#df7fa3] bg-[#fff1f7] px-2 text-xs font-semibold text-[#8f2448]">
+          {isSaving ? "Saving cell..." : message}
+        </div>
       </div>
     </div>
   );
