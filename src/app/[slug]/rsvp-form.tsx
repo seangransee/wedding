@@ -223,6 +223,11 @@ export function RsvpForm({
         <h2 className="break-words text-3xl font-semibold leading-tight text-[#ffd6e4] sm:text-5xl">
           {guestName}, you&apos;re invited!
         </h2>
+        {guestCount > 1 ? (
+          <p className="mt-3 text-lg font-semibold leading-[1.65] text-[#ffd6e4]/85 sm:text-xl">
+            This invitation is for up to {guestCount} guests.
+          </p>
+        ) : null}
       </div>
 
       <div className="grid gap-4">
