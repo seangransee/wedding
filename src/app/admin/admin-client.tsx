@@ -1,7 +1,7 @@
 "use client";
 
 import clsx from "clsx";
-import { ArrowUpDown, Check, Copy, Download, Eye, GripVertical, Search, Trash2 } from "lucide-react";
+import { ArrowUpDown, Check, Copy, Download, Eye, GripVertical, Plus, Search, Trash2, X } from "lucide-react";
 import Link from "next/link";
 import { useActionState, useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { createPortal, useFormStatus } from "react-dom";
@@ -416,6 +416,9 @@ export function AddGuestForm() {
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
   const [slugTouched, setSlugTouched] = useState(false);
+  // The stacked form fields eat a lot of vertical space on phones, so on mobile
+  // they collapse behind a toggle. Desktop keeps the compact inline row visible.
+  const [isFormOpen, setIsFormOpen] = useState(false);
 
   useEffect(() => {
     if (!slugTouched) {
@@ -427,7 +430,27 @@ export function AddGuestForm() {
 
   return (
     <form action={formAction} className="border-b border-[#df7fa3] bg-[#fff1f7]">
-      <div className="grid grid-cols-1 border-b border-[#efb5c9] md:grid-cols-[minmax(12rem,1fr)_minmax(12rem,0.95fr)_5.5rem_minmax(12rem,0.85fr)_minmax(14rem,1fr)_minmax(16rem,1fr)_minmax(12rem,0.85fr)_7rem]">
+      <button
+        type="button"
+        onClick={() => setIsFormOpen((open) => !open)}
+        aria-expanded={isFormOpen}
+        aria-controls="add-guest-fields"
+        className="flex min-h-11 w-full items-center justify-center gap-2 border-b border-[#efb5c9] bg-[#fff1f7] px-3 text-xs font-semibold uppercase tracking-[0.1em] text-[#7a1239] transition hover:bg-[#ffe0ec] md:hidden"
+      >
+        {isFormOpen ? (
+          <X aria-hidden="true" className="size-4" />
+        ) : (
+          <Plus aria-hidden="true" className="size-4" />
+        )}
+        {isFormOpen ? "Close" : "Add guest"}
+      </button>
+      <div
+        id="add-guest-fields"
+        className={clsx(
+          "grid-cols-1 border-b border-[#efb5c9] md:grid md:grid-cols-[minmax(12rem,1fr)_minmax(12rem,0.95fr)_5.5rem_minmax(12rem,0.85fr)_minmax(14rem,1fr)_minmax(16rem,1fr)_minmax(12rem,0.85fr)_7rem]",
+          isFormOpen ? "grid" : "hidden",
+        )}
+      >
         <label className="grid gap-1 border-b border-[#efb5c9] px-2 py-1.5 text-[0.65rem] font-semibold uppercase tracking-[0.08em] text-[#8f2448] md:border-r md:border-b-0">
           Name
           <input
