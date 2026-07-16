@@ -1,7 +1,7 @@
 "use client";
 
 import clsx from "clsx";
-import { ArrowUpDown, Check, Copy, Download, Eye, GripVertical, Search, Trash2 } from "lucide-react";
+import { ArrowUpDown, Check, Copy, Download, Eye, GripVertical, Plus, Search, Trash2, X } from "lucide-react";
 import Link from "next/link";
 import { useActionState, useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { createPortal, useFormStatus } from "react-dom";
@@ -416,6 +416,7 @@ export function AddGuestForm() {
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
   const [slugTouched, setSlugTouched] = useState(false);
+  const [isFormOpen, setIsFormOpen] = useState(false);
 
   useEffect(() => {
     if (!slugTouched) {
@@ -426,7 +427,37 @@ export function AddGuestForm() {
   const canAddGuest = Boolean(name.trim() && slug);
 
   return (
-    <form action={formAction} className="border-b border-[#df7fa3] bg-[#fff1f7]">
+    <div className="border-b border-[#df7fa3] bg-[#fff1f7]">
+      {/* On phones the add-guest form is collapsed behind this toggle so it does
+          not eat vertical space until an admin is actually adding someone. On
+          md+ the toggle is hidden and the form is always shown. */}
+      <button
+        type="button"
+        onClick={() => setIsFormOpen((open) => !open)}
+        aria-expanded={isFormOpen}
+        aria-controls="add-guest-fields"
+        className={clsx(
+          "flex w-full items-center justify-center gap-1.5 px-3 py-2.5 text-xs font-semibold uppercase tracking-[0.1em] text-[#7a1239] transition hover:bg-[#ffe0ec] md:hidden",
+          isFormOpen && "border-b border-[#efb5c9]",
+        )}
+      >
+        {isFormOpen ? (
+          <>
+            <X aria-hidden="true" className="size-3.5" />
+            Close add guest
+          </>
+        ) : (
+          <>
+            <Plus aria-hidden="true" className="size-3.5" />
+            Add a guest
+          </>
+        )}
+      </button>
+      <form
+        id="add-guest-fields"
+        action={formAction}
+        className={clsx(isFormOpen ? "block" : "hidden", "md:block")}
+      >
       <div className="grid grid-cols-1 border-b border-[#efb5c9] md:grid-cols-[minmax(12rem,1fr)_minmax(12rem,0.95fr)_5.5rem_minmax(12rem,0.85fr)_minmax(14rem,1fr)_minmax(16rem,1fr)_minmax(12rem,0.85fr)_7rem]">
         <label className="grid gap-1 border-b border-[#efb5c9] px-2 py-1.5 text-[0.65rem] font-semibold uppercase tracking-[0.08em] text-[#8f2448] md:border-r md:border-b-0">
           Name
@@ -501,7 +532,8 @@ export function AddGuestForm() {
           {state.message}
         </p>
       ) : null}
-    </form>
+      </form>
+    </div>
   );
 }
 

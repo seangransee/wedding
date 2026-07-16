@@ -123,6 +123,7 @@ Be careful changing validation: database constraints, server action validation, 
 - Admin auth is a simple HTTP-only cookie. The password comes from the `ADMIN_PASSWORD` environment variable, and cookie names are in `src/lib/cookies.ts`; do not duplicate the password elsewhere.
 - Admin login is rate-limited in `wedding_admin_login_attempts` by request IP: 5 wrong attempts in 15 minutes locks that IP out for 15 minutes. Successful login clears the bucket.
 - `/admin` uses `react-data-grid` with all rows rendered and a responsive width calculation.
+- The add-guest form is always visible on `md`+ screens. On mobile it is collapsed behind an "Add a guest" toggle so it does not consume vertical space until an admin is actually adding someone; the toggle itself is hidden on `md`+.
 - A search bar above the grid filters guests client-side. It splits the query into whitespace tokens and keeps a guest when every token appears in its name or any RSVP place-card (attendee full) name, so "Sean" and "Lexi" both match the "Sean and Lexi" invitation. Filtering only changes which rows render; cell edits still save by guest id, and drag-to-reorder is disabled while a search is active.
 - Editable columns are Name, URL, Notes, Phone, Email, and Max. URL is locked when `invite_sent` is true.
 - Sorting is URL-driven with `?sort=...&dir=...`. Default sort uses `sort_order`.
