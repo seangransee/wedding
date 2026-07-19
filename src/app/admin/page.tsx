@@ -99,7 +99,9 @@ function getSortKey(value: string | undefined): AdminSortKey {
     value === "max" ||
     value === "invite" ||
     value === "rsvp" ||
-    value === "attending"
+    value === "attending" ||
+    value === "friDin" ||
+    value === "fuckYes"
   ) {
     return value;
   }
@@ -128,7 +130,7 @@ function rsvpSortValue(status: string | null) {
   return 4;
 }
 
-function sortGuests<T extends { name: string; guestCount: number; inviteSent: boolean; rsvpStatus: string | null; attendingCount: number | null; sortOrder: number; id: number }>(
+function sortGuests<T extends { name: string; guestCount: number; inviteSent: boolean; rsvpStatus: string | null; attendingCount: number | null; friDin: boolean; fuckYes: boolean; sortOrder: number; id: number }>(
   guests: T[],
   sortKey: AdminSortKey,
   sortDirection: AdminSortDirection,
@@ -153,6 +155,12 @@ function sortGuests<T extends { name: string; guestCount: number; inviteSent: bo
     }
     if (sortKey === "rsvp") {
       return multiplier * (rsvpSortValue(a.rsvpStatus) - rsvpSortValue(b.rsvpStatus) || a.sortOrder - b.sortOrder);
+    }
+    if (sortKey === "friDin") {
+      return multiplier * (Number(a.friDin) - Number(b.friDin) || a.sortOrder - b.sortOrder);
+    }
+    if (sortKey === "fuckYes") {
+      return multiplier * (Number(a.fuckYes) - Number(b.fuckYes) || a.sortOrder - b.sortOrder);
     }
 
     return multiplier * ((a.attendingCount ?? 0) - (b.attendingCount ?? 0) || a.sortOrder - b.sortOrder);

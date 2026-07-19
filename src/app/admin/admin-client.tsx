@@ -39,7 +39,7 @@ const initialState: AdminActionState = {
   message: "",
 };
 
-export type AdminSortKey = "default" | "name" | "max" | "invite" | "rsvp" | "attending";
+export type AdminSortKey = "default" | "name" | "max" | "invite" | "rsvp" | "attending" | "friDin" | "fuckYes";
 export type AdminSortDirection = "asc" | "desc";
 
 type EditableColumnKey = "name" | "slug" | "notes" | "phoneNumber" | "emailAddress" | "guestCount";
@@ -52,6 +52,8 @@ const SORT_KEY_TO_COLUMN_KEY: Record<Exclude<AdminSortKey, "default">, string> =
   invite: "inviteSent",
   rsvp: "rsvpStatus",
   attending: "attendingCount",
+  friDin: "friDin",
+  fuckYes: "fuckYes",
 };
 
 const COLUMN_KEY_TO_SORT_KEY: Record<string, Exclude<AdminSortKey, "default">> = {
@@ -60,6 +62,8 @@ const COLUMN_KEY_TO_SORT_KEY: Record<string, Exclude<AdminSortKey, "default">> =
   inviteSent: "invite",
   rsvpStatus: "rsvp",
   attendingCount: "attending",
+  friDin: "friDin",
+  fuckYes: "fuckYes",
 };
 
 const BASE_COLUMN_WIDTHS = {
@@ -1329,6 +1333,7 @@ export function GuestTable({
       name: "Fri Din",
       width: columnWidths.friDin,
       minWidth: 74,
+      sortable: true,
       resizable: true,
       renderCell: FriDinCell,
     },
@@ -1383,6 +1388,7 @@ export function GuestTable({
       name: "Fuck yes",
       width: columnWidths.fuckYes,
       minWidth: 74,
+      sortable: true,
       resizable: true,
       renderCell: FuckYesCell,
     },
