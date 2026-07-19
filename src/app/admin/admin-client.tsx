@@ -75,7 +75,7 @@ const BASE_COLUMN_WIDTHS = {
   attendingCount: 61,
   attendeeDetails: 240,
   actions: 100,
-  friDin: 66,
+  friDin: 78,
   fuckYes: 82,
 };
 
@@ -1374,7 +1374,7 @@ export function GuestTable({
       key: "friDin",
       name: "Fri Din",
       width: columnWidths.friDin,
-      minWidth: 60,
+      minWidth: 74,
       resizable: true,
       renderCell: FriDinCell,
     },
