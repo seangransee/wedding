@@ -191,7 +191,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
   const activeDirection = getSortDirection(getSearchParam(resolvedSearchParams, "dir"));
   const sortedGuests = sortGuests(guests, activeSortKey, activeDirection);
   const isDefaultSort = activeSortKey === "default";
-  const { yesCount, yesMaybeCount, yesMaybeNoResponseCount } =
+  const { yesCount, yesMaybeCount, yesMaybeNoResponseCount, friDinnerCount } =
     calculateRsvpSummaryCounts(guests);
 
   return (
@@ -217,7 +217,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
               Edit photos
             </Link>
             <AdminCsvExportButton auditEvents={auditEvents} guests={sortedGuests} />
-            <div className="grid grid-cols-1 overflow-hidden border border-[#df7fa3] bg-[#fff8fb] text-xs sm:grid-cols-3">
+            <div className="grid grid-cols-1 overflow-hidden border border-[#df7fa3] bg-[#fff8fb] text-xs sm:grid-cols-4">
               <div className="border-r border-[#efb5c9] px-2 py-1">
                 <span className="text-[#8f5070]">Yes</span>
                 <span className="ml-2 font-semibold tabular-nums text-[#8f2448]">
@@ -230,10 +230,16 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                   {yesMaybeCount}
                 </span>
               </div>
-              <div className="px-2 py-1">
+              <div className="border-r border-[#efb5c9] px-2 py-1">
                 <span className="text-[#8f5070]">Yes+Maybe+No Response</span>
                 <span className="ml-2 font-semibold tabular-nums text-[#7a1239]">
                   {yesMaybeNoResponseCount}
+                </span>
+              </div>
+              <div className="px-2 py-1">
+                <span className="text-[#8f5070]">Fri Dinner</span>
+                <span className="ml-2 font-semibold tabular-nums text-[#7a1239]">
+                  {friDinnerCount}
                 </span>
               </div>
             </div>
