@@ -1265,6 +1265,7 @@ export function GuestTable({
       name: "Name",
       width: columnWidths.name,
       minWidth: 132,
+      frozen: true,
       sortable: true,
       resizable: true,
       editable: true,
