@@ -1,0 +1,2 @@
+ALTER TABLE wedding_guests
+ADD COLUMN IF NOT EXISTS fri_din BOOLEAN NOT NULL DEFAULT false;

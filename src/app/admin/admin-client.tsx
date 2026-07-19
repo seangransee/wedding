@@ -28,6 +28,7 @@ import {
   editGuestSlug,
   loginAdmin,
   reorderGuestRows,
+  setFriDin,
   setFuckYes,
   setInviteSent,
   type AdminActionState,
@@ -74,6 +75,7 @@ const BASE_COLUMN_WIDTHS = {
   attendingCount: 61,
   attendeeDetails: 240,
   actions: 100,
+  friDin: 66,
   fuckYes: 82,
 };
 
@@ -203,6 +205,7 @@ function makeAdminCsv(guests: GuestWithRsvp[], auditEvents: RsvpAuditEvent[]) {
     "max_guests",
     "invite_sent",
     "fuck_yes",
+    "fri_din",
     "sort_order",
     "current_rsvp_status",
     "current_attending_count",
@@ -235,6 +238,7 @@ function makeAdminCsv(guests: GuestWithRsvp[], auditEvents: RsvpAuditEvent[]) {
     guest.guestCount,
     guest.inviteSent,
     guest.fuckYes,
+    guest.friDin,
     guest.sortOrder,
     guest.rsvpStatus,
     guest.attendingCount,
@@ -261,6 +265,7 @@ function makeAdminCsv(guests: GuestWithRsvp[], auditEvents: RsvpAuditEvent[]) {
     event.guestName,
     event.guestSlug,
     `${INVITATION_BASE_URL}/${event.guestSlug}`,
+    "",
     "",
     "",
     "",
@@ -726,6 +731,64 @@ export function FuckYesToggle({
   );
 }
 
+export function FriDinToggle({
+  guestId,
+  friDin,
+}: {
+  guestId: number;
+  friDin: boolean;
+}) {
+  const [checked, setChecked] = useState(friDin);
+  const [message, setMessage] = useState("");
+  const [isSaving, startTransition] = useTransition();
+
+  useEffect(() => {
+    setChecked(friDin);
+  }, [friDin]);
+
+  function toggle() {
+    const nextChecked = !checked;
+    setChecked(nextChecked);
+    setMessage("Saving...");
+
+    startTransition(() => {
+      void setFriDin(initialState, makeFormData({
+        guestId,
+        friDin: nextChecked,
+      })).then((result) => {
+        setMessage(result.message);
+
+        if (!result.ok) {
+          setChecked(checked);
+        }
+      }).catch(() => {
+        setChecked(checked);
+        setMessage("Friday dinner could not be saved.");
+      });
+    });
+  }
+
+  return (
+    <div className="flex items-center justify-center">
+      <button
+        type="button"
+        disabled={isSaving}
+        onClick={toggle}
+        aria-label={checked ? "Turn off Friday dinner" : "Turn on Friday dinner"}
+        title={message || (checked ? "Friday dinner on" : "Friday dinner off")}
+        className={clsx(
+          "grid size-6 place-items-center border transition disabled:cursor-wait disabled:opacity-65",
+          checked
+            ? "border-[#be185d] bg-[#f9a8d4] text-[#7a1239] hover:bg-[#f472b6]"
+            : "border-[#df7fa3] bg-white text-transparent hover:border-[#be185d] hover:bg-[#fff1f7]",
+        )}
+      >
+        <Check aria-hidden="true" className="size-3.5 stroke-[3]" />
+      </button>
+    </div>
+  );
+}
+
 function rowKeyGetter(row: GuestWithRsvp) {
   return row.id;
 }
@@ -941,6 +1004,10 @@ function InviteCell({ row }: RenderCellProps<GuestWithRsvp>) {
 
 function FuckYesCell({ row }: RenderCellProps<GuestWithRsvp>) {
   return <FuckYesToggle guestId={row.id} fuckYes={row.fuckYes} />;
+}
+
+function FriDinCell({ row }: RenderCellProps<GuestWithRsvp>) {
+  return <FriDinToggle guestId={row.id} friDin={row.friDin} />;
 }
 
 function makeFormData(values: Record<string, string | number | boolean>) {
@@ -1301,6 +1368,14 @@ export function GuestTable({
       minWidth: 94,
       resizable: true,
       renderCell: ActionsCell,
+    },
+    {
+      key: "friDin",
+      name: "Fri Din",
+      width: columnWidths.friDin,
+      minWidth: 60,
+      resizable: true,
+      renderCell: FriDinCell,
     },
     {
       key: "fuckYes",
