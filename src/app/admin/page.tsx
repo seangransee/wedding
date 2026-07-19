@@ -19,6 +19,10 @@ import { calculateRsvpSummaryCounts } from "./rsvp-summary";
 
 export const dynamic = "force-dynamic";
 
+export const metadata = {
+  title: "Admin - Sexi Wedding",
+};
+
 type AdminPageProps = {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 };
