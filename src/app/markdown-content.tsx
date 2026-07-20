@@ -270,7 +270,7 @@ function renderSplitHeadingText(text: string) {
             href={linkedName.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="transition hover:text-[#ffd6e4]"
+            className="underline decoration-dotted decoration-2 underline-offset-[6px] transition duration-200 hover:decoration-solid hover:[text-shadow:0_0_18px_rgba(255,214,228,0.55)]"
           >
             {linkedName.label}
           </a>
