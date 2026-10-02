@@ -9,8 +9,6 @@
   "zelle": {
     "name": "Sean Gransee",
     "phone": "6303374944",
-    "formattedPhone": "(630) 337-4944",
-    "url": "https://enroll.zellepay.com/qr-codes?data=eyJuYW1lIjoiU0VBTiIsInRva2VuIjoiNjMwMzM3NDk0NCJ9",
-    "qrImage": "/registry/zelle-qr.svg"
+    "formattedPhone": "(630) 337-4944"
   }
 }

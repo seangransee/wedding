@@ -53,6 +53,7 @@ export function RegistryOptions({ amazonCopy, fundCopy }: { amazonCopy: ReactNod
         <div className="grid gap-7 md:grid-cols-2 md:gap-8">
           <div className="grid content-start gap-4 border-t border-[#ffd6e4]/35 pt-5">
             <h4 className="text-3xl font-semibold">Venmo</h4>
+            <p className="text-2xl font-semibold">@{venmo.username}</p>
             <a href={venmo.url} target="_blank" rel="noopener noreferrer" className={actionClassName}>
               Open Venmo
               <ExternalLink size={18} aria-hidden />
@@ -63,12 +64,7 @@ export function RegistryOptions({ amazonCopy, fundCopy }: { amazonCopy: ReactNod
 
           <div className="grid content-start gap-4 border-t border-[#ffd6e4]/35 pt-5">
             <h4 className="text-3xl font-semibold">Zelle</h4>
-            <a href={zelle.url} target="_blank" rel="noopener noreferrer" className={actionClassName}>
-              Open Zelle
-              <ExternalLink size={18} aria-hidden />
-              <span className="sr-only"> (opens in a new tab)</span>
-            </a>
-            <GiftQrCode src={zelle.qrImage} service="Zelle" />
+            <p className="text-2xl font-semibold">{zelle.formattedPhone}</p>
           </div>
         </div>
       </div>
