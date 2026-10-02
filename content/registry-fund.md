@@ -1,1 +1,3 @@
-Help us make more memories together. Choose Venmo or Zelle below and give whatever feels right to you.
+Your gift is for both Lexi and Sean.
+
+Venmo and Zelle use Sean's account details, so you'll see Sean Gransee as the recipient.

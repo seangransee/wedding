@@ -108,15 +108,15 @@ export function RegistryOptions({ amazonCopy, fundCopy }: { amazonCopy: ReactNod
         <div className="grid gap-3">
           <h3 className="flex items-center gap-3 text-3xl font-semibold leading-tight sm:text-4xl">
             <Heart className="shrink-0" size={25} strokeWidth={1.5} aria-hidden />
-            Honeymoon &amp; travel fund
+            Contribute to our next chapter
           </h3>
-          {fundCopy}
+          <div className="[&_p:first-child]:font-semibold">{fundCopy}</div>
         </div>
 
         <div className="grid gap-7 md:grid-cols-2 md:gap-8">
           <div className="grid content-start gap-4 border-t border-[#ffd6e4]/35 pt-5">
             <h4 className="text-3xl font-semibold">Venmo</h4>
-            <p className="text-lg leading-relaxed">Send a gift to {venmo.name}.</p>
+            <p className="text-lg leading-relaxed">Send your gift through Sean&apos;s Venmo account.</p>
             <a href={venmo.url} target="_blank" rel="noopener noreferrer" className={actionClassName}>
               Open Venmo
               <ExternalLink size={18} aria-hidden />

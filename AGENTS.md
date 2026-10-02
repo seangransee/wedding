@@ -12,7 +12,7 @@ Long-form public/invitation copy lives in Markdown files under `content/` so non
 - `content/our-story.md` - the Our Story section.
 - `content/hotel-blocks.md` - the dedicated Hotels section. Use `<!-- invitation-only-start title="Hotels" -->` and `<!-- invitation-only-end -->` around booking details that should be hidden on public `/` and shown only on guest invitation pages. Keep individual hotel names as `###` headings so they render as prominent hotel blocks.
 - `content/faqs.md` - the FAQ section. Keep hotel block booking details in `content/hotel-blocks.md`, not in FAQs.
-- `content/registry.md`, `content/registry-amazon.md`, and `content/registry-fund.md` - the shared Registry introduction and its two gift options. Receiving destinations live in `src/lib/registry.json`; QR assets are generated from the same URLs.
+- `content/registry.md`, `content/registry-amazon.md`, and `content/registry-fund.md` - the shared Gifts introduction and its two gift options. Receiving destinations live in `src/lib/registry.json`; QR assets are generated from the same URLs.
 
 The shared Sexi Adventures gallery is driven by image files in the repo-root `photos/` directory, not Markdown or hard-coded arrays. After adding, removing, or replacing supported image files there, run `npm run photos:generate` so the rendered gallery uses the updated static WebP assets and manifest.
 
@@ -145,7 +145,10 @@ Be careful changing validation: database constraints, server action validation, 
 - All long-form content should be driven by Markdown files in `content/`, not hard-coded in React or TypeScript. The renderer for these files lives in `src/app/markdown-content.tsx`.
 - Public `/` keeps Markdown invitation-only blocks locked behind an invitation link; guest invitation pages render those blocks.
 - FAQ questions in `content/faqs.md` render as collapsible dropdowns; keep each question as a `###` heading followed by its answer content.
-- The Registry appears on both public and invitation pages with two gift options: Amazon and a money fund using Venmo or Zelle. Keep receiving links, copy buttons, QR assets, and recipient names in sync. Zelle uses the phone-number QR issued by Schwab; never invent payment links or publish account numbers.
+- The Gifts section (`#registry`) appears on both public and invitation pages with two options: Amazon and monetary gifts using Venmo or Zelle, labeled "Contribute to our next chapter." Keep receiving links, copy buttons, QR assets, and recipient names in sync. Zelle uses the phone-number QR issued by Schwab; never invent payment links or publish account numbers.
+- Keep the website's Amazon registry copy generic. Individual gift item details belong only inside the Amazon registry.
+- Keep monetary-gift wording neutral without earmarking gifts for honeymoon, travel, or another intended use.
+- Monetary gifts are for both Lexi and Sean. Explain that Venmo and Zelle display Sean Gransee as the account recipient so guests understand why his name appears.
 - In-page anchor offsets allow for a three-row sticky navigation below 360px; verify section headings remain visible when changing navigation items.
 - The Sexi Adventures gallery source files live in repo-root `photos/`. Run `npm run photos:generate` after adding, removing, or replacing supported files there; the app renders committed static WebP assets from `public/optimized-photos/` plus `src/lib/generated/photo-manifest.json`, merges that manifest with `wedding_photos` metadata for order and visibility, and uses `react-photo-album` plus `yet-another-react-lightbox`. Do not hard-code gallery image lists in React.
 - Keep public gallery and admin photo thumbnails off `next/image` and `/_next/image`; the static generated assets avoid Vercel Image Optimization usage and origin-function image transfer.

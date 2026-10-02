@@ -1,1 +1,1 @@
-One upgrade for married life: a TOTO Washlet bidet. Buy it or chip in toward it on Amazon.
+Find our wedding registry on Amazon.

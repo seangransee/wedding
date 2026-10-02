@@ -88,7 +88,7 @@ function PageNav({
     { href: `#${panelId}`, label: panelNavLabel },
     { href: "#our-story", label: "Our Story" },
     { href: "#hotel-blocks", label: "Hotels" },
-    { href: "#registry", label: "Registry" },
+    { href: "#registry", label: "Gifts" },
     { href: "#faqs", label: "FAQs" },
     ...(hasPhotos ? [{ href: "#photos", label: "Sexi Adventures" }] : []),
   ];
