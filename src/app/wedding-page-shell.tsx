@@ -3,6 +3,7 @@ import { getWeddingPhotos } from "@/lib/photos";
 import { MarkdownContent } from "./markdown-content";
 import { getWeddingCalendarUrl, WEDDING_DETAILS } from "./wedding-details";
 import { PhotosSection } from "./photos-section";
+import { RegistrySection } from "./registry-section";
 
 export { LockedNotice } from "./locked-notice";
 
@@ -87,6 +88,7 @@ function PageNav({
     { href: `#${panelId}`, label: panelNavLabel },
     { href: "#our-story", label: "Our Story" },
     { href: "#hotel-blocks", label: "Hotels" },
+    { href: "#registry", label: "Registry" },
     { href: "#faqs", label: "FAQs" },
     ...(hasPhotos ? [{ href: "#photos", label: "Sexi Adventures" }] : []),
   ];
@@ -129,6 +131,7 @@ function LongFormSections({
         buttonizeBookingLinks
         lockedBlocks={!showHotelBlocks}
       />
+      <RegistrySection />
       <MarkdownContent
         id="faqs"
         fileName="faqs.md"
@@ -162,7 +165,7 @@ export async function WeddingPageShell({
 
       <section className="guest-hero-section relative z-10 mx-auto grid min-h-[calc(100svh-2rem)] max-w-5xl items-end gap-4 pt-[36svh]">
         <EventHeroCopy calendarWebsiteUrl={calendarWebsiteUrl} />
-        <div id={panelId} className={`${panelClassName} scroll-mt-28`}>
+        <div id={panelId} className={`${panelClassName} scroll-mt-40 min-[360px]:scroll-mt-28`}>
           {panel}
         </div>
       </section>

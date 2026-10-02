@@ -122,6 +122,10 @@ body {
   backdrop-filter: blur(0.4rem);
 }
 
+.registry-action {
+  text-shadow: none;
+}
+
 .guest-hero-copy h1 {
   margin-top: 0.5rem;
   font-size: 2.25rem;

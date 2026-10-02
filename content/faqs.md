@@ -58,7 +58,7 @@ Please note that this applies to all guests, including infants and toddlers. We 
 
 ### Do you have a registry?
 
-This is TBD, at the moment we will be setting up a honeymoon fund/travel fund.
+Yes! Visit our [Registry section](#registry) for our Amazon registry and ways to contribute to our honeymoon & travel fund through Venmo or Zelle.
 
 ### Should I bring my gift to the wedding?
 

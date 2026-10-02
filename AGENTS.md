@@ -12,6 +12,7 @@ Long-form public/invitation copy lives in Markdown files under `content/` so non
 - `content/our-story.md` - the Our Story section.
 - `content/hotel-blocks.md` - the dedicated Hotels section. Use `<!-- invitation-only-start title="Hotels" -->` and `<!-- invitation-only-end -->` around booking details that should be hidden on public `/` and shown only on guest invitation pages. Keep individual hotel names as `###` headings so they render as prominent hotel blocks.
 - `content/faqs.md` - the FAQ section. Keep hotel block booking details in `content/hotel-blocks.md`, not in FAQs.
+- `content/registry.md`, `content/registry-amazon.md`, and `content/registry-fund.md` - the shared Registry introduction and its two gift options. Receiving destinations live in `src/lib/registry.json`; QR assets are generated from the same URLs.
 
 The shared Sexi Adventures gallery is driven by image files in the repo-root `photos/` directory, not Markdown or hard-coded arrays. After adding, removing, or replacing supported image files there, run `npm run photos:generate` so the rendered gallery uses the updated static WebP assets and manifest.
 
@@ -24,6 +25,7 @@ The package currently uses `next` 16.x with React 19, Tailwind CSS 4, TypeScript
 - `npm run lint` - Run ESLint.
 - `npm run db:migrate` - Run every SQL file in `migrations/` against `DATABASE_URL`.
 - `npm run photos:generate` - Regenerate static WebP gallery assets and `src/lib/generated/photo-manifest.json` from repo-root `photos/`.
+- `npm run registry:generate` - Regenerate static receiving QR SVGs after changing verified Venmo or bank-issued Zelle URLs in `src/lib/registry.json`.
 
 Use npm for scripts and dependency installs. `package-lock.json` is the lockfile of record.
 
@@ -143,6 +145,8 @@ Be careful changing validation: database constraints, server action validation, 
 - All long-form content should be driven by Markdown files in `content/`, not hard-coded in React or TypeScript. The renderer for these files lives in `src/app/markdown-content.tsx`.
 - Public `/` keeps Markdown invitation-only blocks locked behind an invitation link; guest invitation pages render those blocks.
 - FAQ questions in `content/faqs.md` render as collapsible dropdowns; keep each question as a `###` heading followed by its answer content.
+- The Registry appears on both public and invitation pages with two gift options: Amazon and a money fund using Venmo or Zelle. Keep receiving links, copy buttons, QR assets, and recipient names in sync. Zelle uses the phone-number QR issued by Schwab; never invent payment links or publish account numbers.
+- In-page anchor offsets allow for a three-row sticky navigation below 360px; verify section headings remain visible when changing navigation items.
 - The Sexi Adventures gallery source files live in repo-root `photos/`. Run `npm run photos:generate` after adding, removing, or replacing supported files there; the app renders committed static WebP assets from `public/optimized-photos/` plus `src/lib/generated/photo-manifest.json`, merges that manifest with `wedding_photos` metadata for order and visibility, and uses `react-photo-album` plus `yet-another-react-lightbox`. Do not hard-code gallery image lists in React.
 - Keep public gallery and admin photo thumbnails off `next/image` and `/_next/image`; the static generated assets avoid Vercel Image Optimization usage and origin-function image transfer.
 - Design uses a green/pink wedding palette, Cormorant/Libre serif fonts with Great Vibes for the `Sean + Lexi = Sexi` brand mark, pink-accent double-happiness glyphs, pink-tinted Our Story emoji, high-contrast large long-form copy, and a spreadsheet-like admin UI. Keep new UI consistent with those patterns.

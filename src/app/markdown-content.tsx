@@ -27,6 +27,7 @@ type MarkdownNode =
     };
 
 type MarkdownContentProps = {
+  children?: ReactNode;
   fileName: string;
   id: string;
   collapsibleQuestions?: boolean;
@@ -212,8 +213,8 @@ function renderInlineMarkdown(
       <a
         key={`${url}-${index}`}
         href={url}
-        target="_blank"
-        rel="noopener noreferrer"
+        target={url.startsWith("#") ? undefined : "_blank"}
+        rel={url.startsWith("#") ? undefined : "noopener noreferrer"}
         className="font-semibold text-[#ffd6e4] underline decoration-dashed decoration-1 underline-offset-4 transition hover:text-[#ffd6e4]"
       >
         {renderTextWithStyledEmojis(label, `link-${index}`, options)}
@@ -584,7 +585,12 @@ function renderCollapsibleQuestionNodes(
   return renderedNodes;
 }
 
+export function MarkdownCopy({ fileName }: { fileName: string }) {
+  return <div className="grid gap-3">{renderNodes(parseMarkdown(readContentFile(fileName)), false, false)}</div>;
+}
+
 export function MarkdownContent({
+  children,
   buttonizeBookingLinks = false,
   collapsibleQuestions = false,
   fileName,
@@ -606,7 +612,7 @@ export function MarkdownContent({
   return (
     <section
       id={id}
-      className="relative z-10 mx-auto mt-12 max-w-5xl scroll-mt-28 sm:mt-16 lg:mt-20"
+      className="relative z-10 mx-auto mt-12 max-w-5xl scroll-mt-40 min-[360px]:scroll-mt-28 sm:mt-16 lg:mt-20"
     >
       <article className="guest-panel-surface grid gap-6 rounded-lg border border-[#ffd6e4]/60 p-5 text-[#ffd6e4] sm:gap-7 sm:p-8 lg:p-10">
         <header className="grid gap-3 border-b border-[#ffd6e4]/45 pb-5 text-center sm:pb-6">
@@ -638,6 +644,7 @@ export function MarkdownContent({
             styleEmojis,
           )}
         </div>
+        {children}
       </article>
     </section>
   );

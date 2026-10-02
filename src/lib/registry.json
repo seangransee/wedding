@@ -1,0 +1,16 @@
+{
+  "amazonUrl": "https://www.amazon.com/wedding/share/sexiwedding",
+  "venmo": {
+    "name": "Sean Gransee",
+    "username": "Sean-Gransee",
+    "url": "https://venmo.com/u/Sean-Gransee",
+    "qrImage": "/registry/venmo-qr.svg"
+  },
+  "zelle": {
+    "name": "Sean Gransee",
+    "phone": "6303374944",
+    "formattedPhone": "(630) 337-4944",
+    "url": "https://enroll.zellepay.com/qr-codes?data=eyJuYW1lIjoiU0VBTiIsInRva2VuIjoiNjMwMzM3NDk0NCJ9",
+    "qrImage": "/registry/zelle-qr.svg"
+  }
+}
