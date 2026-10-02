@@ -31,6 +31,7 @@ export const metadata: Metadata = {
   metadataBase: new URL("https://www.sexiwedding.com"),
   title: "Sexi Wedding",
   description: "Sean + Lexi = Sexi",
+  other: { "deployment-marker": "cloud-codex-2026-10-02" },
 };
 
 export default function RootLayout({
