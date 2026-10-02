@@ -145,7 +145,7 @@ Be careful changing validation: database constraints, server action validation, 
 - All long-form content should be driven by Markdown files in `content/`, not hard-coded in React or TypeScript. The renderer for these files lives in `src/app/markdown-content.tsx`.
 - Public `/` keeps Markdown invitation-only blocks locked behind an invitation link; guest invitation pages render those blocks.
 - FAQ questions in `content/faqs.md` render as collapsible dropdowns; keep each question as a `###` heading followed by its answer content.
-- The Gifts section (`#registry`) appears on both public and invitation pages with two options: Amazon and monetary gifts using Venmo or Zelle, labeled "Contribute to our next chapter." Keep receiving links, copy buttons, QR assets, and recipient names in sync. Zelle uses the phone-number QR issued by Schwab; never invent payment links or publish account numbers.
+- The Gifts section (`#registry`) appears on both public and invitation pages with two options: Amazon and monetary gifts using Venmo or Zelle, labeled "Contribute to our next chapter." Each payment option has a link and a QR code visible on all screen sizes. Keep receiving links and QR assets in sync, without extra instructions or copy controls. Zelle uses the phone-number QR issued by Schwab; never invent payment links or publish account numbers.
 - Keep the website's Amazon registry copy generic. Individual gift item details belong only inside the Amazon registry.
 - Keep monetary-gift wording neutral without earmarking gifts for honeymoon, travel, or another intended use.
 - Monetary gifts are for both Lexi and Sean. Explain that Venmo and Zelle display Sean Gransee as the account recipient so guests understand why his name appears.
