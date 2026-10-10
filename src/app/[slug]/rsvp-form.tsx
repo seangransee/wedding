@@ -36,19 +36,22 @@ const FUCK_YES_RSVP_OPTIONS: RsvpOption[] = [
   { id: "fuck-yes", value: "yes", label: "Fuck yes" },
 ];
 
-const MEAL_OPTIONS: Array<{ value: MealType; label: string; description: string; dietaryNote?: string }> = [
+const MEAL_OPTIONS: Array<{ value: MealType; category: string; label: string; description: string; dietaryNote?: string }> = [
   {
     value: "beef",
+    category: "Beef",
     label: "Center Cut Fillet",
     description: "Red wine caramelized onions, asparagus, truffle mashed potatoes, bourbon sauce.",
   },
   {
     value: "fish",
+    category: "Fish",
     label: "Locally Sourced Whitefish",
     description: "Farro, charred Brussels sprouts, lemon caper coulis.",
   },
   {
     value: "vegetarian",
+    category: "Vegetarian",
     label: "Truffle Mushroom Gnocchi",
     description: "Spinach, roasted tomatoes, parmesan, truffle mushroom cream sauce.",
     dietaryNote: "Vegetarian. Can be made vegan; please request this in Dietary Restrictions/Allergies below.",
@@ -479,9 +482,12 @@ export function RsvpForm({
                             <span className="grid gap-1.5">
                               <span
                                 id={`attendee-${index}-meal-${option.value}-name`}
-                                className="text-xl font-semibold leading-snug sm:text-2xl"
+                                className="grid gap-1.5 text-xl font-semibold leading-snug sm:text-2xl"
                               >
-                                {option.label}
+                                <span className="w-fit rounded-full border border-[#ffd6e4]/40 px-2.5 py-0.5 text-base leading-snug sm:text-lg">
+                                  {option.category}
+                                </span>
+                                <span>{option.label}</span>
                               </span>
                               {option.description ? (
                                 <span
