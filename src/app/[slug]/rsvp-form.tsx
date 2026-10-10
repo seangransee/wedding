@@ -37,9 +37,9 @@ const FUCK_YES_RSVP_OPTIONS: RsvpOption[] = [
 ];
 
 const MEAL_OPTIONS: Array<{ value: MealType; label: string }> = [
-  { value: "beef", label: "Beef" },
-  { value: "fish", label: "Fish" },
-  { value: "vegetarian", label: "Vegetarian" },
+  { value: "beef", label: "Center Cut Fillet" },
+  { value: "fish", label: "Locally Sourced Whitefish" },
+  { value: "vegetarian", label: "Truffle Mushroom Gnocchi" },
 ];
 
 type ErrorLocation = "status" | "count" | "names" | "global" | null;
