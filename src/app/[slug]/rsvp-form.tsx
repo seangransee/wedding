@@ -36,10 +36,22 @@ const FUCK_YES_RSVP_OPTIONS: RsvpOption[] = [
   { id: "fuck-yes", value: "yes", label: "Fuck yes" },
 ];
 
-const MEAL_OPTIONS: Array<{ value: MealType; label: string }> = [
-  { value: "beef", label: "Center Cut Fillet" },
-  { value: "fish", label: "Locally Sourced Whitefish" },
-  { value: "vegetarian", label: "Truffle Mushroom Gnocchi" },
+const MEAL_OPTIONS: Array<{ value: MealType; label: string; description: string }> = [
+  {
+    value: "beef",
+    label: "Center Cut Fillet",
+    description: "Red wine caramelized onions, asparagus, truffle mashed potatoes, bourbon sauce.",
+  },
+  {
+    value: "fish",
+    label: "Locally Sourced Whitefish",
+    description: "Farro, charred Brussels sprouts, lemon caper coulis.",
+  },
+  {
+    value: "vegetarian",
+    label: "Truffle Mushroom Gnocchi",
+    description: "Spinach, roasted tomatoes, parmesan, truffle mushroom cream sauce.",
+  },
 ];
 
 type ErrorLocation = "status" | "count" | "names" | "global" | null;
@@ -427,6 +439,8 @@ export function RsvpForm({
                             type="button"
                             role="radio"
                             aria-checked={selected}
+                            aria-labelledby={`attendee-${index}-meal-${option.value}-name`}
+                            aria-describedby={option.description ? `attendee-${index}-meal-${option.value}-description` : undefined}
                             onClick={() => {
                               const next = [...visibleAttendeeDetails];
                               next[index] = {
@@ -443,25 +457,40 @@ export function RsvpForm({
                                 attendeeDetails: next,
                               });
                             }}
-                            className={`grid min-h-12 grid-cols-[auto_1fr] items-center gap-3 rounded-md border px-3 text-left text-lg font-semibold transition sm:min-h-14 sm:text-xl ${
+                            className={`grid min-h-12 grid-cols-[auto_minmax(0,1fr)] items-start gap-3 rounded-md border px-4 py-4 text-left transition focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#ffd6e4] sm:gap-4 sm:px-5 sm:py-5 ${
                               selected
-                                ? "border-[#ffd6e4] bg-[#fff6fa]/12 text-[#ffd6e4]"
-                                : "border-[#ffd6e4]/40 bg-[#fff6fa]/6 text-[#ffd6e4] hover:border-[#ffd6e4] hover:text-[#ffd6e4]"
+                                ? "border-[#ffd6e4] bg-[#fff6fa]/15 text-[#ffd6e4]"
+                                : "border-[#ffd6e4]/40 bg-[#031b12]/35 text-[#ffd6e4] hover:border-[#ffd6e4]/75 hover:bg-[#fff6fa]/8"
                             }`}
                           >
                             <span
                               aria-hidden="true"
-                              className={`grid size-4 place-items-center rounded-[3px] border ${
+                              className={`mt-1.5 grid size-5 place-items-center rounded-full border ${
                                 selected
                                   ? "border-[#ffd6e4] bg-[#ffd6e4]"
                                   : "border-[#ffd6e4]/55 bg-[#fff6fa]/10"
                               }`}
                             >
                               {selected ? (
-                                <span className="size-2 rounded-[2px] bg-[#031b12]" />
+                                <span className="size-2.5 rounded-full bg-[#031b12]" />
                               ) : null}
                             </span>
-                            <span>{option.label}</span>
+                            <span className="grid gap-1.5">
+                              <span
+                                id={`attendee-${index}-meal-${option.value}-name`}
+                                className="text-xl font-semibold leading-snug sm:text-2xl"
+                              >
+                                {option.label}
+                              </span>
+                              {option.description ? (
+                                <span
+                                  id={`attendee-${index}-meal-${option.value}-description`}
+                                  className="max-w-[65ch] text-lg font-normal leading-relaxed text-[#ffd6e4]/90 sm:text-xl"
+                                >
+                                  {option.description}
+                                </span>
+                              ) : null}
+                            </span>
                           </button>
                         );
                       })}
