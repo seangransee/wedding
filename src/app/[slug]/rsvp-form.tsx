@@ -36,7 +36,7 @@ const FUCK_YES_RSVP_OPTIONS: RsvpOption[] = [
   { id: "fuck-yes", value: "yes", label: "Fuck yes" },
 ];
 
-const MEAL_OPTIONS: Array<{ value: MealType; label: string; description: string }> = [
+const MEAL_OPTIONS: Array<{ value: MealType; label: string; description: string; dietaryNote?: string }> = [
   {
     value: "beef",
     label: "Center Cut Fillet",
@@ -51,6 +51,7 @@ const MEAL_OPTIONS: Array<{ value: MealType; label: string; description: string 
     value: "vegetarian",
     label: "Truffle Mushroom Gnocchi",
     description: "Spinach, roasted tomatoes, parmesan, truffle mushroom cream sauce.",
+    dietaryNote: "Vegetarian. Can be made vegan; please request this in Dietary Restrictions/Allergies below.",
   },
 ];
 
@@ -440,7 +441,7 @@ export function RsvpForm({
                             role="radio"
                             aria-checked={selected}
                             aria-labelledby={`attendee-${index}-meal-${option.value}-name`}
-                            aria-describedby={option.description ? `attendee-${index}-meal-${option.value}-description` : undefined}
+                            aria-describedby={`attendee-${index}-meal-${option.value}-description${option.dietaryNote ? ` attendee-${index}-meal-${option.value}-dietary-note` : ""}`}
                             onClick={() => {
                               const next = [...visibleAttendeeDetails];
                               next[index] = {
@@ -488,6 +489,14 @@ export function RsvpForm({
                                   className="max-w-[65ch] text-lg font-normal leading-relaxed text-[#ffd6e4]/90 sm:text-xl"
                                 >
                                   {option.description}
+                                </span>
+                              ) : null}
+                              {option.dietaryNote ? (
+                                <span
+                                  id={`attendee-${index}-meal-${option.value}-dietary-note`}
+                                  className="max-w-[65ch] border-t border-[#ffd6e4]/25 pt-2 text-lg font-medium leading-relaxed text-[#ffd6e4] sm:text-xl"
+                                >
+                                  {option.dietaryNote}
                                 </span>
                               ) : null}
                             </span>
