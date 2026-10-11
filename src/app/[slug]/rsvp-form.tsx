@@ -53,7 +53,7 @@ const MEAL_OPTIONS: Array<{ value: MealType; category: string; label: string; de
     value: "vegetarian",
     category: "Vegetarian",
     label: "Truffle Mushroom Gnocchi",
-    description: "Spinach, roasted tomatoes, parmesan, truffle mushroom cream sauce.",
+    description: "Spinach, mushrooms, roasted tomatoes, parmesan, truffle mushroom cream sauce.",
     dietaryNote: "Vegetarian. Can be made vegan; please request this in Dietary Restrictions/Allergies below.",
   },
 ];
