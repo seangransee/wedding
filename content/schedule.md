@@ -1,4 +1,4 @@
-## Saturday
+## Saturday, December 12, 2026
 
 ### Ceremony
 

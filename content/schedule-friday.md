@@ -1,4 +1,4 @@
-## Friday night
+## Friday night, December 11, 2026
 
 ### Casual welcome event
 
