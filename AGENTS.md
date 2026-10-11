@@ -10,6 +10,7 @@ Next.js app for Sean and Lexi's wedding website. The app has four main surfaces:
 Long-form public/invitation copy lives in Markdown files under `content/` so non-technical editors can update it without touching React code. Current files:
 
 - `content/our-story.md` - the Our Story section.
+- `content/schedule.md` - Saturday's schedule for everyone; `content/schedule-friday.md` - the casual Friday welcome event, rendered only on invitations whose `fri_din` flag is true. Use `##` for the day and `###` for each event, with venue and time in separate paragraphs.
 - `content/hotel-blocks.md` - the dedicated Hotels section. Use `<!-- invitation-only-start title="Hotels" -->` and `<!-- invitation-only-end -->` around booking details that should be hidden on public `/` and shown only on guest invitation pages. Keep individual hotel names as `###` headings so they render as prominent hotel blocks.
 - `content/faqs.md` - the FAQ section. Keep hotel block booking details in `content/hotel-blocks.md`, not in FAQs.
 - `content/registry.md`, `content/registry-amazon.md`, and `content/registry-fund.md` - the shared Gifts introduction and its two gift options. Receiving destinations live in `src/lib/registry.json`; the Venmo QR asset is generated from its URL.
@@ -144,12 +145,13 @@ Be careful changing validation: database constraints, server action validation, 
 - `INVITATION_BASE_URL` in `admin-client.tsx` is hardcoded to `https://sexiwedding.com` for copied links.
 - All long-form content should be driven by Markdown files in `content/`, not hard-coded in React or TypeScript. The renderer for these files lives in `src/app/markdown-content.tsx`.
 - Public `/` keeps Markdown invitation-only blocks locked behind an invitation link; guest invitation pages render those blocks.
+- The Schedule section (`#schedule`) sits below RSVP and above Our Story, with a matching navigation link. Its Friday content is conditionally rendered on the server from `guest.friDin`; public pages and unselected guests receive only Saturday's events.
 - FAQ questions in `content/faqs.md` render as collapsible dropdowns; keep each question as a `###` heading followed by its answer content.
 - The Gifts section (`#registry`) appears on both public and invitation pages with two options: Amazon and monetary gifts using Venmo or Zelle, labeled "Contribute to our next chapter." Venmo displays its handle, link, and QR code on all screen sizes. Zelle displays only its verified phone number, without a link or QR code. Keep the Venmo receiving link and QR asset in sync, without extra instructions or copy controls. Never invent payment destinations or publish account numbers.
 - Keep the website's Amazon registry copy generic. Individual gift item details belong only inside the Amazon registry.
 - Keep monetary-gift wording neutral without earmarking gifts for honeymoon, travel, or another intended use.
 - Monetary gifts are for both Lexi and Sean. Keep this clear with a short shared statement above the payment options; omit account-name explanations.
-- In-page anchor offsets allow for a three-row sticky navigation below 360px; verify section headings remain visible when changing navigation items.
+- In-page anchor offsets allow for a three-row sticky navigation below 640px; verify section headings remain visible when changing navigation items.
 - The Sexi Adventures gallery source files live in repo-root `photos/`. Run `npm run photos:generate` after adding, removing, or replacing supported files there; the app renders committed static WebP assets from `public/optimized-photos/` plus `src/lib/generated/photo-manifest.json`, merges that manifest with `wedding_photos` metadata for order and visibility, and uses `react-photo-album` plus `yet-another-react-lightbox`. Do not hard-code gallery image lists in React.
 - Keep public gallery and admin photo thumbnails off `next/image` and `/_next/image`; the static generated assets avoid Vercel Image Optimization usage and origin-function image transfer.
 - Design uses a green/pink wedding palette, Cormorant/Libre serif fonts with Great Vibes for the `Sean + Lexi = Sexi` brand mark, pink-accent double-happiness glyphs, pink-tinted Our Story emoji, high-contrast large long-form copy, and a spreadsheet-like admin UI. Keep new UI consistent with those patterns.

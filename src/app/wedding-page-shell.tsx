@@ -4,6 +4,7 @@ import { MarkdownContent } from "./markdown-content";
 import { getWeddingCalendarUrl, WEDDING_DETAILS } from "./wedding-details";
 import { PhotosSection } from "./photos-section";
 import { RegistrySection } from "./registry-section";
+import { ScheduleSection } from "./schedule-section";
 
 export { LockedNotice } from "./locked-notice";
 
@@ -14,6 +15,7 @@ type WeddingPageShellProps = {
   panelId?: string;
   panelNavLabel?: string;
   showHotelBlocks?: boolean;
+  showFridayWelcome?: boolean;
 };
 
 const defaultPanelClassName =
@@ -86,6 +88,7 @@ function PageNav({
 }) {
   const navItems = [
     { href: `#${panelId}`, label: panelNavLabel },
+    { href: "#schedule", label: "Schedule" },
     { href: "#our-story", label: "Our Story" },
     { href: "#hotel-blocks", label: "Hotels" },
     { href: "#registry", label: "Gifts" },
@@ -116,12 +119,15 @@ function PageNav({
 function LongFormSections({
   photos,
   showHotelBlocks,
+  showFridayWelcome,
 }: {
   photos: Awaited<ReturnType<typeof getWeddingPhotos>>;
   showHotelBlocks: boolean;
+  showFridayWelcome: boolean;
 }) {
   return (
     <div className="pb-16">
+      <ScheduleSection showFridayWelcome={showFridayWelcome} />
       <MarkdownContent id="our-story" fileName="our-story.md" styleEmojis />
       <MarkdownContent
         id="hotel-blocks"
@@ -151,6 +157,7 @@ export async function WeddingPageShell({
   panelId = "wedding-details",
   panelNavLabel = "Wedding Details",
   showHotelBlocks = false,
+  showFridayWelcome = false,
 }: WeddingPageShellProps) {
   const photos = await getWeddingPhotos();
 
@@ -165,12 +172,12 @@ export async function WeddingPageShell({
 
       <section className="guest-hero-section relative z-10 mx-auto grid min-h-[calc(100svh-2rem)] max-w-5xl items-end gap-4 pt-[36svh]">
         <EventHeroCopy calendarWebsiteUrl={calendarWebsiteUrl} />
-        <div id={panelId} className={`${panelClassName} scroll-mt-40 min-[360px]:scroll-mt-28`}>
+        <div id={panelId} className={`${panelClassName} scroll-mt-40 sm:scroll-mt-28`}>
           {panel}
         </div>
       </section>
 
-      <LongFormSections photos={photos} showHotelBlocks={showHotelBlocks} />
+      <LongFormSections photos={photos} showHotelBlocks={showHotelBlocks} showFridayWelcome={showFridayWelcome} />
     </main>
   );
 }

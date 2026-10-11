@@ -75,6 +75,7 @@ export default async function GuestPage({ params }: PageProps) {
       panelId="rsvp"
       panelNavLabel="RSVP"
       showHotelBlocks
+      showFridayWelcome={data.guest.friDin}
       panel={
         <RsvpForm
           slug={slug}

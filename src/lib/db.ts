@@ -517,11 +517,11 @@ export async function updateGuestFriDin(id: number, friDin: boolean) {
      SET fri_din = $2,
          updated_at = now()
      WHERE id = $1
-     RETURNING id`,
+     RETURNING slug`,
     [id, friDin],
-  )) as Array<{ id: number }>;
+  )) as Array<{ slug: string }>;
 
-  return rows.length > 0;
+  return rows[0] ?? null;
 }
 
 export async function updateGuestName(id: number, name: string) {
