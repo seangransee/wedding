@@ -1,6 +1,6 @@
-## Friday night, December 11, 2026
+## Friday, December 11, 2026
 
-### Casual welcome event
+### Casual evening welcome event
 
 [Exchequer Restaurant & Pub](https://maps.app.goo.gl/6FBojqMLP8oPzAmX8)
 
