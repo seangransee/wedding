@@ -126,6 +126,62 @@ body {
   text-shadow: none;
 }
 
+.guest-schedule-day > div {
+  position: relative;
+  gap: 0;
+  padding-left: 1.75rem;
+}
+
+.guest-schedule-day > div::before {
+  content: "";
+  position: absolute;
+  left: 0.25rem;
+  top: 3.5rem;
+  bottom: 0.6rem;
+  width: 1px;
+  background: rgba(255, 214, 228, 0.4);
+}
+
+.guest-schedule-day h3 {
+  border: 0;
+  padding: 0 0 1.5rem;
+  font-size: 1.125rem;
+  text-transform: none;
+  letter-spacing: 0.06em;
+}
+
+.guest-schedule-day h4 {
+  position: relative;
+  border: 0;
+  padding-top: 0;
+  margin-bottom: 0.35rem;
+}
+
+.guest-schedule-day h4::before {
+  content: "";
+  position: absolute;
+  left: -1.75rem;
+  top: 0.6em;
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+  background: var(--blush-pink);
+}
+
+.guest-schedule-day p + h4 {
+  margin-top: 2rem;
+}
+
+.guest-schedule-day a {
+  display: inline-block;
+  padding-block: 0.3rem;
+}
+
+.guest-schedule-day a:focus-visible {
+  outline: 2px solid var(--blush-pink);
+  outline-offset: 4px;
+}
+
 .guest-hero-copy h1 {
   margin-top: 0.5rem;
   font-size: 2.25rem;

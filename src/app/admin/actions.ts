@@ -232,6 +232,7 @@ export async function setFriDin(
   }
 
   revalidatePath("/admin");
+  revalidatePath(`/${updated.slug}`);
   return { ok: true, message: friDin ? "Friday dinner on." : "Friday dinner off." };
 }
 
