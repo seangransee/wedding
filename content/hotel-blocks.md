@@ -7,7 +7,7 @@ We have a few options for different price points and convenience levels. We reco
 ### [The Blackstone](https://www.marriott.com/event-reservations/reservation-link.mi?_branch_referrer=H4sIAAAAAAAAA8soKSkottLXTywo0MtNLCrKzC8p0UvOz9UvSi3OyczLtgdK2ALZZSCOWmaKraG5mbG5qYmhqYWRibladmqlrXtQgFpdUWpaKlB3Xnp8UlF%2BeXFqka1vflJmTqqqkUFwYlpiUSYAbAHTtmkAAAA%3D&id=1763754158247&key=GRP&app=resvlink&_branch_match_id=1589857826543394755) - our venue!
 
 - Room Rate - $159-$189/day (no daily amenity fee) + tax
-- Parking Fees - $82/day for valet parking
+- Overnight parking is $82 per night. Guests attending the wedding only can receive validated parking for $32.
 - Must book by November 12, 2026
 
 ### [The Hilton Chicago](https://book.passkey.com/gt/221582931?gtid=50d1b256bb48751190d0ac6259f0bb87) - literally across the street from our venue
