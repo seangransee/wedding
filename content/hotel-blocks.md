@@ -8,7 +8,7 @@ We have a few options for different price points and convenience levels. We reco
 
 - Room Rate - $159-$189/day (no daily amenity fee) + tax
 - Overnight parking is $82 per night. Guests attending the wedding only can receive validated parking for $32.
-- Must book by November 12, 2026
+- Must book by November 11, 2026
 
 ### [The Hilton Chicago](https://book.passkey.com/gt/221582931?gtid=50d1b256bb48751190d0ac6259f0bb87) - literally across the street from our venue
 
