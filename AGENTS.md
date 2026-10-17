@@ -37,6 +37,11 @@ Use npm for scripts and dependency installs. `package-lock.json` is the lockfile
 - The app code will also read `POSTGRES_URL`, `POSTGRES_PRISMA_URL`, or `POSTGRES_URL_NON_POOLING` as fallbacks, but `scripts/migrate.mjs` requires `DATABASE_URL`.
 - Migrations are idempotent SQL files sorted by filename. There is no migration ledger table; rerunning migrations reapplies all guarded statements.
 
+## Workflow
+
+- After making any requested changes, always commit and push directly to the `main` branch (never a feature branch or PR).
+- Then wait for the deploy to finish and verify the changes on the live website at `https://sexiwedding.com`.
+
 ## Deployment
 
 - Production is hosted on Vercel at `https://sexiwedding.com`.
