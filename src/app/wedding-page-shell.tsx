@@ -57,7 +57,7 @@ function EventHeroCopy({ calendarWebsiteUrl }: { calendarWebsiteUrl: string }) {
           href={WEDDING_DETAILS.mapUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex min-h-11 items-center justify-center underline decoration-dotted decoration-2 underline-offset-6 transition hover:text-[#ffd6e4]"
+          className="inline-flex min-h-11 items-center justify-center underline decoration-dashed decoration-1 underline-offset-6 transition hover:text-[#ffd6e4]"
         >
           {WEDDING_DETAILS.venueName}
         </a>
