@@ -41,7 +41,8 @@ Use npm for scripts and dependency installs. `package-lock.json` is the lockfile
 
 - After making any requested changes, always commit and push directly to the `main` branch (never a feature branch or PR).
 - Then wait for the deploy to finish and verify the changes on the live website at `https://sexiwedding.com`.
-- Show screenshots in the chat as much as possible: when testing locally or verifying on the live site, capture screenshots of the relevant pages (mobile width first) and send them to the user rather than only describing what changed.
+- Show screenshots in the chat as early as possible: as soon as a visual change renders locally, capture screenshots of the relevant pages (mobile width first) and send them to the user before committing and pushing, then send more when verifying on the live site. Send them rather than only describing what changed.
+- Sharing screenshots is not a confirmation step: do not wait for the user to reply before pushing to `main`.
 
 ## Deployment
 
