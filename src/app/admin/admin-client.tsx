@@ -16,6 +16,7 @@ import {
   type SortColumn,
 } from "react-data-grid";
 import type { GuestWithRsvp, RsvpAttendeeDetails, RsvpAuditEvent } from "@/lib/db";
+import { formatMailingAddress } from "@/lib/mailing-address";
 import { slugify } from "@/lib/slug";
 import {
   addGuest,
@@ -73,6 +74,7 @@ const BASE_COLUMN_WIDTHS = {
   notes: 170,
   phoneNumber: 142,
   emailAddress: 180,
+  mailingAddress: 220,
   guestCount: 54,
   inviteSent: 97,
   rsvpStatus: 112,
@@ -216,6 +218,7 @@ function makeAdminCsv(guests: GuestWithRsvp[], auditEvents: RsvpAuditEvent[]) {
     "current_place_cards",
     "current_meal_choices",
     "current_dietary_notes",
+    "current_mailing_address",
     "guest_created_at",
     "guest_updated_at",
     "audit_event_id",
@@ -227,6 +230,7 @@ function makeAdminCsv(guests: GuestWithRsvp[], auditEvents: RsvpAuditEvent[]) {
     "audit_place_cards",
     "audit_meal_choices",
     "audit_dietary_notes",
+    "audit_mailing_address",
     "audit_created_at",
   ];
 
@@ -249,8 +253,10 @@ function makeAdminCsv(guests: GuestWithRsvp[], auditEvents: RsvpAuditEvent[]) {
     attendeeNameSummary(guest.attendeeDetails),
     attendeeMealSummary(guest.attendeeDetails),
     attendeeDietarySummary(guest.attendeeDetails),
+    formatMailingAddress(guest.mailingAddress),
     guest.createdAt,
     guest.updatedAt,
+    "",
     "",
     "",
     "",
@@ -284,6 +290,7 @@ function makeAdminCsv(guests: GuestWithRsvp[], auditEvents: RsvpAuditEvent[]) {
     "",
     "",
     "",
+    "",
     event.id,
     event.eventType,
     event.guestNamePrevious,
@@ -293,6 +300,7 @@ function makeAdminCsv(guests: GuestWithRsvp[], auditEvents: RsvpAuditEvent[]) {
     attendeeNameSummary(event.attendeeDetails),
     attendeeMealSummary(event.attendeeDetails),
     attendeeDietarySummary(event.attendeeDetails),
+    formatMailingAddress(event.mailingAddress),
     event.createdAt,
   ]);
 
@@ -922,6 +930,11 @@ function PlaceCardsCell({ row }: RenderCellProps<GuestWithRsvp>) {
   return attendeeDetailsSummary(row.attendeeDetails);
 }
 
+function MailingAddressCell({ row }: RenderCellProps<GuestWithRsvp>) {
+  const address = formatMailingAddress(row.mailingAddress);
+  return <span title={address || undefined}>{address}</span>;
+}
+
 async function copyText(text: string) {
   if (navigator.clipboard?.writeText) {
     await navigator.clipboard.writeText(text);
@@ -1382,6 +1395,14 @@ export function GuestTable({
       resizable: true,
       editable: true,
       renderEditCell: SpreadsheetTextEditor,
+    },
+    {
+      key: "mailingAddress",
+      name: "Mailing address",
+      width: columnWidths.mailingAddress,
+      minWidth: 140,
+      resizable: true,
+      renderCell: MailingAddressCell,
     },
     {
       key: "fuckYes",

@@ -8,6 +8,13 @@ import {
 } from "react";
 import { autosaveRsvp, type RsvpActionState } from "./actions";
 import type { MealType, RsvpAttendeeDetails, RsvpStatus } from "@/lib/db";
+import {
+  MAILING_ADDRESS_FIELDS,
+  MAILING_ADDRESS_MAX_LENGTH,
+  mailingAddressFormName,
+  parsePastedMailingAddress,
+  type MailingAddress,
+} from "@/lib/mailing-address";
 
 type RsvpFormProps = {
   slug: string;
@@ -17,6 +24,7 @@ type RsvpFormProps = {
   initialStatus: RsvpStatus | "";
   initialAttendingCount: number | null;
   initialAttendeeDetails: RsvpAttendeeDetails[];
+  initialMailingAddress: MailingAddress;
 };
 
 type RsvpOption = {
@@ -57,6 +65,8 @@ const MEAL_OPTIONS: Array<{ value: MealType; category: string; label: string; de
     dietaryNote: "Vegetarian. Can be made vegan; please request this in Dietary Restrictions/Allergies below.",
   },
 ];
+
+const ADDRESS_INPUT_CLASS_NAME = "min-h-12 w-full min-w-0 rounded-md border border-[#ffd6e4]/55 bg-[#031b12]/55 px-3 text-lg font-normal text-[#ffd6e4] outline-none transition placeholder:text-[#ffd6e4]/45 focus:border-[#ffd6e4] focus:ring-2 focus:ring-[#ffd6e4]/25 sm:min-h-14 sm:text-xl";
 
 type ErrorLocation = "status" | "count" | "names" | "global" | null;
 
@@ -99,6 +109,7 @@ export function RsvpForm({
   initialStatus,
   initialAttendingCount,
   initialAttendeeDetails,
+  initialMailingAddress,
 }: RsvpFormProps) {
   const visibleInitialStatus = fuckYes && initialStatus !== "yes" ? "" : initialStatus;
   const rsvpOptions = fuckYes ? FUCK_YES_RSVP_OPTIONS : RSVP_OPTIONS;
@@ -110,9 +121,10 @@ export function RsvpForm({
         status: visibleInitialStatus,
         attendingCount: initialAttendingCount,
         attendeeDetails: initialAttendeeDetails,
+        mailingAddress: initialMailingAddress,
       },
     }),
-    [initialAttendeeDetails, initialAttendingCount, visibleInitialStatus],
+    [initialAttendeeDetails, initialAttendingCount, initialMailingAddress, visibleInitialStatus],
   );
   const [saveState, setSaveState] = useState<RsvpActionState>(initialState);
   const [status, setStatus] = useState<RsvpStatus | "">(visibleInitialStatus);
@@ -122,6 +134,10 @@ export function RsvpForm({
   );
   const [attendeeDetails, setAttendeeDetails] =
     useState<RsvpAttendeeDetails[]>(initialAttendeeDetails);
+  const [mailingAddress, setMailingAddress] = useState<MailingAddress>(initialMailingAddress);
+  const [showCountry, setShowCountry] = useState(Boolean(initialMailingAddress.country));
+  const [addressPasted, setAddressPasted] = useState(false);
+  const lastSavedMailingAddress = useRef(JSON.stringify(initialMailingAddress));
   const [localError, setLocalError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [justSaved, setJustSaved] = useState(false);
@@ -174,6 +190,7 @@ export function RsvpForm({
       status?: RsvpStatus | "";
       attendingCount?: number | null;
       attendeeDetails?: RsvpAttendeeDetails[];
+      mailingAddress?: MailingAddress;
     },
     explicit = false,
   ) {
@@ -182,6 +199,7 @@ export function RsvpForm({
       nextStatus === "yes" && guestCount === 1
         ? 1
         : nextValues?.attendingCount ?? attendingCount;
+    const nextMailingAddress = nextValues?.mailingAddress ?? mailingAddress;
     const detailsFromInputs = currentAttendeeDetails();
     const nextDetails = nextValues?.attendeeDetails ?? (
       detailsFromInputs.length > 0 ? detailsFromInputs : attendeeDetails
@@ -204,6 +222,9 @@ export function RsvpForm({
     formData.set("slug", slug);
     formData.set("status", nextStatus);
     formData.set("attendingCount", nextStatus === "yes" ? String(nextAttendingCount) : "");
+    MAILING_ADDRESS_FIELDS.forEach((field) => {
+      formData.set(mailingAddressFormName(field), nextMailingAddress[field]);
+    });
 
     if (nextStatus === "yes" && nextAttendingCount) {
       Array.from(
@@ -226,6 +247,10 @@ export function RsvpForm({
 
     const result = await autosaveRsvp(formData);
 
+    if (result.ok) {
+      lastSavedMailingAddress.current = JSON.stringify(nextMailingAddress);
+    }
+
     if (saveSequence.current === sequence) {
       setSaveState(result);
       setLocalError(result.ok ? "" : result.message);
@@ -234,6 +259,13 @@ export function RsvpForm({
         setJustSaved(true);
       }
     }
+  }
+
+  function updateMailingAddress(field: keyof MailingAddress, value: string) {
+    setLocalError("");
+    setJustSaved(false);
+    setAddressPasted(false);
+    setMailingAddress((current) => ({ ...current, [field]: value }));
   }
 
   return (
@@ -543,6 +575,165 @@ export function RsvpForm({
               ))}
             </div>
           ) : null}
+        </div>
+      ) : null}
+
+      {status ? (
+        <div
+          role="group"
+          aria-labelledby="mailing-address-heading"
+          onBlur={(event) => {
+            // Save once focus leaves the address block instead of on every field hop.
+            if (event.currentTarget.contains(event.relatedTarget as Node | null)) {
+              return;
+            }
+            if (JSON.stringify(mailingAddress) !== lastSavedMailingAddress.current) {
+              void saveDraft();
+            }
+          }}
+          className="grid gap-4 rounded-md border border-[#ffd6e4]/40 bg-[#fff6fa]/8 p-4 text-lg font-semibold leading-[1.5] text-[#ffd6e4] sm:text-xl"
+        >
+          <div className="grid gap-1.5">
+            <p id="mailing-address-heading" className="text-xl sm:text-2xl">
+              Mailing Address
+            </p>
+            <p className="font-normal leading-relaxed text-[#ffd6e4]/90">
+              Where can we send you mail? Tip: paste your whole address into
+              the first box and we&apos;ll fill in the rest.
+            </p>
+          </div>
+
+          <div className="grid gap-2">
+            <label htmlFor="mailing-address-line1">Street address</label>
+            <input
+              id="mailing-address-line1"
+              name={mailingAddressFormName("line1")}
+              value={mailingAddress.line1}
+              maxLength={MAILING_ADDRESS_MAX_LENGTH}
+              onPaste={(event) => {
+                const parsed = parsePastedMailingAddress(event.clipboardData.getData("text"));
+                if (!parsed) {
+                  return;
+                }
+
+                event.preventDefault();
+                setLocalError("");
+                setJustSaved(false);
+                setMailingAddress(parsed);
+                setAddressPasted(true);
+                if (parsed.country) {
+                  setShowCountry(true);
+                }
+                void saveDraft({ mailingAddress: parsed });
+              }}
+              onChange={(event) => updateMailingAddress("line1", event.target.value)}
+              autoComplete="shipping address-line1"
+              enterKeyHint="next"
+              placeholder="123 Main St"
+              className={ADDRESS_INPUT_CLASS_NAME}
+            />
+            {addressPasted ? (
+              <p className="text-base font-normal leading-relaxed text-[#ffd6e4] sm:text-lg" role="status">
+                ✨ We filled in your address below. Give it a quick look!
+              </p>
+            ) : null}
+          </div>
+
+          <div className="grid gap-2">
+            <label htmlFor="mailing-address-line2">
+              Apt, suite, or unit{" "}
+              <span className="font-normal text-[#ffd6e4]/75">(optional)</span>
+            </label>
+            <input
+              id="mailing-address-line2"
+              name={mailingAddressFormName("line2")}
+              value={mailingAddress.line2}
+              maxLength={MAILING_ADDRESS_MAX_LENGTH}
+              onChange={(event) => updateMailingAddress("line2", event.target.value)}
+              autoComplete="shipping address-line2"
+              enterKeyHint="next"
+              className={ADDRESS_INPUT_CLASS_NAME}
+            />
+          </div>
+
+          <div className="grid gap-2">
+            <label htmlFor="mailing-address-city">City</label>
+            <input
+              id="mailing-address-city"
+              name={mailingAddressFormName("city")}
+              value={mailingAddress.city}
+              maxLength={MAILING_ADDRESS_MAX_LENGTH}
+              onChange={(event) => updateMailingAddress("city", event.target.value)}
+              autoComplete="shipping address-level2"
+              enterKeyHint="next"
+              className={ADDRESS_INPUT_CLASS_NAME}
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="grid min-w-0 gap-2">
+              <label htmlFor="mailing-address-region">
+                {showCountry ? "State / Province" : "State"}
+              </label>
+              <input
+                id="mailing-address-region"
+                name={mailingAddressFormName("region")}
+                value={mailingAddress.region}
+                maxLength={MAILING_ADDRESS_MAX_LENGTH}
+                onChange={(event) => updateMailingAddress("region", event.target.value)}
+                autoComplete="shipping address-level1"
+                autoCapitalize={showCountry ? "words" : "characters"}
+                enterKeyHint="next"
+                className={ADDRESS_INPUT_CLASS_NAME}
+              />
+            </div>
+            <div className="grid min-w-0 gap-2">
+              <label htmlFor="mailing-address-postal-code">
+                {showCountry ? "Postal code" : "ZIP code"}
+              </label>
+              <input
+                id="mailing-address-postal-code"
+                name={mailingAddressFormName("postalCode")}
+                value={mailingAddress.postalCode}
+                maxLength={MAILING_ADDRESS_MAX_LENGTH}
+                onChange={(event) => updateMailingAddress("postalCode", event.target.value)}
+                autoComplete="shipping postal-code"
+                inputMode={showCountry ? "text" : "numeric"}
+                autoCapitalize="characters"
+                enterKeyHint={showCountry ? "next" : "done"}
+                className={ADDRESS_INPUT_CLASS_NAME}
+              />
+            </div>
+          </div>
+
+          {showCountry ? (
+            <div className="grid gap-2">
+              <label htmlFor="mailing-address-country">Country</label>
+              <input
+                id="mailing-address-country"
+                name={mailingAddressFormName("country")}
+                value={mailingAddress.country}
+                maxLength={MAILING_ADDRESS_MAX_LENGTH}
+                onChange={(event) => updateMailingAddress("country", event.target.value)}
+                autoComplete="shipping country-name"
+                enterKeyHint="done"
+                className={ADDRESS_INPUT_CLASS_NAME}
+              />
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => {
+                setShowCountry(true);
+                window.requestAnimationFrame(() => {
+                  document.getElementById("mailing-address-country")?.focus();
+                });
+              }}
+              className="min-h-11 w-fit text-left text-base font-semibold text-[#ffd6e4] underline decoration-[#ffd6e4]/55 underline-offset-4 transition hover:decoration-[#ffd6e4] sm:text-lg"
+            >
+              Outside the US? Add a country
+            </button>
+          )}
         </div>
       ) : null}
 

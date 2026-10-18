@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getGuestPageData } from "@/lib/db";
+import { EMPTY_MAILING_ADDRESS } from "@/lib/mailing-address";
 import { WEDDING_DETAILS } from "../wedding-details";
 import { WeddingPageShell } from "../wedding-page-shell";
 import { RsvpForm } from "./rsvp-form";
@@ -85,6 +86,7 @@ export default async function GuestPage({ params }: PageProps) {
           initialStatus={data.rsvp?.status ?? ""}
           initialAttendingCount={data.rsvp?.attendingCount ?? null}
           initialAttendeeDetails={attendeeDetails}
+          initialMailingAddress={data.rsvp?.mailingAddress ?? EMPTY_MAILING_ADDRESS}
         />
       }
     />

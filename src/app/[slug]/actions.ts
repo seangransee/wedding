@@ -10,6 +10,13 @@ import {
   type RsvpAttendeeDetails,
   type RsvpStatus,
 } from "@/lib/db";
+import {
+  EMPTY_MAILING_ADDRESS,
+  MAILING_ADDRESS_FIELDS,
+  mailingAddressFormName,
+  normalizeMailingAddress,
+  type MailingAddress,
+} from "@/lib/mailing-address";
 import { isValidSlug } from "@/lib/slug";
 
 export type RsvpActionState = {
@@ -19,6 +26,7 @@ export type RsvpActionState = {
     status: RsvpStatus | "";
     attendingCount: number | null;
     attendeeDetails: RsvpAttendeeDetails[];
+    mailingAddress: MailingAddress;
   };
 };
 
@@ -78,10 +86,19 @@ export async function autosaveRsvp(
       dietaryNotes: submittedDietaryNotes[index] ?? "",
     }),
   );
+  const mailingAddress = normalizeMailingAddress(
+    Object.fromEntries(
+      MAILING_ADDRESS_FIELDS.map((field) => [
+        field,
+        String(formData.get(mailingAddressFormName(field)) ?? ""),
+      ]),
+    ) as MailingAddress,
+  );
   const values: RsvpActionState["values"] = {
     status: status === "yes" || status === "no" || status === "deciding" ? status : "",
     attendingCount: rawCount ? Number(rawCount) : null,
     attendeeDetails: submittedAttendeeDetails,
+    mailingAddress,
   };
 
   if (!isValidSlug(slug)) {
@@ -106,6 +123,7 @@ export async function autosaveRsvp(
       status: "",
       attendingCount: null,
       attendeeDetails: [],
+      mailingAddress: EMPTY_MAILING_ADDRESS,
     });
   }
 
@@ -115,6 +133,7 @@ export async function autosaveRsvp(
       status,
       attendingCount: null,
       attendeeDetails: [],
+      mailingAddress,
     });
 
     revalidatePath(`/${slug}`);
@@ -122,6 +141,7 @@ export async function autosaveRsvp(
       status,
       attendingCount: null,
       attendeeDetails: [],
+      mailingAddress,
     });
   }
 
@@ -155,6 +175,7 @@ export async function autosaveRsvp(
     status: "yes",
     attendingCount,
     attendeeDetails,
+    mailingAddress,
   });
 
   revalidatePath(`/${slug}`);
@@ -162,5 +183,6 @@ export async function autosaveRsvp(
     status: "yes",
     attendingCount,
     attendeeDetails,
+    mailingAddress,
   });
 }

@@ -63,9 +63,9 @@ Use npm for scripts and dependency installs. `package-lock.json` is the lockfile
 Core tables:
 
 - `wedding_guests` - one row per invitation link. Important columns are `name`, `slug`, `notes`, `phone_number`, `email_address`, `guest_count`, `invite_sent`, `fuck_yes`, and `sort_order`.
-- `wedding_rsvps` - one current RSVP per guest, keyed by `guest_id`.
+- `wedding_rsvps` - one current RSVP per guest, keyed by `guest_id`; also stores the invitation's optional mailing address in `mailing_address_line1`, `_line2`, `_city`, `_region`, `_postal_code`, and `_country` (empty strings when unset).
 - `wedding_rsvp_attendees` - per-person current RSVP details, keyed by RSVP and 1-based `position`; stores place-card name, optional meal type, and optional dietary/allergy notes.
-- `wedding_rsvp_audit_events` and `wedding_rsvp_audit_attendees` - append-only RSVP edit history, with soft deletion for deleted guests' audit rows.
+- `wedding_rsvp_audit_events` and `wedding_rsvp_audit_attendees` - append-only RSVP edit history (including the mailing address at each save), with soft deletion for deleted guests' audit rows.
 - `wedding_photos` - one metadata row per repo-root `photos/` image, storing manual gallery order and optional `hidden_at` visibility state.
 
 `guest_count` is the maximum attending count for the invitation and is constrained to 1-10. RSVP statuses are `yes`, `no`, and `deciding`. For `yes`, `attending_count` is required; for `no` and `deciding`, it must be null.
@@ -128,6 +128,7 @@ The admin `Invite sent` checkbox is important for link stability. Once `invite_s
 - Single-guest invitations automatically use attending count 1 when status is `yes`.
 - Multi-guest invitations require a count from 1 to `guest_count`.
 - For each attending person, guests can enter a place-card name, choose one optional meal type (`beef`, `fish`, or `vegetarian`), and add optional dietary/allergy notes. Meal type and dietary notes are saved per attendee position.
+- Once any status is chosen, the form shows one optional Mailing Address block per invitation (street, apt/unit, city, state, ZIP, plus a country field revealed by "Outside the US? Add a country" or when a saved address has one). Inputs use `shipping address-*` autocomplete tokens so phone/browser autofill fills them in one tap. Pasting a whole address into the street box splits it into the fields via `parsePastedMailingAddress` in `src/lib/mailing-address.ts` (US/Canadian formats; anything unrecognized pastes normally). The block saves when focus leaves it (only if the address changed), right after a parsed paste, and with every other RSVP save. The address survives status changes and is not required.
 - The server stores attendee rows when any per-person detail is present. It does not enforce that every attending slot has a place-card name or meal choice, even though the UI asks guests to provide them.
 - Every successful RSVP save upserts `wedding_rsvps`, replaces current attendee rows, and inserts an RSVP audit event plus audit attendee rows.
 - RSVP saves call `revalidatePath("/{slug}")`.
@@ -142,10 +143,10 @@ Be careful changing validation: database constraints, server action validation, 
 - Admin login is rate-limited in `wedding_admin_login_attempts` by request IP: 5 wrong attempts in 15 minutes locks that IP out for 15 minutes. Successful login clears the bucket.
 - `/admin` uses `react-data-grid` with all rows rendered and a responsive width calculation.
 - A search bar above the grid filters guests client-side. It splits the query into whitespace tokens and keeps a guest when every token appears in its name or any RSVP place-card (attendee full) name, so "Sean" and "Lexi" both match the "Sean and Lexi" invitation. Filtering only changes which rows render; cell edits still save by guest id, and drag-to-reorder is disabled while a search is active.
-- Editable columns are Name, URL, Notes, Phone, Email, and Max. URL is locked when `invite_sent` is true.
+- Editable columns are Name, URL, Notes, Phone, Email, and Max. URL is locked when `invite_sent` is true. The read-only Mailing address column shows the guest-entered RSVP address.
 - Sorting is URL-driven with `?sort=...&dir=...`. Default sort uses `sort_order`.
 - Drag-to-reorder is available only in default sort; it saves the full ordered guest id list through `reorderGuestRows`.
-- The Export CSV button downloads the loaded admin data as one CSV with `guest` rows for current invitation/RSVP/contact state and `rsvp_audit` rows for visible RSVP edit history, including per-person place-card, meal, and dietary details.
+- The Export CSV button downloads the loaded admin data as one CSV with `guest` rows for current invitation/RSVP/contact state and `rsvp_audit` rows for visible RSVP edit history, including per-person place-card, meal, and dietary details and the one-line mailing address.
 - Deleting a guest requires typing `delete`, soft-deletes visible audit events for that guest, then deletes the guest row. RSVP and attendee rows cascade from foreign keys.
 - The audit table shown in admin filters to RSVP events, hides the `Sean and Lexi` guest name, and includes compact per-person place-card, meal, and dietary details.
 - `/admin/photos` is linked from the admin header and lets admins manually reorder the Sexi Adventures gallery or hide/restore photos. Hidden photos remain in `photos/` and can be brought back from the same page.

@@ -1,5 +1,8 @@
 import { neon } from "@neondatabase/serverless";
 import { Pool, type QueryResultRow } from "pg";
+import type { MailingAddress } from "./mailing-address";
+
+export type { MailingAddress } from "./mailing-address";
 
 export type RsvpStatus = "yes" | "no" | "deciding";
 export type RsvpAuditEventType = "rsvp" | "guest_name";
@@ -32,6 +35,7 @@ export type Rsvp = {
   guestId: number;
   status: RsvpStatus;
   attendingCount: number | null;
+  mailingAddress: MailingAddress;
   createdAt: string;
   updatedAt: string;
 };
@@ -49,6 +53,7 @@ export type GuestWithRsvp = Guest & {
   rsvpStatus: RsvpStatus | null;
   attendingCount: number | null;
   attendeeDetails: RsvpAttendeeDetails[];
+  mailingAddress: MailingAddress;
 };
 
 export type RsvpAuditEvent = {
@@ -62,6 +67,7 @@ export type RsvpAuditEvent = {
   status: RsvpStatus | null;
   attendingCount: number | null;
   attendeeDetails: RsvpAttendeeDetails[];
+  mailingAddress: MailingAddress;
   createdAt: string;
 };
 
@@ -95,7 +101,16 @@ type GuestRow = {
   updated_at: string;
 };
 
-type RsvpRow = {
+type MailingAddressRow = {
+  mailing_address_line1: string | null;
+  mailing_address_line2: string | null;
+  mailing_address_city: string | null;
+  mailing_address_region: string | null;
+  mailing_address_postal_code: string | null;
+  mailing_address_country: string | null;
+};
+
+type RsvpRow = MailingAddressRow & {
   id: number;
   guest_id: number;
   status: RsvpStatus;
@@ -113,13 +128,13 @@ type RsvpAttendeeRow = {
   dietary_notes: string | null;
 };
 
-type GuestWithRsvpRow = GuestRow & {
+type GuestWithRsvpRow = GuestRow & MailingAddressRow & {
   rsvp_status: RsvpStatus | null;
   attending_count: number | null;
   attendee_details: string | null;
 };
 
-type RsvpAuditEventRow = {
+type RsvpAuditEventRow = MailingAddressRow & {
   id: number;
   event_type: RsvpAuditEventType;
   guest_id: number | null;
@@ -220,12 +235,24 @@ function toGuest(row: GuestRow): Guest {
   };
 }
 
+function toMailingAddress(row: MailingAddressRow): MailingAddress {
+  return {
+    line1: row.mailing_address_line1 ?? "",
+    line2: row.mailing_address_line2 ?? "",
+    city: row.mailing_address_city ?? "",
+    region: row.mailing_address_region ?? "",
+    postalCode: row.mailing_address_postal_code ?? "",
+    country: row.mailing_address_country ?? "",
+  };
+}
+
 function toRsvp(row: RsvpRow): Rsvp {
   return {
     id: row.id,
     guestId: row.guest_id,
     status: row.status,
     attendingCount: row.attending_count,
+    mailingAddress: toMailingAddress(row),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -663,6 +690,12 @@ export async function listGuestsWithRsvps(): Promise<GuestWithRsvp[]> {
        g.updated_at,
        r.status AS rsvp_status,
        r.attending_count,
+       r.mailing_address_line1,
+       r.mailing_address_line2,
+       r.mailing_address_city,
+       r.mailing_address_region,
+       r.mailing_address_postal_code,
+       r.mailing_address_country,
        (
          COALESCE(
            json_agg(
@@ -679,7 +712,7 @@ export async function listGuestsWithRsvps(): Promise<GuestWithRsvp[]> {
      FROM wedding_guests g
      LEFT JOIN wedding_rsvps r ON r.guest_id = g.id
      LEFT JOIN wedding_rsvp_attendees a ON a.rsvp_id = r.id
-     GROUP BY g.id, r.status, r.attending_count
+     GROUP BY g.id, r.id
      ORDER BY g.sort_order ASC, g.id ASC`,
   )) as GuestWithRsvpRow[];
 
@@ -688,6 +721,7 @@ export async function listGuestsWithRsvps(): Promise<GuestWithRsvp[]> {
     rsvpStatus: row.rsvp_status,
     attendingCount: row.attending_count,
     attendeeDetails: parseAttendeeDetails(row.attendee_details),
+    mailingAddress: toMailingAddress(row),
   }));
 }
 
@@ -698,7 +732,19 @@ export async function getGuestPageData(slug: string): Promise<GuestPageData | nu
   }
 
   const rsvpRows = (await sql().query(
-    `SELECT id, guest_id, status, attending_count, created_at, updated_at
+    `SELECT
+       id,
+       guest_id,
+       status,
+       attending_count,
+       mailing_address_line1,
+       mailing_address_line2,
+       mailing_address_city,
+       mailing_address_region,
+       mailing_address_postal_code,
+       mailing_address_country,
+       created_at,
+       updated_at
      FROM wedding_rsvps
      WHERE guest_id = $1`,
     [guest.id],
@@ -736,6 +782,12 @@ export async function listRsvpAuditEvents(): Promise<RsvpAuditEvent[]> {
        audit.guest_name_current,
        audit.status,
        audit.attending_count,
+       audit.mailing_address_line1,
+       audit.mailing_address_line2,
+       audit.mailing_address_city,
+       audit.mailing_address_region,
+       audit.mailing_address_postal_code,
+       audit.mailing_address_country,
        audit.created_at,
        (
          COALESCE(
@@ -774,6 +826,7 @@ export async function listRsvpAuditEvents(): Promise<RsvpAuditEvent[]> {
     status: row.status,
     attendingCount: row.attending_count,
     attendeeDetails: parseAttendeeDetails(row.attendee_details),
+    mailingAddress: toMailingAddress(row),
     createdAt: row.created_at,
   }));
 }
@@ -859,6 +912,7 @@ export async function saveRsvp(input: {
   status: RsvpStatus;
   attendingCount: number | null;
   attendeeDetails: RsvpAttendeeDetails[];
+  mailingAddress: MailingAddress;
 }) {
   const attendeeNames = input.attendeeDetails.map((attendee) => attendee.fullName);
   const attendeeMealTypes = input.attendeeDetails.map((attendee) => attendee.mealType);
@@ -866,11 +920,27 @@ export async function saveRsvp(input: {
 
   await sql().query(
     `WITH upserted AS (
-       INSERT INTO wedding_rsvps (guest_id, status, attending_count)
-       VALUES ($1, $2, $3)
+       INSERT INTO wedding_rsvps (
+         guest_id,
+         status,
+         attending_count,
+         mailing_address_line1,
+         mailing_address_line2,
+         mailing_address_city,
+         mailing_address_region,
+         mailing_address_postal_code,
+         mailing_address_country
+       )
+       VALUES ($1, $2, $3, $7, $8, $9, $10, $11, $12)
        ON CONFLICT (guest_id) DO UPDATE SET
          status = EXCLUDED.status,
          attending_count = EXCLUDED.attending_count,
+         mailing_address_line1 = EXCLUDED.mailing_address_line1,
+         mailing_address_line2 = EXCLUDED.mailing_address_line2,
+         mailing_address_city = EXCLUDED.mailing_address_city,
+         mailing_address_region = EXCLUDED.mailing_address_region,
+         mailing_address_postal_code = EXCLUDED.mailing_address_postal_code,
+         mailing_address_country = EXCLUDED.mailing_address_country,
          updated_at = now()
        RETURNING id
      ),
@@ -918,9 +988,15 @@ export async function saveRsvp(input: {
          guest_slug,
          guest_name_current,
          status,
-         attending_count
+         attending_count,
+         mailing_address_line1,
+         mailing_address_line2,
+         mailing_address_city,
+         mailing_address_region,
+         mailing_address_postal_code,
+         mailing_address_country
        )
-       SELECT 'rsvp', guest.id, guest.name, guest.slug, guest.name, $2, $3
+       SELECT 'rsvp', guest.id, guest.name, guest.slug, guest.name, $2, $3, $7, $8, $9, $10, $11, $12
        FROM wedding_guests guest
        WHERE guest.id = $1
        RETURNING id
@@ -953,6 +1029,12 @@ export async function saveRsvp(input: {
       attendeeNames,
       attendeeMealTypes,
       attendeeDietaryNotes,
+      input.mailingAddress.line1,
+      input.mailingAddress.line2,
+      input.mailingAddress.city,
+      input.mailingAddress.region,
+      input.mailingAddress.postalCode,
+      input.mailingAddress.country,
     ],
   );
 }
