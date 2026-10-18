@@ -45,6 +45,13 @@ Use npm for scripts and dependency installs. `package-lock.json` is the lockfile
 - Cloud sessions have no production credentials. Never set `DATABASE_URL` in the cloud environment's variables: process env wins over `.env.local`, so dev, build, and `db:migrate` would all point at it.
 - `.gitignore` re-includes only `.claude/settings.json` from `.claude/`; keep local state such as `settings.local.json`, `launch.json`, and `worktrees/` untracked.
 
+## Workflow
+
+- After making any requested changes, always commit and push directly to the `main` branch (never a feature branch or PR).
+- Then wait for the deploy to finish and verify the changes on the live website at `https://sexiwedding.com`.
+- Show screenshots in the chat as early as possible: as soon as a visual change renders locally, capture screenshots of the relevant pages (mobile width first) and send them to the user before committing and pushing, then send more when verifying on the live site. Send them rather than only describing what changed.
+- Sharing screenshots is not a confirmation step: do not wait for the user to reply before pushing to `main`.
+
 ## Deployment
 
 - Production is hosted on Vercel at `https://sexiwedding.com`.
