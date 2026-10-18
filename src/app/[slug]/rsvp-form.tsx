@@ -598,8 +598,7 @@ export function RsvpForm({
               Mailing Address
             </p>
             <p className="font-normal leading-relaxed text-[#ffd6e4]/90">
-              Where can we send you mail? Tip: paste your whole address into
-              the first box and we&apos;ll fill in the rest.
+              Where can we send you mail?
             </p>
           </div>
 
