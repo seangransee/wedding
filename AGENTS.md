@@ -35,12 +35,20 @@ Use npm for scripts and dependency installs. `package-lock.json` is the lockfile
 - Local development expects `DATABASE_URL`; `.env.local` points at `postgresql://localhost:5432/wedding_local`.
 - `src/lib/db.ts` chooses `pg.Pool` for localhost/127.0.0.1/::1 connection strings and Neon serverless SQL for remote connection strings.
 - The app code will also read `POSTGRES_URL`, `POSTGRES_PRISMA_URL`, or `POSTGRES_URL_NON_POOLING` as fallbacks, but `scripts/migrate.mjs` requires `DATABASE_URL`.
-- Migrations are idempotent SQL files sorted by filename. There is no migration ledger table; rerunning migrations reapplies all guarded statements.
+- Migrations are idempotent SQL files sorted by filename. There is no migration ledger table; rerunning migrations reapplies all guarded statements. Keep them safe to rerun against populated data, since every production build reruns them all.
+
+## Claude Code Cloud Sessions
+
+- `.claude/settings.json` runs `scripts/cloud-session-start.sh` on SessionStart. It exits immediately unless `CLAUDE_CODE_REMOTE=true`, so it only does work in cloud sessions.
+- In the cloud it runs `npm ci` when `package.json`, `package-lock.json`, `.npmrc`, or the script change; starts the VM's pre-installed PostgreSQL 16; creates `wedding_local` owned by a VM-local `wedding` role; writes `.env.local` if missing; runs migrations; and loads `scripts/dev-seed.sql` sample guests when `wedding_guests` is empty.
+- `.env.local` uses the cloud environment's `ADMIN_PASSWORD` when set, otherwise a random one. Read it from `.env.local` to log in to `/admin`.
+- Cloud sessions have no production credentials. Never set `DATABASE_URL` in the cloud environment's variables: process env wins over `.env.local`, so dev, build, and `db:migrate` would all point at it.
+- `.gitignore` re-includes only `.claude/settings.json` from `.claude/`; keep local state such as `settings.local.json`, `launch.json`, and `worktrees/` untracked.
 
 ## Deployment
 
 - Production is hosted on Vercel at `https://sexiwedding.com`.
-- After committing and pushing to `main`, always run `npm run db:migrate` against production.
+- Production migrations run automatically: `vercel.json` sets the build command to run `npm run db:migrate` before `npm run build` when `VERCEL_ENV` is `production`, so every production deployment migrates before the new code goes live and a failed migration fails the deploy. Preview builds skip migrations because Preview shares the production `DATABASE_URL`, so never run unmerged migrations from a preview. Do not run `npm run db:migrate` against production by hand unless explicitly instructed.
 - Do not make changes, submit forms, clear cookies, run migrations, or otherwise mutate anything in production at `sexiwedding.com` unless explicitly instructed. It is OK to read from production for verification or debugging.
 
 ## Data Model

@@ -44,3 +44,8 @@ next-env.d.ts
 
 # Project agent instructions should be tracked even if globally ignored.
 !AGENTS.md
+
+# Share Claude Code project settings (the cloud session hook), not local state.
+!/.claude/
+/.claude/*
+!/.claude/settings.json
