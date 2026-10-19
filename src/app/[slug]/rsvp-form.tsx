@@ -578,7 +578,7 @@ export function RsvpForm({
         </div>
       ) : null}
 
-      {status ? (
+      {status === "yes" ? (
         <div
           role="group"
           aria-labelledby="mailing-address-heading"
