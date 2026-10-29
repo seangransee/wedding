@@ -36,7 +36,7 @@ The reception will wrap up at midnight. We plan to make every minute count, so b
 
 ### When is the RSVP deadline?
 
-Please RSVP by November 1st. We need final head counts for our vendors by that date, so we cannot accommodate late RSVPs. If you miss the deadline, please reach out to us directly at lexiandseanwedding@gmail.com and text Lexi at 773.558.9132.
+Please RSVP by November 14th. We need final head counts for our vendors by that date, so we cannot accommodate late RSVPs. If you miss the deadline, please reach out to us directly at lexiandseanwedding@gmail.com and text Lexi at 773.558.9132.
 
 ### How do I RSVP?
 

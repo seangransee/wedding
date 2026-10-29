@@ -293,13 +293,13 @@ export function RsvpForm({
           {fuckYes ? (
             <>
               Please RSVP with a final answer by{" "}
-              <strong className="font-semibold text-[#ffd6e4]">November 1st</strong>.
+              <strong className="font-semibold text-[#ffd6e4]">November 14th</strong>.
             </>
           ) : (
             <>
               If you&apos;re not sure, select &quot;still deciding&quot; so we know
               you saw this. Please RSVP with a final answer by{" "}
-              <strong className="font-semibold text-[#ffd6e4]">November 1st</strong>.
+              <strong className="font-semibold text-[#ffd6e4]">November 14th</strong>.
             </>
           )}
         </p>
