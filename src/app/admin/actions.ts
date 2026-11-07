@@ -19,6 +19,7 @@ import {
   updateGuestName,
   updateGuestNotes,
   updateGuestPhoneNumber,
+  updateGuestReh,
   updateGuestSlug,
 } from "@/lib/db";
 import { isValidSlug, slugify } from "@/lib/slug";
@@ -234,6 +235,30 @@ export async function setFriDin(
   revalidatePath("/admin");
   revalidatePath(`/${updated.slug}`);
   return { ok: true, message: friDin ? "Friday dinner on." : "Friday dinner off." };
+}
+
+export async function setReh(
+  _previousState: AdminActionState,
+  formData: FormData,
+): Promise<AdminActionState> {
+  await requireAdmin();
+
+  const guestId = Number(formData.get("guestId"));
+  const reh = String(formData.get("reh") ?? "") === "true";
+
+  if (!Number.isInteger(guestId) || guestId < 1) {
+    return { ok: false, message: "Guest id is invalid." };
+  }
+
+  const updated = await updateGuestReh(guestId, reh);
+
+  if (!updated) {
+    return { ok: false, message: "Guest was not found." };
+  }
+
+  revalidatePath("/admin");
+  revalidatePath(`/${updated.slug}`);
+  return { ok: true, message: reh ? "Rehearsal on (Friday dinner too)." : "Rehearsal off." };
 }
 
 export async function editGuestName(

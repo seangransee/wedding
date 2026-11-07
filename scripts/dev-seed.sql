@@ -2,14 +2,14 @@
 -- automatically). Every name, slug, and contact detail here is made up.
 
 INSERT INTO wedding_guests
-  (name, slug, guest_count, sort_order, notes, phone_number, email_address, invite_sent, fuck_yes, fri_din)
+  (name, slug, guest_count, sort_order, notes, phone_number, email_address, invite_sent, fuck_yes, fri_din, reh)
 VALUES
-  ('Sean and Lexi', 'sean-and-lexi', 2, 1, 'Hidden from the admin audit table', '', '', true, true, true),
-  ('Sample Solo Guest', 'sample-solo-guest', 1, 2, '', '555-0101', 'solo@example.com', true, false, false),
-  ('Sample Couple', 'sample-couple', 2, 3, 'Has RSVPed yes', '555-0102', 'couple@example.com', true, false, true),
-  ('Sample Family', 'sample-family', 4, 4, 'Still deciding', '', 'family@example.com', true, false, false),
-  ('Sample Regrets', 'sample-regrets', 2, 5, 'Declined', '', '', true, false, false),
-  ('Sample Not Yet Invited', 'sample-not-yet-invited', 2, 6, 'Slug is still editable', '', '', false, false, false);
+  ('Sean and Lexi', 'sean-and-lexi', 2, 1, 'Hidden from the admin audit table', '', '', true, true, true, true),
+  ('Sample Solo Guest', 'sample-solo-guest', 1, 2, '', '555-0101', 'solo@example.com', true, false, false, false),
+  ('Sample Couple', 'sample-couple', 2, 3, 'Has RSVPed yes', '555-0102', 'couple@example.com', true, false, true, true),
+  ('Sample Family', 'sample-family', 4, 4, 'Still deciding', '', 'family@example.com', true, false, false, false),
+  ('Sample Regrets', 'sample-regrets', 2, 5, 'Declined', '', '', true, false, false, false),
+  ('Sample Not Yet Invited', 'sample-not-yet-invited', 2, 6, 'Slug is still editable', '', '', false, false, false, false);
 
 INSERT INTO wedding_rsvps (guest_id, status, attending_count)
 SELECT id, 'yes', 2 FROM wedding_guests WHERE slug IN ('sean-and-lexi', 'sample-couple');

@@ -40,6 +40,24 @@ export function getWelcomePartyCalendarUrl({
   return `https://www.google.com/calendar/render?${params.toString()}`;
 }
 
+export function getRehearsalCalendarUrl({
+  websiteUrl = WEDDING_WEBSITE_URL,
+}: Pick<WeddingCalendarUrlOptions, "websiteUrl"> = {}) {
+  const params = new URLSearchParams({
+    action: "TEMPLATE",
+    text: "Wedding Rehearsal – Sean & Lexi's Wedding",
+    dates: "20261211T160000/20261211T170000",
+    ctz: "America/Chicago",
+    location:
+      "The Blackstone, Autograph Collection, 636 South Michigan Avenue, Chicago, IL 60605, USA",
+    details: `Wedding rehearsal at The Blackstone Hotel\n\n${websiteUrl}`,
+  });
+
+  params.append("sprop", `website:${websiteUrl}`);
+
+  return `https://www.google.com/calendar/render?${params.toString()}`;
+}
+
 export const WEDDING_DETAILS = {
   brand: "Sean + Lexi = Sexi",
   dateLabel: "December 12, 2026",

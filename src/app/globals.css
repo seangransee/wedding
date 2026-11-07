@@ -142,105 +142,193 @@ body {
   display: none;
 }
 
-.guest-schedule-day > div {
-  position: relative;
-  gap: 0;
-  padding-left: 1.75rem;
+/* Schedule: one block per day (script weekday + small-caps date), centered event cards. */
+.schedule-days {
+  display: grid;
+  gap: 2rem;
+  padding-top: 1.75rem;
 }
 
-.guest-schedule-day h3 {
-  border: 0;
-  border-bottom: 1px solid rgba(255, 214, 228, 0.55);
-  padding: 0 0 1rem;
-  margin-bottom: 1.5rem;
-  /* Day headings ("Saturday, December 12, 2026") always stay on one line. */
-  font-size: clamp(1rem, 6.4vw, 2.5rem);
-  font-weight: 700;
-  line-height: 1.2;
-  text-transform: none;
-  letter-spacing: normal;
+.schedule-day {
+  display: grid;
+  font-variant-numeric: lining-nums;
+  align-content: start;
+  gap: 1.25rem;
+}
+
+.schedule-day-header {
+  display: grid;
+  justify-items: center;
+  text-align: center;
+}
+
+.schedule-day-weekday {
+  color: var(--blush-pink);
+  font-size: 3rem;
+  font-weight: 400;
+  line-height: 1;
+}
+
+/* Dates ("December 12, 2026") always stay on one line. */
+.schedule-day-date {
+  margin-top: 0.35rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: 0.28em;
+  line-height: 1.4;
+  text-transform: uppercase;
   white-space: nowrap;
 }
 
-.guest-schedule-day h4 {
-  position: relative;
-  border: 0;
-  padding-top: 0;
-  margin-bottom: 0.35rem;
-}
-
-.guest-schedule-day h4::before {
-  content: "";
-  position: absolute;
-  left: -1.75rem;
-  top: 0.6em;
-  width: 0.55rem;
-  height: 0.55rem;
-  border-radius: 50%;
-  background: var(--blush-pink);
-}
-
-.guest-schedule-day p + h4 {
-  margin-top: 2rem;
-}
-
-/* Event time: the paragraph right after an event (###) heading. */
-.guest-schedule-day h4 + p {
-  margin-top: 0.15rem;
-  font-size: 0.95rem;
-  font-weight: 600;
+.schedule-day-intro {
+  text-align: center;
+  font-size: 1.15rem;
   line-height: 1.6;
-  letter-spacing: 0.14em;
+}
+
+.schedule-events {
+  display: grid;
+  gap: 0.85rem;
+  list-style: none;
+  padding: 0;
+}
+
+.schedule-event {
+  display: grid;
+  justify-items: center;
+  border: 1px solid rgba(255, 214, 228, 0.3);
+  border-radius: 0.75rem;
+  background: linear-gradient(180deg, rgba(255, 246, 250, 0.07), rgba(255, 246, 250, 0.025));
+  padding: 1.35rem 1rem 1.3rem;
+  text-align: center;
+}
+
+.schedule-event-time {
+  color: var(--blush-pink);
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  line-height: 1.5;
   text-transform: uppercase;
 }
 
-/* Venue/address lines: a list under an event renders as a tight stacked block. */
-.guest-schedule-day ul {
-  gap: 0;
-  margin-top: 0.5rem;
-  padding-left: 0;
-  line-height: 1.55;
+.schedule-event-title {
+  margin-top: 0.3rem;
+  font-size: 2rem;
+  font-weight: 600;
+  line-height: 1.15;
 }
 
-.guest-schedule-day li {
-  list-style: none;
+.schedule-event-venue {
+  display: grid;
+  margin-top: 0.7rem;
+  font-size: 1.15rem;
+  font-style: normal;
+  line-height: 1.45;
 }
 
-.guest-schedule-day li:first-child {
+.schedule-event-venue-name {
   font-weight: 600;
 }
 
-.guest-schedule-day li:last-child:not(:first-child) {
+.schedule-event-venue-line:last-child {
   opacity: 0.8;
 }
 
-.guest-schedule-day li a {
+.schedule-event-venue a {
+  display: inline-block;
   padding-block: 0.15rem;
 }
 
 /* Closing note under an event's venue block, e.g. "Regrets only". */
-.guest-schedule-day ul + p {
-  justify-self: start;
-  margin-top: 0.85rem;
+.schedule-event-note {
+  margin-top: 0.9rem;
   border: 1px solid rgba(255, 214, 228, 0.55);
   border-radius: 999px;
   background: rgba(255, 246, 250, 0.06);
-  padding: 0.3rem 0.95rem;
-  font-size: 0.85rem;
+  padding: 0.25rem 0.9rem;
+  font-size: 0.75rem;
   font-weight: 600;
-  line-height: 1.5;
   letter-spacing: 0.2em;
+  line-height: 1.5;
   text-transform: uppercase;
 }
 
-.guest-schedule-day a {
-  display: inline-block;
-  padding-block: 0.3rem;
+.schedule-event-calendar {
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  margin-top: 0.35rem;
+  margin-bottom: -0.6rem;
+  color: var(--blush-pink);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-decoration: underline dashed 1px;
+  text-underline-offset: 4px;
+  text-transform: uppercase;
 }
 
-.guest-schedule-day a:focus-visible {
+.schedule-event a:focus-visible {
   outline: 2px solid var(--blush-pink);
   outline-offset: 4px;
+}
+
+.schedule-day-divider {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  color: var(--blush-pink);
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.schedule-day-divider::before,
+.schedule-day-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 214, 228, 0.55), transparent);
+}
+
+/* Two days side by side on wide screens, split by a thin rule. */
+@media (min-width: 1024px) {
+  .schedule-days-multi {
+    grid-template-columns: 1fr auto 1fr;
+    gap: 2.5rem;
+  }
+
+  .schedule-days-multi .schedule-day-divider {
+    flex-direction: column;
+    gap: 0.9rem;
+  }
+
+  .schedule-days-multi .schedule-day-divider::before,
+  .schedule-days-multi .schedule-day-divider::after {
+    width: 1px;
+    height: auto;
+    background: linear-gradient(180deg, transparent, rgba(255, 214, 228, 0.55), transparent);
+  }
+}
+
+@media (min-width: 640px) {
+  .schedule-day-weekday {
+    font-size: 3.5rem;
+  }
+
+  .schedule-event {
+    padding: 1.6rem 1.5rem 1.5rem;
+  }
+
+  .schedule-event-title {
+    font-size: 2.25rem;
+  }
+}
+
+/* Single-day schedules sit in a narrower centered column. */
+.schedule-days:not(.schedule-days-multi) .schedule-day {
+  justify-self: center;
+  width: min(100%, 34rem);
 }
 
 .guest-hero-copy h1 {

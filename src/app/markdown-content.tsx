@@ -589,6 +589,58 @@ export function MarkdownCopy({ fileName }: { fileName: string }) {
   return <div className="grid gap-3">{renderNodes(parseMarkdown(readContentFile(fileName)), false, false)}</div>;
 }
 
+export type ScheduleEvent = {
+  title: string;
+  time: string;
+  venue: string[];
+  notes: string[];
+};
+
+export type ScheduleDay = {
+  weekday: string;
+  date: string;
+  intro: string[];
+  events: ScheduleEvent[];
+};
+
+/**
+ * Reads a schedule file (`##` day, `###` events; under each event the first
+ * paragraph is the time, a `-` list is the venue block, and later paragraphs
+ * are notes) into structured data for the Schedule section.
+ */
+export function readScheduleDay(fileName: string): ScheduleDay {
+  const day: ScheduleDay = { weekday: "", date: "", intro: [], events: [] };
+  let event: ScheduleEvent | null = null;
+
+  for (const node of parseMarkdown(readContentFile(fileName))) {
+    if (node.type === "heading" && node.level <= 2) {
+      // "Friday, December 11, 2026" -> weekday "Friday", date "December 11, 2026".
+      const [weekday, ...rest] = node.text.split(",");
+      day.weekday = rest.length ? weekday.trim() : "";
+      day.date = rest.length ? rest.join(",").trim() : node.text.trim();
+    } else if (node.type === "heading") {
+      event = { title: node.text, time: "", venue: [], notes: [] };
+      day.events.push(event);
+    } else if (node.type === "list") {
+      event?.venue.push(...node.items);
+    } else if (node.type === "paragraph") {
+      if (!event) {
+        day.intro.push(node.text);
+      } else if (!event.time && event.venue.length === 0 && event.notes.length === 0) {
+        event.time = node.text;
+      } else {
+        event.notes.push(node.text);
+      }
+    }
+  }
+
+  return day;
+}
+
+export function InlineMarkdown({ text }: { text: string }) {
+  return <>{renderInlineMarkdown(text)}</>;
+}
+
 export function MarkdownContent({
   children,
   buttonizeBookingLinks = false,

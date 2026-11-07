@@ -32,6 +32,7 @@ import {
   setFriDin,
   setFuckYes,
   setInviteSent,
+  setReh,
   type AdminActionState,
 } from "./actions";
 
@@ -40,7 +41,7 @@ const initialState: AdminActionState = {
   message: "",
 };
 
-export type AdminSortKey = "default" | "name" | "max" | "invite" | "rsvp" | "attending" | "friDin" | "fuckYes";
+export type AdminSortKey = "default" | "name" | "max" | "invite" | "rsvp" | "attending" | "friDin" | "reh" | "fuckYes";
 export type AdminSortDirection = "asc" | "desc";
 
 type EditableColumnKey = "name" | "slug" | "notes" | "phoneNumber" | "emailAddress" | "guestCount";
@@ -54,6 +55,7 @@ const SORT_KEY_TO_COLUMN_KEY: Record<Exclude<AdminSortKey, "default">, string> =
   rsvp: "rsvpStatus",
   attending: "attendingCount",
   friDin: "friDin",
+  reh: "reh",
   fuckYes: "fuckYes",
 };
 
@@ -64,6 +66,7 @@ const COLUMN_KEY_TO_SORT_KEY: Record<string, Exclude<AdminSortKey, "default">> =
   rsvpStatus: "rsvp",
   attendingCount: "attending",
   friDin: "friDin",
+  reh: "reh",
   fuckYes: "fuckYes",
 };
 
@@ -82,6 +85,7 @@ const BASE_COLUMN_WIDTHS = {
   attendeeDetails: 240,
   actions: 100,
   friDin: 78,
+  reh: 104,
   fuckYes: 82,
 };
 
@@ -212,6 +216,7 @@ function makeAdminCsv(guests: GuestWithRsvp[], auditEvents: RsvpAuditEvent[]) {
     "invite_sent",
     "fuck_yes",
     "fri_din",
+    "reh",
     "sort_order",
     "current_rsvp_status",
     "current_attending_count",
@@ -247,6 +252,7 @@ function makeAdminCsv(guests: GuestWithRsvp[], auditEvents: RsvpAuditEvent[]) {
     guest.inviteSent,
     guest.fuckYes,
     guest.friDin,
+    guest.reh,
     guest.sortOrder,
     guest.rsvpStatus,
     guest.attendingCount,
@@ -275,6 +281,7 @@ function makeAdminCsv(guests: GuestWithRsvp[], auditEvents: RsvpAuditEvent[]) {
     event.guestName,
     event.guestSlug,
     `${INVITATION_BASE_URL}/${event.guestSlug}`,
+    "",
     "",
     "",
     "",
@@ -743,20 +750,26 @@ export function FuckYesToggle({
   );
 }
 
-export function FriDinToggle({
+function GuestFlagToggle({
   guestId,
-  friDin,
+  value,
+  field,
+  label,
+  action,
 }: {
   guestId: number;
-  friDin: boolean;
+  value: boolean;
+  field: "friDin" | "reh";
+  label: string;
+  action: (state: AdminActionState, formData: FormData) => Promise<AdminActionState>;
 }) {
-  const [checked, setChecked] = useState(friDin);
+  const [checked, setChecked] = useState(value);
   const [message, setMessage] = useState("");
   const [isSaving, startTransition] = useTransition();
 
   useEffect(() => {
-    setChecked(friDin);
-  }, [friDin]);
+    setChecked(value);
+  }, [value]);
 
   function toggle() {
     const nextChecked = !checked;
@@ -764,9 +777,9 @@ export function FriDinToggle({
     setMessage("Saving...");
 
     startTransition(() => {
-      void setFriDin(initialState, makeFormData({
+      void action(initialState, makeFormData({
         guestId,
-        friDin: nextChecked,
+        [field]: nextChecked,
       })).then((result) => {
         setMessage(result.message);
 
@@ -775,7 +788,7 @@ export function FriDinToggle({
         }
       }).catch(() => {
         setChecked(checked);
-        setMessage("Friday dinner could not be saved.");
+        setMessage(`${label} could not be saved.`);
       });
     });
   }
@@ -786,8 +799,8 @@ export function FriDinToggle({
         type="button"
         disabled={isSaving}
         onClick={toggle}
-        aria-label={checked ? "Turn off Friday dinner" : "Turn on Friday dinner"}
-        title={message || (checked ? "Friday dinner on" : "Friday dinner off")}
+        aria-label={checked ? `Turn off ${label.toLowerCase()}` : `Turn on ${label.toLowerCase()}`}
+        title={message || `${label} ${checked ? "on" : "off"}`}
         className={clsx(
           "grid size-6 place-items-center border transition disabled:cursor-wait disabled:opacity-65",
           checked
@@ -1024,7 +1037,11 @@ function FuckYesCell({ row }: RenderCellProps<GuestWithRsvp>) {
 }
 
 function FriDinCell({ row }: RenderCellProps<GuestWithRsvp>) {
-  return <FriDinToggle guestId={row.id} friDin={row.friDin} />;
+  return <GuestFlagToggle guestId={row.id} value={row.friDin} field="friDin" label="Friday dinner" action={setFriDin} />;
+}
+
+function RehCell({ row }: RenderCellProps<GuestWithRsvp>) {
+  return <GuestFlagToggle guestId={row.id} value={row.reh} field="reh" label="Rehearsal" action={setReh} />;
 }
 
 function makeFormData(values: Record<string, string | number | boolean>) {
@@ -1136,18 +1153,24 @@ export function GuestTable({
     return () => resizeObserver.disconnect();
   }, []);
 
+  const [flagFilter, setFlagFilter] = useState<"all" | "friDin" | "reh">("all");
   const queryTokens = useMemo(() => {
     const normalized = query.trim().toLowerCase();
     return normalized ? normalized.split(/\s+/) : [];
   }, [query]);
-  const isSearching = queryTokens.length > 0;
+  const isFiltering = queryTokens.length > 0 || flagFilter !== "all";
 
   const visibleRows = useMemo(() => {
+    const flagRows =
+      flagFilter === "friDin" ? rows.filter((row) => row.friDin)
+      : flagFilter === "reh" ? rows.filter((row) => row.reh)
+      : rows;
+
     if (queryTokens.length === 0) {
-      return rows;
+      return flagRows;
     }
 
-    return rows.filter((row) => {
+    return flagRows.filter((row) => {
       // Match every token somewhere in the guest name or any RSVP place-card name,
       // so "Sean" and "Lexi" both find the "Sean and Lexi" invitation.
       const haystack = [row.name, ...row.attendeeDetails.map((attendee) => attendee.fullName)]
@@ -1156,11 +1179,11 @@ export function GuestTable({
 
       return queryTokens.every((token) => haystack.includes(token));
     });
-  }, [queryTokens, rows]);
+  }, [flagFilter, queryTokens, rows]);
 
   // Drag-to-reorder saves the full ordered id list, so only allow it when the
   // complete, unfiltered list is shown.
-  const canReorder = isDefaultSort && !isSearching;
+  const canReorder = isDefaultSort && !isFiltering;
 
   const sortColumns = useMemo<SortColumn[]>(() => {
     if (activeSortKey === "default") {
@@ -1351,6 +1374,15 @@ export function GuestTable({
       renderCell: FriDinCell,
     },
     {
+      key: "reh",
+      name: "Rehearsal",
+      width: columnWidths.reh,
+      minWidth: 96,
+      sortable: true,
+      resizable: true,
+      renderCell: RehCell,
+    },
+    {
       key: "notes",
       name: "Notes",
       width: columnWidths.notes,
@@ -1511,14 +1543,38 @@ export function GuestTable({
             className="min-h-8 w-full border border-[#df7fa3] bg-[#fff8fb] pl-8 pr-3 text-sm font-normal normal-case tracking-normal text-[#4a1027] outline-none transition placeholder:text-[#4a1027]/40 focus:border-[#be185d] focus:ring-1 focus:ring-[#be185d]/30"
           />
         </div>
-        {isSearching ? (
+        <div className="flex items-center gap-2" role="group" aria-label="Show only">
+          {([
+            ["friDin", "Friday dinner"],
+            ["reh", "Rehearsal"],
+          ] as const).map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              aria-pressed={flagFilter === value}
+              onClick={() => setFlagFilter((current) => (current === value ? "all" : value))}
+              className={clsx(
+                "inline-flex min-h-8 items-center border px-2.5 text-xs font-semibold uppercase tracking-[0.08em] transition",
+                flagFilter === value
+                  ? "border-[#be185d] bg-[#be185d] text-white hover:bg-[#9d174d]"
+                  : "border-[#df7fa3] bg-[#fff8fb] text-[#7a1239] hover:border-[#be185d] hover:bg-[#ffe0ec]",
+              )}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        {isFiltering ? (
           <div className="flex items-center gap-2 text-xs font-semibold text-[#7a1239]">
             <span className="tabular-nums" role="status" aria-live="polite">
               {visibleRows.length} of {rows.length} shown
             </span>
             <button
               type="button"
-              onClick={() => setQuery("")}
+              onClick={() => {
+                setQuery("");
+                setFlagFilter("all");
+              }}
               className="inline-flex min-h-7 items-center border border-[#df7fa3] bg-[#fff8fb] px-2 uppercase tracking-[0.08em] text-[#7a1239] transition hover:border-[#be185d] hover:bg-[#ffe0ec]"
             >
               Clear
@@ -1544,7 +1600,7 @@ export function GuestTable({
           renderers={{
             noRowsFallback: (
               <div className="grid h-full place-items-center px-3 py-8 text-sm text-[#8f5070]">
-                {isSearching ? "No guests match your search." : "No guests have been added yet."}
+                {isFiltering ? "No guests match these filters." : "No guests have been added yet."}
               </div>
             ),
           }}

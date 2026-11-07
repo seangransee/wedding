@@ -77,6 +77,7 @@ export default async function GuestPage({ params }: PageProps) {
       panelNavLabel="RSVP"
       showHotelBlocks
       showFridayWelcome={data.guest.friDin}
+      showRehearsal={data.guest.reh}
       scheduleFirst={data.rsvp?.status === "yes" || data.rsvp?.status === "no"}
       panel={
         <RsvpForm

@@ -17,6 +17,7 @@ type WeddingPageShellProps = {
   panelNavLabel?: string;
   showHotelBlocks?: boolean;
   showFridayWelcome?: boolean;
+  showRehearsal?: boolean;
   scheduleFirst?: boolean;
 };
 
@@ -87,6 +88,7 @@ export async function WeddingPageShell({
   panelNavLabel = "Wedding Details",
   showHotelBlocks = false,
   showFridayWelcome = false,
+  showRehearsal = false,
   scheduleFirst = false,
 }: WeddingPageShellProps) {
   const photos = await getWeddingPhotos();
@@ -103,7 +105,11 @@ export async function WeddingPageShell({
         heroCopy={<EventHeroCopy calendarWebsiteUrl={calendarWebsiteUrl} />}
         panel={panel}
         schedule={
-          <ScheduleSection showFridayWelcome={showFridayWelcome} calendarWebsiteUrl={calendarWebsiteUrl} />
+          <ScheduleSection
+            showFridayWelcome={showFridayWelcome}
+            showRehearsal={showRehearsal}
+            calendarWebsiteUrl={calendarWebsiteUrl}
+          />
         }
         gifts={<RegistrySection />}
         hotels={
