@@ -1,4 +1,5 @@
 import { Fragment } from "react";
+import { CalendarPlus } from "lucide-react";
 import { InlineMarkdown, readScheduleDay, type ScheduleEvent } from "./markdown-content";
 import { getRehearsalCalendarUrl, getWeddingCalendarUrl, getWelcomePartyCalendarUrl } from "./wedding-details";
 
@@ -54,13 +55,14 @@ function ScheduleEventCard({ event }: { event: ScheduleEventWithCalendar }) {
         </p>
       ))}
       {event.calendarHref ? (
-        // Shown only to guests who have already RSVP'd (see .guest-schedule-calendar-link in globals.css).
         <a
           href={event.calendarHref}
           target="_blank"
           rel="noopener noreferrer"
-          className="guest-schedule-calendar-link schedule-event-calendar"
+          className="schedule-event-calendar"
+          aria-label={`Add ${event.title} to calendar`}
         >
+          <CalendarPlus aria-hidden="true" strokeWidth={1.75} />
           Add to calendar
         </a>
       ) : null}
