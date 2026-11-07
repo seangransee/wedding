@@ -15,7 +15,11 @@ import {
   type AdminSortDirection,
   type AdminSortKey,
 } from "./admin-client";
-import { calculateRsvpSummaryCounts } from "./rsvp-summary";
+import {
+  calculateRsvpSummaryCounts,
+  findIncompleteRsvps,
+  type MissingAttendeeDetails,
+} from "./rsvp-summary";
 
 export const dynamic = "force-dynamic";
 
@@ -83,6 +87,20 @@ function attendeeDetailsSummary(attendees: RsvpAttendeeDetails[]) {
     })
     .filter(Boolean)
     .join("; ");
+}
+
+function missingDetailsLabel(attendee: MissingAttendeeDetails) {
+  const missing = [
+    attendee.missingName ? "place card" : "",
+    attendee.missingMeal ? "meal" : "",
+  ].filter(Boolean);
+  const who = attendee.fullName || `Guest ${attendee.position}`;
+
+  return `${who}: needs ${missing.join(" + ")}`;
+}
+
+function guestContactLine(guest: { phoneNumber: string; emailAddress: string }) {
+  return [guest.phoneNumber.trim(), guest.emailAddress.trim()].filter(Boolean).join(" · ");
 }
 
 function getSearchParam(
@@ -209,6 +227,9 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
   const isDefaultSort = activeSortKey === "default";
   const { yesCount, yesMaybeCount, yesMaybeNoResponseCount, friDinnerCount } =
     calculateRsvpSummaryCounts(guests);
+  const incomplete = findIncompleteRsvps(guests);
+  const incompleteCount =
+    incomplete.awaitingResponse.length + incomplete.missingDetails.length;
 
   return (
     <main className="min-h-screen bg-[#f9d8e6] px-3 py-3 text-[#4a1027] sm:px-4">
@@ -232,6 +253,13 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
             >
               Edit photos
             </Link>
+            <a
+              href="#incomplete"
+              className="inline-flex h-8 items-center justify-center border border-[#df7fa3] bg-[#fff8fb] px-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#7a1239] transition hover:border-[#be185d] hover:bg-[#fff1f7]"
+            >
+              Incomplete
+              <span className="ml-1.5 tabular-nums text-[#be185d]">{incompleteCount}</span>
+            </a>
             <AdminCsvExportButton auditEvents={auditEvents} guests={sortedGuests} />
             <div className="grid grid-cols-1 overflow-hidden border border-[#df7fa3] bg-[#fff8fb] text-xs sm:grid-cols-4">
               <div className="border-r border-[#efb5c9] px-2 py-1">
@@ -271,6 +299,97 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
             guests={sortedGuests}
             isDefaultSort={isDefaultSort}
           />
+        </div>
+
+        <div id="incomplete" className="scroll-mt-3 border-t border-[#df7fa3] bg-[#fff1f7]">
+          <div className="flex items-center justify-between border-b border-[#df7fa3] bg-[#f4bfd2] px-3 py-2">
+            <h2 className="text-sm font-semibold uppercase tracking-[0.12em] text-[#7a1239]">
+              Incomplete
+            </h2>
+            <span className="text-xs tabular-nums text-[#8f5070]">
+              {incompleteCount} invitation{incompleteCount === 1 ? "" : "s"}
+            </span>
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2">
+            <div className="border-b border-[#df7fa3] lg:border-r lg:border-b-0">
+              <div className="flex items-center justify-between border-b border-[#efb5c9] bg-[#ffeaf2] px-3 py-1.5 text-xs">
+                <span className="font-semibold text-[#8f2448]">Haven&apos;t said yes or no</span>
+                <span className="tabular-nums text-[#8f5070]">{incomplete.awaitingResponse.length}</span>
+              </div>
+              <div className="max-h-[24rem] overflow-auto bg-[#fff8fb]">
+                {incomplete.awaitingResponse.length === 0 ? (
+                  <p className="px-3 py-4 text-center text-sm text-[#8f5070]">
+                    Everyone has answered yes or no.
+                  </p>
+                ) : (
+                  <ul className="text-xs">
+                    {incomplete.awaitingResponse.map((guest) => {
+                      const contact = guestContactLine(guest);
+                      return (
+                        <li
+                          key={guest.id}
+                          className="flex flex-wrap items-center gap-x-2 gap-y-0.5 border-b border-[#efb5c9] px-3 py-1.5 odd:bg-[#fff8fb] even:bg-[#ffeaf2]"
+                        >
+                          <span className="font-semibold text-[#4a1027]">{guest.name}</span>
+                          <span className={`inline-flex border px-1.5 py-px text-[0.65rem] font-semibold ${rsvpClassName(guest.rsvpStatus)}`}>
+                            {rsvpLabel(guest.rsvpStatus)}
+                          </span>
+                          {guest.inviteSent ? null : (
+                            <span className="border border-dashed border-[#c084a0] px-1.5 py-px text-[0.65rem] text-[#8f5070]">
+                              Invite not sent
+                            </span>
+                          )}
+                          <span className="font-mono text-[0.68rem] text-[#be185d]">/{guest.slug}</span>
+                          {contact ? (
+                            <span className="w-full text-[0.7rem] text-[#7d3150]">{contact}</span>
+                          ) : null}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </div>
+            </div>
+            <div>
+              <div className="flex items-center justify-between border-b border-[#efb5c9] bg-[#ffeaf2] px-3 py-1.5 text-xs">
+                <span className="font-semibold text-[#8f2448]">Yes, missing place card or meal</span>
+                <span className="tabular-nums text-[#8f5070]">{incomplete.missingDetails.length}</span>
+              </div>
+              <div className="max-h-[24rem] overflow-auto bg-[#fff8fb]">
+                {incomplete.missingDetails.length === 0 ? (
+                  <p className="px-3 py-4 text-center text-sm text-[#8f5070]">
+                    Every yes has place cards and meals.
+                  </p>
+                ) : (
+                  <ul className="text-xs">
+                    {incomplete.missingDetails.map(({ guest, attendees }) => {
+                      const contact = guestContactLine(guest);
+                      return (
+                        <li
+                          key={guest.id}
+                          className="flex flex-wrap items-center gap-x-2 gap-y-0.5 border-b border-[#efb5c9] px-3 py-1.5 odd:bg-[#fff8fb] even:bg-[#ffeaf2]"
+                        >
+                          <span className="font-semibold text-[#4a1027]">{guest.name}</span>
+                          <span className="tabular-nums text-[#8f5070]">
+                            {guest.attendingCount} attending
+                          </span>
+                          <span className="font-mono text-[0.68rem] text-[#be185d]">/{guest.slug}</span>
+                          <ul className="w-full text-[0.7rem] text-[#991b1b]">
+                            {attendees.map((attendee) => (
+                              <li key={attendee.position}>{missingDetailsLabel(attendee)}</li>
+                            ))}
+                          </ul>
+                          {contact ? (
+                            <span className="w-full text-[0.7rem] text-[#7d3150]">{contact}</span>
+                          ) : null}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
 
         <div className="border-t border-[#df7fa3] bg-[#fff1f7]">

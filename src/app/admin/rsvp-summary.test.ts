@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { calculateRsvpSummaryCounts } from "./rsvp-summary.ts";
+import { calculateRsvpSummaryCounts, findIncompleteRsvps } from "./rsvp-summary.ts";
 
 test("counts actual yes attendees and full maybe or no-response invitations", () => {
   const guests = [
@@ -39,4 +39,40 @@ test("counts Friday dinner using attendees for yes and max for deciding/no-respo
     yesMaybeNoResponseCount: 12,
     friDinnerCount: 10,
   });
+});
+
+test("finds guests awaiting a response and yes guests missing place cards or meals", () => {
+  const guests = [
+    { id: 1, rsvpStatus: null, attendingCount: null, attendeeDetails: [] },
+    { id: 2, rsvpStatus: "deciding", attendingCount: null, attendeeDetails: [] },
+    { id: 3, rsvpStatus: "no", attendingCount: null, attendeeDetails: [] },
+    {
+      id: 4,
+      rsvpStatus: "yes",
+      attendingCount: 2,
+      attendeeDetails: [
+        { fullName: "Ann", mealType: "fish" },
+        { fullName: "Bo", mealType: "beef" },
+      ],
+    },
+    {
+      id: 5,
+      rsvpStatus: "yes",
+      attendingCount: 3,
+      attendeeDetails: [
+        { fullName: "Cy", mealType: null },
+        { fullName: " ", mealType: "vegetarian" },
+      ],
+    },
+  ] as const;
+
+  const result = findIncompleteRsvps(guests);
+
+  assert.deepEqual(result.awaitingResponse.map((guest) => guest.id), [1, 2]);
+  assert.deepEqual(result.missingDetails.map(({ guest }) => guest.id), [5]);
+  assert.deepEqual(result.missingDetails[0].attendees, [
+    { position: 1, fullName: "Cy", missingName: false, missingMeal: true },
+    { position: 2, fullName: "", missingName: true, missingMeal: false },
+    { position: 3, fullName: "", missingName: true, missingMeal: true },
+  ]);
 });

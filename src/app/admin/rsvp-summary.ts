@@ -50,3 +50,63 @@ export function calculateRsvpSummaryCounts(
     friDinnerCount,
   };
 }
+
+export type IncompleteGuestInput = {
+  id: number;
+  rsvpStatus: "yes" | "no" | "deciding" | null;
+  attendingCount: number | null;
+  attendeeDetails: readonly {
+    fullName: string;
+    mealType: string | null;
+  }[];
+};
+
+export type MissingAttendeeDetails = {
+  position: number;
+  fullName: string;
+  missingName: boolean;
+  missingMeal: boolean;
+};
+
+export type IncompleteRsvps<T> = {
+  // No RSVP saved yet, or still deciding.
+  awaitingResponse: T[];
+  // Said yes, but at least one attending person lacks a place-card name or meal.
+  missingDetails: { guest: T; attendees: MissingAttendeeDetails[] }[];
+};
+
+// Attendee rows are stored in position order and only when some detail was
+// entered, so slots past the stored rows are entirely blank.
+export function findIncompleteRsvps<T extends IncompleteGuestInput>(
+  guests: readonly T[],
+): IncompleteRsvps<T> {
+  const awaitingResponse: T[] = [];
+  const missingDetails: IncompleteRsvps<T>["missingDetails"] = [];
+
+  for (const guest of guests) {
+    if (guest.rsvpStatus === null || guest.rsvpStatus === "deciding") {
+      awaitingResponse.push(guest);
+      continue;
+    }
+    if (guest.rsvpStatus !== "yes") {
+      continue;
+    }
+
+    const attendees: MissingAttendeeDetails[] = [];
+    for (let index = 0; index < (guest.attendingCount ?? 0); index += 1) {
+      const attendee = guest.attendeeDetails[index];
+      const fullName = attendee?.fullName.trim() ?? "";
+      const missingName = fullName === "";
+      const missingMeal = !attendee?.mealType;
+      if (missingName || missingMeal) {
+        attendees.push({ position: index + 1, fullName, missingName, missingMeal });
+      }
+    }
+
+    if (attendees.length > 0) {
+      missingDetails.push({ guest, attendees });
+    }
+  }
+
+  return { awaitingResponse, missingDetails };
+}
