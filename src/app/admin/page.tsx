@@ -253,13 +253,6 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
             >
               Edit photos
             </Link>
-            <a
-              href="#incomplete"
-              className="inline-flex h-8 items-center justify-center border border-[#df7fa3] bg-[#fff8fb] px-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#7a1239] transition hover:border-[#be185d] hover:bg-[#fff1f7]"
-            >
-              Incomplete
-              <span className="ml-1.5 tabular-nums text-[#be185d]">{incompleteCount}</span>
-            </a>
             <AdminCsvExportButton auditEvents={auditEvents} guests={sortedGuests} />
             <div className="grid grid-cols-1 overflow-hidden border border-[#df7fa3] bg-[#fff8fb] text-xs sm:grid-cols-4">
               <div className="border-r border-[#efb5c9] px-2 py-1">
@@ -290,18 +283,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
           </div>
         </div>
 
-        <AddGuestForm />
-
-        <div className="overflow-auto bg-[#fff8fb]">
-          <GuestTable
-            activeDirection={activeDirection}
-            activeSortKey={activeSortKey}
-            guests={sortedGuests}
-            isDefaultSort={isDefaultSort}
-          />
-        </div>
-
-        <div id="incomplete" className="scroll-mt-3 border-t border-[#df7fa3] bg-[#fff1f7]">
+        <div id="incomplete" className="border-b border-[#df7fa3] bg-[#fff1f7]">
           <div className="flex items-center justify-between border-b border-[#df7fa3] bg-[#f4bfd2] px-3 py-2">
             <h2 className="text-sm font-semibold uppercase tracking-[0.12em] text-[#7a1239]">
               Incomplete
@@ -390,6 +372,18 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
               </div>
             </div>
           </div>
+        </div>
+
+
+        <AddGuestForm />
+
+        <div className="overflow-auto bg-[#fff8fb]">
+          <GuestTable
+            activeDirection={activeDirection}
+            activeSortKey={activeSortKey}
+            guests={sortedGuests}
+            isDefaultSort={isDefaultSort}
+          />
         </div>
 
         <div className="border-t border-[#df7fa3] bg-[#fff1f7]">
