@@ -257,33 +257,32 @@ body {
   display: inline-flex;
   min-height: 2.75rem;
   align-items: center;
-  gap: 0.55rem;
-  margin-top: 1.1rem;
-  border: 1px solid rgba(255, 214, 228, 0.85);
+  gap: 0.45rem;
+  margin-top: 0.75rem;
+  margin-bottom: -0.4rem;
+  border: 1px solid rgba(255, 214, 228, 0.32);
   border-radius: 999px;
-  background: rgba(255, 214, 228, 0.14);
-  box-shadow: 0 0.6rem 1.4rem -0.9rem rgba(0, 0, 0, 0.9), inset 0 1px 0 rgba(255, 246, 250, 0.18);
-  padding: 0.55rem 1.3rem 0.55rem 1.1rem;
-  color: var(--blush-pink);
-  font-size: 0.8rem;
+  padding: 0.4rem 1rem 0.4rem 0.85rem;
+  color: rgba(255, 214, 228, 0.88);
+  font-size: 0.72rem;
   font-weight: 600;
   letter-spacing: 0.18em;
   line-height: 1;
-  text-shadow: none;
   text-transform: uppercase;
-  transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease;
+  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
 }
 
 .schedule-event-calendar:hover {
-  border-color: var(--blush-pink);
-  background: var(--blush-pink);
-  color: #031b12;
+  border-color: rgba(255, 214, 228, 0.75);
+  background: rgba(255, 214, 228, 0.08);
+  color: var(--blush-pink);
 }
 
 .schedule-event-calendar svg {
-  width: 1.05rem;
-  height: 1.05rem;
+  width: 0.95rem;
+  height: 0.95rem;
   flex: none;
+  opacity: 0.85;
 }
 
 .schedule-event a:focus-visible {
