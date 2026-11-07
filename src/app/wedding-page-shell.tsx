@@ -71,7 +71,7 @@ function EventHeroCopy({ calendarWebsiteUrl }: { calendarWebsiteUrl: string }) {
         href={getWeddingCalendarUrl({ websiteUrl: calendarWebsiteUrl })}
         target="_blank"
         rel="noopener noreferrer"
-        className="mt-4 inline-flex min-h-11 items-center justify-center text-xs font-semibold uppercase tracking-[0.18em] text-[#ffd6e4] underline decoration-dashed decoration-1 underline-offset-4 transition hover:text-[#ffd6e4]"
+        className="guest-hero-calendar-link mt-4 inline-flex min-h-11 items-center justify-center text-xs font-semibold uppercase tracking-[0.18em] text-[#ffd6e4] underline decoration-dashed decoration-1 underline-offset-4 transition hover:text-[#ffd6e4]"
       >
         Add to calendar
       </a>
@@ -102,7 +102,9 @@ export async function WeddingPageShell({
         panelClassName={panelClassName}
         heroCopy={<EventHeroCopy calendarWebsiteUrl={calendarWebsiteUrl} />}
         panel={panel}
-        schedule={<ScheduleSection showFridayWelcome={showFridayWelcome} />}
+        schedule={
+          <ScheduleSection showFridayWelcome={showFridayWelcome} calendarWebsiteUrl={calendarWebsiteUrl} />
+        }
         gifts={<RegistrySection />}
         hotels={
           <MarkdownContent

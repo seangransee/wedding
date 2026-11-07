@@ -88,7 +88,7 @@ export function WeddingPageLayout({
   );
 
   return (
-    <>
+    <div className="contents" data-schedule-first={isScheduleFirst ? "true" : "false"}>
       <PageNav
         hasPhotos={hasPhotos}
         panelId={panelId}
@@ -109,6 +109,6 @@ export function WeddingPageLayout({
         {ourStory}
         {photos}
       </div>
-    </>
+    </div>
   );
 }

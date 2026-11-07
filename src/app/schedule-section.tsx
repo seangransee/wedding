@@ -1,6 +1,29 @@
 import { MarkdownCopy } from "./markdown-content";
+import { getWeddingCalendarUrl, getWelcomePartyCalendarUrl } from "./wedding-details";
 
-export function ScheduleSection({ showFridayWelcome }: { showFridayWelcome: boolean }) {
+// Shown only to guests who have already RSVP'd (see .guest-schedule-calendar-link in globals.css).
+function ScheduleCalendarLink({ href }: { href: string }) {
+  return (
+    <div>
+      <a
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="guest-schedule-calendar-link mt-4 inline-flex min-h-11 items-center justify-self-start text-xs font-semibold uppercase tracking-[0.18em] text-[#ffd6e4] underline decoration-dashed decoration-1 underline-offset-4 transition hover:text-[#ffd6e4]"
+      >
+        Add to calendar
+      </a>
+    </div>
+  );
+}
+
+export function ScheduleSection({
+  showFridayWelcome,
+  calendarWebsiteUrl,
+}: {
+  showFridayWelcome: boolean;
+  calendarWebsiteUrl: string;
+}) {
   return (
     <section
       id="schedule"
@@ -17,10 +40,12 @@ export function ScheduleSection({ showFridayWelcome }: { showFridayWelcome: bool
           {showFridayWelcome ? (
             <div className="guest-schedule-day">
               <MarkdownCopy fileName="schedule-friday.md" />
+              <ScheduleCalendarLink href={getWelcomePartyCalendarUrl({ websiteUrl: calendarWebsiteUrl })} />
             </div>
           ) : null}
           <div className="guest-schedule-day">
             <MarkdownCopy fileName="schedule.md" />
+            <ScheduleCalendarLink href={getWeddingCalendarUrl({ websiteUrl: calendarWebsiteUrl })} />
           </div>
         </div>
       </div>

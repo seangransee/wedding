@@ -23,6 +23,23 @@ export function getWeddingCalendarUrl({
   return `https://www.google.com/calendar/render?${params.toString()}`;
 }
 
+export function getWelcomePartyCalendarUrl({
+  websiteUrl = WEDDING_WEBSITE_URL,
+}: Pick<WeddingCalendarUrlOptions, "websiteUrl"> = {}) {
+  const params = new URLSearchParams({
+    action: "TEMPLATE",
+    text: "Welcome Party – Sean & Lexi's Wedding",
+    dates: "20261211T173000/20261211T200000",
+    ctz: "America/Chicago",
+    location: "Exchequer Restaurant & Pub, 226 S Wabash Ave, Chicago, IL 60604, USA",
+    details: `Speakeasy Bar at Exchequer Restaurant & Pub\n\n${websiteUrl}`,
+  });
+
+  params.append("sprop", `website:${websiteUrl}`);
+
+  return `https://www.google.com/calendar/render?${params.toString()}`;
+}
+
 export const WEDDING_DETAILS = {
   brand: "Sean + Lexi = Sexi",
   dateLabel: "December 12, 2026",
