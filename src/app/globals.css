@@ -273,6 +273,23 @@ body {
     inset 0 0 0 1px rgba(255, 246, 250, 0.1);
 }
 
+@media (min-width: 640px) {
+  .guest-page-nav {
+    max-width: min(calc(100vw - 6.75rem), 46rem);
+  }
+}
+
+/* RSVP'd guests' nav also carries the brand mark, so anchor jumps need more clearance. */
+[data-schedule-first="true"] [id] {
+  scroll-margin-top: 11.5rem;
+}
+
+@media (min-width: 640px) {
+  [data-schedule-first="true"] [id] {
+    scroll-margin-top: 9rem;
+  }
+}
+
 .guest-page-nav-list {
   display: flex;
   flex-wrap: wrap;
@@ -564,6 +581,56 @@ body {
     opacity: 0.28;
     transform: scale(1.08) translateZ(0);
   }
+}
+
+/*
+ * RSVP'd guests: frame the photo so the sticky nav ends where Sean's hat meets his
+ * forehead and the Schedule card starts just below Lexi's chin.
+ * Measured on public/sexi-background.jpg (1384x2076, 2:3): hat line at 33.2% of the
+ * image height, Lexi's chin at 48.6%. --hero-nav-bottom is the nav's bottom edge at
+ * the top of the page; --hero-photo-base-height is the normal rendered photo height,
+ * grown when needed so the photo still reaches the bottom of tall screens.
+ */
+.guest-invitation-page:has([data-schedule-first="true"]) {
+  --hero-nav-bottom: 8.5rem;
+  --hero-photo-base-height: min(165vw, 2175px);
+  --hero-hat-line: 0.332;
+  --hero-chin-line: 0.486;
+  --hero-photo-height: max(
+    var(--hero-photo-base-height),
+    calc((100svh - var(--hero-nav-bottom)) / (1 - var(--hero-hat-line)))
+  );
+}
+
+@media (max-width: 640px) {
+  .guest-invitation-page:has([data-schedule-first="true"]) {
+    --hero-nav-bottom: 10.15rem;
+    --hero-photo-base-height: 126svh;
+  }
+}
+
+.guest-invitation-page:has([data-schedule-first="true"])::before {
+  background-size: auto var(--hero-photo-height);
+  background-position-y: calc(var(--hero-nav-bottom) - var(--hero-photo-height) * var(--hero-hat-line));
+}
+
+@media (min-width: 1536px) {
+  /* First layer is the edge-fade gradient; only the photo layer moves. */
+  .guest-invitation-page:has([data-schedule-first="true"])::before {
+    background-size:
+      min(110vw, 1450px) auto,
+      auto var(--hero-photo-height);
+    background-position-y:
+      48%,
+      calc(var(--hero-nav-bottom) - var(--hero-photo-height) * var(--hero-hat-line));
+  }
+}
+
+.guest-hero-section-schedule-first {
+  align-items: start;
+  padding-top: calc(
+    var(--hero-photo-height) * (var(--hero-chin-line) - var(--hero-hat-line)) + 0.75rem
+  );
 }
 
 @keyframes adminCopyPulse {

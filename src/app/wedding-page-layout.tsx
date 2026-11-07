@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
+import { WEDDING_DETAILS } from "./wedding-details";
 
 type WeddingPageLayoutProps = {
   scheduleFirst: boolean;
@@ -47,6 +48,14 @@ function PageNav({
       aria-label="On this page"
       className="guest-page-nav sticky top-[calc(env(safe-area-inset-top)+0.5rem)] z-30 mx-auto rounded-lg border border-[#ffd6e4]/45 bg-[#031b12]/88 px-2 py-2 text-[#ffd6e4] shadow-[0_18px_45px_-30px_rgba(0,0,0,0.75)] backdrop-blur-md"
     >
+      {scheduleFirst ? (
+        <p
+          className="pb-1.5 text-center text-4xl leading-tight text-[#ffd6e4] sm:text-5xl"
+          style={{ fontFamily: "var(--font-brand-script)", fontWeight: 400 }}
+        >
+          {WEDDING_DETAILS.brand}
+        </p>
+      ) : null}
       <div className="guest-page-nav-list">
         {navItems.map((item) => (
           <a
@@ -96,8 +105,15 @@ export function WeddingPageLayout({
         scheduleFirst={isScheduleFirst}
       />
 
-      <section className="guest-hero-section relative z-10 mx-auto grid min-h-[calc(100svh-2rem)] max-w-5xl items-end gap-4 pt-[36svh]">
-        {heroCopy}
+      <section
+        className={`guest-hero-section relative z-10 mx-auto grid max-w-5xl gap-4 ${
+          isScheduleFirst
+            ? "guest-hero-section-schedule-first"
+            : "min-h-[calc(100svh-2rem)] items-end pt-[36svh]"
+        }`}
+      >
+        {/* RSVP'd guests get the brand mark in the nav instead of the date/venue card. */}
+        {isScheduleFirst ? null : heroCopy}
         {isScheduleFirst ? schedule : panelBlock}
       </section>
 
