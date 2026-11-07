@@ -1,0 +1,217 @@
+"use server";
+
+import { cookies } from "next/headers";
+import { ADMIN_COOKIE_NAME, ADMIN_PASSWORD } from "@/lib/cookies";
+import {
+  createSeatingTable,
+  deleteSeatingTableById,
+  getSeatingChart,
+  replaceSeatingTableSeats,
+  setSeatingAssignment,
+  updateSeatingRoomSize,
+  updateSeatingTableLabel,
+  updateSeatingTablePosition,
+} from "@/lib/db";
+import {
+  isUuid,
+  normalizeTableName,
+  normalizeTableNumber,
+  ROOM_MAX_SIZE,
+  ROOM_MIN_HEIGHT,
+  ROOM_MIN_WIDTH,
+  type SeatingChartData,
+} from "@/lib/seating";
+
+// Seating data only shows on /admin/seating, whose client keeps its own state,
+// so these actions skip revalidatePath to avoid re-rendering on every drag.
+
+export type SeatingActionResult = {
+  ok: boolean;
+  message: string;
+};
+
+const RELOAD_HINT = "Reload to see the latest seating chart.";
+
+async function requireAdmin() {
+  const cookieStore = await cookies();
+
+  if (cookieStore.get(ADMIN_COOKIE_NAME)?.value !== ADMIN_PASSWORD) {
+    throw new Error("Admin login required.");
+  }
+}
+
+function isGuestId(value: unknown): value is number {
+  return Number.isInteger(value) && (value as number) > 0;
+}
+
+function isCoordinate(value: unknown): value is number {
+  return Number.isInteger(value) && (value as number) >= 0 && (value as number) <= ROOM_MAX_SIZE;
+}
+
+function isRoomSize(value: unknown, min: number): value is number {
+  return Number.isInteger(value) && (value as number) >= min && (value as number) <= ROOM_MAX_SIZE;
+}
+
+function ok(message: string): SeatingActionResult {
+  return { ok: true, message };
+}
+
+function fail(message: string): SeatingActionResult {
+  return { ok: false, message };
+}
+
+export async function loadSeatingChart(): Promise<SeatingChartData> {
+  await requireAdmin();
+  return getSeatingChart();
+}
+
+export async function seatParty(guestId: number, tableId: string | null): Promise<SeatingActionResult> {
+  await requireAdmin();
+
+  if (!isGuestId(guestId) || (tableId !== null && !isUuid(tableId))) {
+    return fail("That seat change was invalid.");
+  }
+
+  const saved = await setSeatingAssignment(guestId, tableId);
+
+  return saved ? ok("Seat saved.") : fail(`That guest or table no longer exists. ${RELOAD_HINT}`);
+}
+
+function labelText(value: unknown) {
+  return typeof value === "string" ? value : null;
+}
+
+export async function addSeatingTable(input: {
+  id: string;
+  number: string;
+  name: string;
+  x: number;
+  y: number;
+}): Promise<SeatingActionResult> {
+  await requireAdmin();
+
+  const number = labelText(input?.number);
+  const name = labelText(input?.name);
+
+  if (!isUuid(input?.id) || number === null || name === null || !isCoordinate(input.x) || !isCoordinate(input.y)) {
+    return fail("That new table was invalid.");
+  }
+
+  await createSeatingTable({
+    id: input.id,
+    number: normalizeTableNumber(number),
+    name: normalizeTableName(name),
+    x: input.x,
+    y: input.y,
+  });
+  return ok("Table added.");
+}
+
+export async function moveSeatingTable(
+  tableId: string,
+  x: number,
+  y: number,
+): Promise<SeatingActionResult> {
+  await requireAdmin();
+
+  if (!isUuid(tableId) || !isCoordinate(x) || !isCoordinate(y)) {
+    return fail("That table position was invalid.");
+  }
+
+  const saved = await updateSeatingTablePosition(tableId, x, y);
+
+  return saved ? ok("Table moved.") : fail(`That table no longer exists. ${RELOAD_HINT}`);
+}
+
+export async function labelSeatingTable(
+  tableId: string,
+  number: string,
+  name: string,
+): Promise<SeatingActionResult> {
+  await requireAdmin();
+
+  const numberText = labelText(number);
+  const nameText = labelText(name);
+
+  if (!isUuid(tableId) || numberText === null || nameText === null) {
+    return fail("That table label was invalid.");
+  }
+
+  const saved = await updateSeatingTableLabel(
+    tableId,
+    normalizeTableNumber(numberText),
+    normalizeTableName(nameText),
+  );
+
+  return saved ? ok("Table label saved.") : fail(`That table no longer exists. ${RELOAD_HINT}`);
+}
+
+/** Replaces the optional exact seats at one table (an empty list clears them). */
+export async function saveTableSeats(
+  tableId: string,
+  seats: Array<{ seatNumber: number; partyId: number; position: number }>,
+): Promise<SeatingActionResult> {
+  await requireAdmin();
+
+  const valid =
+    isUuid(tableId) &&
+    Array.isArray(seats) &&
+    seats.length <= 30 &&
+    seats.every(
+      (seat) =>
+        Number.isInteger(seat?.seatNumber) &&
+        seat.seatNumber >= 1 &&
+        seat.seatNumber <= 30 &&
+        isGuestId(seat.partyId) &&
+        Number.isInteger(seat.position) &&
+        seat.position >= 1 &&
+        seat.position <= 10,
+    );
+
+  if (!valid) {
+    return fail("Those seats were invalid.");
+  }
+
+  const result = await replaceSeatingTableSeats(
+    tableId,
+    seats.map((seat) => ({ seatNumber: seat.seatNumber, partyId: seat.partyId, position: seat.position })),
+  );
+
+  if (!result.tableExists) {
+    return fail(`That table no longer exists. ${RELOAD_HINT}`);
+  }
+
+  if (result.savedCount !== seats.length) {
+    return fail(`Some seats couldn't be saved because a party moved. ${RELOAD_HINT}`);
+  }
+
+  return ok("Seats saved.");
+}
+
+export async function deleteSeatingTable(tableId: string): Promise<SeatingActionResult> {
+  await requireAdmin();
+
+  if (!isUuid(tableId)) {
+    return fail("That table was invalid.");
+  }
+
+  const result = await deleteSeatingTableById(tableId);
+
+  if (result === "protected") {
+    return fail("The sweetheart table can't be deleted.");
+  }
+
+  // Deleting an already-deleted table is fine (e.g. a retried save).
+  return ok("Table deleted.");
+}
+
+export async function resizeSeatingRoom(width: number, height: number): Promise<SeatingActionResult> {
+  await requireAdmin();
+
+  if (!isRoomSize(width, ROOM_MIN_WIDTH) || !isRoomSize(height, ROOM_MIN_HEIGHT)) {
+    return fail("That room size was invalid.");
+  }
+
+  await updateSeatingRoomSize(width, height);
+  return ok("Room resized.");
+}

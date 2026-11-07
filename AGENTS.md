@@ -5,7 +5,7 @@ Next.js app for Sean and Lexi's wedding website. The app has four main surfaces:
 - `/` - public wedding info page, unless a valid guest cookie redirects to the matching invitation link.
 - `/savethedate` - public save-the-date page.
 - `/:slug` - guest-specific invitation and RSVP page.
-- `/admin` - password-gated guest/RSVP management spreadsheet.
+- `/admin` - password-gated guest/RSVP management spreadsheet, with `/admin/photos` (gallery manager) and `/admin/seating` (seating chart) linked from its header.
 
 Long-form public/invitation copy lives in Markdown files under `content/` so non-technical editors can update it without touching React code. Current files:
 
@@ -17,7 +17,7 @@ Long-form public/invitation copy lives in Markdown files under `content/` so non
 
 The shared Sexi Adventures gallery is driven by image files in the repo-root `photos/` directory, not Markdown or hard-coded arrays. After adding, removing, or replacing supported image files there, run `npm run photos:generate` so the rendered gallery uses the updated static WebP assets and manifest.
 
-The package currently uses `next` 16.x with React 19, Tailwind CSS 4, TypeScript, Neon/Postgres, and `react-data-grid`.
+The package currently uses `next` 16.x with React 19, Tailwind CSS 4, TypeScript, Neon/Postgres, and `react-data-grid`. The seating chart also uses `@dnd-kit/core` (drag and drop), `@use-gesture/react` (touch pinch zoom), and `@radix-ui/react-dialog` (dialogs and phone bottom sheets).
 
 ## Commands
 
@@ -67,6 +67,10 @@ Core tables:
 - `wedding_rsvp_attendees` - per-person current RSVP details, keyed by RSVP and 1-based `position`; stores place-card name, optional meal type, and optional dietary/allergy notes.
 - `wedding_rsvp_audit_events` and `wedding_rsvp_audit_attendees` - append-only RSVP edit history (including the mailing address at each save), with soft deletion for deleted guests' audit rows.
 - `wedding_photos` - one metadata row per repo-root `photos/` image, storing manual gallery order and optional `hidden_at` visibility state.
+- `wedding_seating_layout` - a single row (`id = 1`) with the seating chart room's `room_width`/`room_height`.
+- `wedding_seating_tables` - one row per table: `kind` (`round`, 12 seats, or `sweetheart`, 2 seats; a partial unique index allows only one sweetheart table), free-form `number` (up to 12 characters) and `name` (up to 40), `capacity`, and center `x`/`y`. Sizes and positions are room units (1 unit = 1 CSS pixel at 100% zoom). Migration 016 creates the sweetheart table once and seats the `Sean and Lexi` invitation there.
+- `wedding_seating_assignments` - at most one table per invitation (`guest_id` primary key); parties are seated as a unit. Deleting a guest or table cascades.
+- `wedding_seating_seats` - optional exact seats: `(table_id, seat_number)` primary key holding one person (`guest_id` + 1-based `person_position`, unique). Rows cascade away when the party's assignment is removed, and moving a party to another table clears its seats.
 
 `guest_count` is the maximum attending count for the invitation and is constrained to 1-10. RSVP statuses are `yes`, `no`, and `deciding`. For `yes`, `attending_count` is required; for `no` and `deciding`, it must be null.
 
@@ -80,6 +84,7 @@ Core tables:
 - `src/app/admin/page.tsx`: admin page. Without a valid admin cookie it shows the login form; with the cookie it loads guests and RSVP audit events.
 - `src/app/admin/admin-client.tsx`: spreadsheet UI for adding, editing, sorting, reordering, copying links, viewing links, deleting guests, and toggling flags.
 - `src/app/admin/photos/page.tsx`: admin photo manager for reordering Sexi Adventures photos and hiding/restoring individual images without deleting files.
+- `src/app/admin/seating/page.tsx`: admin seating chart (login form without the admin cookie). `seating-chart-client.tsx` holds state, the autosave queue, and drag and drop; `seating-floor-plan.tsx`, `seating-sidebar.tsx`, and `seating-dialogs.tsx` are its views; `actions.ts` has the admin-checked server actions. Shared rules (headcounts, colors, sorting, CSV) live in `src/lib/seating.ts` with tests in `src/lib/seating.test.ts`, and queries in `src/lib/db.ts`.
 - `src/app/[slug]/opengraph-image.tsx`, `src/app/savethedate/opengraph-image.tsx`, and `src/lib/opengraph-image.tsx`: generated PNG Open Graph images for per-guest invitation links and the public save-the-date link.
 
 Global styling lives in `src/app/globals.css`. The shared public/invitation page shell lives in `src/app/wedding-page-shell.tsx` (section order and sticky in-page navigation live in the client `src/app/wedding-page-layout.tsx`), renders long-form Markdown content from `content/`, renders the static-manifest-backed Sexi Adventures gallery when generated photo assets exist, and uses `public/sexi-background.jpg`; Open Graph image generation uses local fonts from `public/fonts/`.
@@ -154,6 +159,14 @@ Be careful changing validation: database constraints, server action validation, 
 - Deleting a guest requires typing `delete`, soft-deletes visible audit events for that guest, then deletes the guest row. RSVP and attendee rows cascade from foreign keys.
 - The audit table shown in admin filters to RSVP events, hides the `Sean and Lexi` guest name, and includes compact per-person place-card, meal, and dietary details.
 - `/admin/photos` is linked from the admin header and lets admins manually reorder the Sexi Adventures gallery or hide/restore photos. Hidden photos remain in `photos/` and can be brought back from the same page.
+- `/admin/seating` (Seating chart button in the admin header) seats invitations at tables on a floor plan:
+  - A party's headcount is its confirmed attending count for `yes`, its full `guest_count` for Maybe (`deciding`) and No reply, and 0 for `no`. Unconfirmed parties use dashed amber/slate chips with a `?` after the count; declined parties drop out of Not seated, and any already at a table show struck through until removed.
+  - "+ Table" adds a 12-person table in the first open spot and opens its dialog to type a free-form number and name (numbers are never auto-assigned). The sweetheart table can't be deleted; deleting another table returns its parties to Not seated.
+  - Tables are colored by headcount from `fullnessStyle`: dashed white when empty, pale cream through lime as they fill (10 and 11 deliberately distinct), solid green at exactly 12, and red stripes over capacity. Over-filling is allowed.
+  - Drag parties between the sidebar and tables, drag tables to move them, and drag the room's right/bottom edges or corner to resize it (never smaller than its tables). Touch uses a long-press to start dragging. Tapping a party or table opens a dialog with the same actions, including optional exact seats (tap a person then a seat, tap two seats to swap, or Fill in order).
+  - The sidebar (collapsible on desktop; a List tab on phones) groups everyone by table with Not seated at the top, and its search dims non-matching parties on the floor plan. Zoom auto-fits until zoomed by hand (buttons, ctrl/cmd + wheel or trackpad pinch, touch pinch); below 50% tables show only number and headcount.
+  - Every change applies optimistically and autosaves through a sequential queue (repeated changes to the same thing coalesce). A failed save shows a Retry/Reload banner, leaving the page warns while saves are pending, and the chart refetches on focus and every 30 seconds when nothing is pending. The actions skip `revalidatePath` because only this client shows seating data.
+  - CSV exports one row per person (table number, table name, seat, guest, invitation, RSVP, meal, dietary notes): tables in order with exact-seated people first, then Not seated; declined guests are left out. Cells starting with `=`, `+`, `-`, or `@` get a leading apostrophe so guest-typed text can't run as a spreadsheet formula.
 
 ## Implementation Notes
 

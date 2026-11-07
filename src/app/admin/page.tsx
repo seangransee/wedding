@@ -250,6 +250,12 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
           </div>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             <Link
+              href="/admin/seating"
+              className="inline-flex h-8 items-center justify-center border border-[#7a1239] bg-[#9f1d52] px-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#fff8fb] transition hover:bg-[#bd2867]"
+            >
+              Seating chart
+            </Link>
+            <Link
               href="/admin/photos"
               className="inline-flex h-8 items-center justify-center border border-[#df7fa3] bg-[#fff8fb] px-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#7a1239] transition hover:border-[#be185d] hover:bg-[#fff1f7]"
             >

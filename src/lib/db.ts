@@ -1,6 +1,16 @@
 import { neon } from "@neondatabase/serverless";
 import { Pool, type QueryResultRow } from "pg";
 import type { MailingAddress } from "./mailing-address";
+import {
+  DEFAULT_ROOM,
+  ROUND_TABLE_CAPACITY,
+  type SeatingAttendee,
+  type SeatingChartData,
+  type SeatingParty,
+  type SeatingSeat,
+  type SeatingTable,
+  type SeatingTableKind,
+} from "./seating";
 
 export type { MailingAddress } from "./mailing-address";
 
@@ -1057,5 +1067,356 @@ export async function saveRsvp(input: {
       input.mailingAddress.postalCode,
       input.mailingAddress.country,
     ],
+  );
+}
+
+type SeatingLayoutRow = {
+  room_width: number;
+  room_height: number;
+};
+
+type SeatingTableRow = {
+  id: string;
+  kind: SeatingTableKind;
+  number: string;
+  name: string;
+  capacity: number;
+  x: number;
+  y: number;
+  created_at_ms: number;
+};
+
+type SeatingPartyRow = {
+  id: number;
+  name: string;
+  guest_count: number;
+  sort_order: number;
+  rsvp_status: RsvpStatus | null;
+  attending_count: number | null;
+  attendees: string | null;
+  table_id: string | null;
+  assigned_at_ms: number | null;
+};
+
+type SeatingSeatRow = {
+  table_id: string;
+  seat_number: number;
+  guest_id: number;
+  person_position: number;
+};
+
+function toSeatingTable(row: SeatingTableRow): SeatingTable {
+  return {
+    id: row.id,
+    kind: row.kind,
+    number: row.number,
+    name: row.name,
+    capacity: row.capacity,
+    x: row.x,
+    y: row.y,
+    createdAt: Number(row.created_at_ms),
+  };
+}
+
+function toSeatingAttendees(value: string | null): SeatingAttendee[] {
+  const rows = value
+    ? (JSON.parse(value) as Array<{ position: number } & SeatingAttendee>)
+    : [];
+  const attendees: SeatingAttendee[] = [];
+
+  for (const row of rows) {
+    while (attendees.length < row.position - 1) {
+      attendees.push({ name: "", mealType: null, dietaryNotes: "" });
+    }
+    attendees[row.position - 1] = {
+      name: row.name,
+      mealType: row.mealType,
+      dietaryNotes: row.dietaryNotes,
+    };
+  }
+
+  return attendees;
+}
+
+function toSeatingParty(row: SeatingPartyRow): SeatingParty {
+  return {
+    id: row.id,
+    name: row.name,
+    status: row.rsvp_status ?? "none",
+    guestCount: row.guest_count,
+    attendingCount: row.attending_count,
+    attendees: toSeatingAttendees(row.attendees),
+    sortOrder: row.sort_order,
+    tableId: row.table_id,
+    assignedAt: row.assigned_at_ms === null ? null : Number(row.assigned_at_ms),
+  };
+}
+
+export function isMissingSeatingTablesError(error: unknown) {
+  return error instanceof Error && /relation "wedding_seating_[a-z_]+" does not exist/i.test(error.message);
+}
+
+export async function getSeatingChart(): Promise<SeatingChartData> {
+  const [layoutRows, tableRows, partyRows, seatRows] = await Promise.all([
+    sql().query<SeatingLayoutRow>(
+      `SELECT room_width, room_height
+       FROM wedding_seating_layout
+       WHERE id = 1`,
+    ),
+    sql().query<SeatingTableRow>(
+      `SELECT
+         id::text AS id,
+         kind,
+         number,
+         name,
+         capacity,
+         x,
+         y,
+         (extract(epoch FROM created_at) * 1000)::float8 AS created_at_ms
+       FROM wedding_seating_tables
+       ORDER BY created_at ASC, id ASC`,
+    ),
+    sql().query<SeatingPartyRow>(
+      `SELECT
+         g.id,
+         g.name,
+         g.guest_count,
+         g.sort_order,
+         r.status AS rsvp_status,
+         r.attending_count,
+         (
+           COALESCE(
+             json_agg(
+               json_build_object(
+                 'position', a.position,
+                 'name', btrim(COALESCE(a.full_name, '')),
+                 'mealType', a.meal_type,
+                 'dietaryNotes', btrim(COALESCE(a.dietary_notes, ''))
+               )
+               ORDER BY a.position
+             ) FILTER (WHERE a.id IS NOT NULL),
+             '[]'::json
+           ) #>> '{}'
+         ) AS attendees,
+         s.table_id::text AS table_id,
+         (extract(epoch FROM s.assigned_at) * 1000)::float8 AS assigned_at_ms
+       FROM wedding_guests g
+       LEFT JOIN wedding_rsvps r ON r.guest_id = g.id
+       LEFT JOIN wedding_rsvp_attendees a ON a.rsvp_id = r.id
+       LEFT JOIN wedding_seating_assignments s ON s.guest_id = g.id
+       GROUP BY g.id, r.id, s.guest_id
+       ORDER BY g.sort_order ASC, g.id ASC`,
+    ),
+    sql().query<SeatingSeatRow>(
+      `SELECT seat.table_id::text AS table_id, seat.seat_number, seat.guest_id, seat.person_position
+       FROM wedding_seating_seats seat
+       JOIN wedding_seating_assignments assignment
+         ON assignment.guest_id = seat.guest_id
+        AND assignment.table_id = seat.table_id
+       ORDER BY seat.table_id, seat.seat_number`,
+    ),
+  ]);
+
+  const layout = layoutRows[0];
+
+  return {
+    room: layout
+      ? { width: layout.room_width, height: layout.room_height }
+      : { ...DEFAULT_ROOM },
+    tables: tableRows.map(toSeatingTable),
+    parties: partyRows.map(toSeatingParty),
+    seats: seatRows.map((row): SeatingSeat => ({
+      tableId: row.table_id,
+      seatNumber: row.seat_number,
+      partyId: row.guest_id,
+      position: row.person_position,
+    })),
+  };
+}
+
+/**
+ * Seats a party at a table, or unseats it when tableId is null. Moving to a
+ * different table clears the party's exact seats (they belonged to the old table).
+ */
+export async function setSeatingAssignment(guestId: number, tableId: string | null) {
+  if (tableId === null) {
+    // Exact seats cascade from the assignment row.
+    await sql().query("DELETE FROM wedding_seating_assignments WHERE guest_id = $1", [guestId]);
+    return true;
+  }
+
+  const rows = await sql().query<{ guest_id: number }>(
+    `WITH target AS (
+       SELECT guest.id AS guest_id, seating_table.id AS table_id
+       FROM wedding_guests guest
+       JOIN wedding_seating_tables seating_table ON seating_table.id = $2::uuid
+       WHERE guest.id = $1
+     ),
+     cleared_seats AS (
+       DELETE FROM wedding_seating_seats seat
+       USING target
+       WHERE seat.guest_id = target.guest_id
+         AND seat.table_id <> target.table_id
+       RETURNING 1
+     )
+     INSERT INTO wedding_seating_assignments (guest_id, table_id)
+     SELECT target.guest_id, target.table_id
+     FROM target, (SELECT count(*) FROM cleared_seats) AS cleared_count
+     ON CONFLICT (guest_id) DO UPDATE SET
+       table_id = EXCLUDED.table_id,
+       assigned_at = CASE
+         WHEN wedding_seating_assignments.table_id = EXCLUDED.table_id
+           THEN wedding_seating_assignments.assigned_at
+         ELSE now()
+       END
+     RETURNING guest_id`,
+    [guestId, tableId],
+  );
+
+  return rows.length > 0;
+}
+
+/** Idempotent: retrying with the same client-generated id is a no-op. */
+export async function createSeatingTable(input: {
+  id: string;
+  number: string;
+  name: string;
+  x: number;
+  y: number;
+}) {
+  await sql().query(
+    `INSERT INTO wedding_seating_tables (id, kind, number, name, capacity, x, y)
+     VALUES ($1::uuid, 'round', $2, $3, $4, $5, $6)
+     ON CONFLICT (id) DO NOTHING`,
+    [input.id, input.number, input.name, ROUND_TABLE_CAPACITY, input.x, input.y],
+  );
+}
+
+export async function updateSeatingTablePosition(id: string, x: number, y: number) {
+  const rows = await sql().query<{ id: string }>(
+    `UPDATE wedding_seating_tables
+     SET x = $2,
+         y = $3,
+         updated_at = now()
+     WHERE id = $1::uuid
+     RETURNING id`,
+    [id, x, y],
+  );
+
+  return rows.length > 0;
+}
+
+export async function updateSeatingTableLabel(id: string, number: string, name: string) {
+  const rows = await sql().query<{ id: string }>(
+    `UPDATE wedding_seating_tables
+     SET number = $2,
+         name = $3,
+         updated_at = now()
+     WHERE id = $1::uuid
+     RETURNING id`,
+    [id, number, name],
+  );
+
+  return rows.length > 0;
+}
+
+/**
+ * Replaces every exact seat at a table. Seats are only kept for parties that
+ * are currently at the table and seat numbers within its capacity; returns
+ * how many of the requested seats were saved.
+ */
+export async function replaceSeatingTableSeats(
+  tableId: string,
+  seats: Array<{ seatNumber: number; partyId: number; position: number }>,
+) {
+  const rows = await sql().query<{ table_exists: boolean; saved_count: number }>(
+    `WITH input_seats AS (
+       SELECT DISTINCT ON (seat_number) seat_number, guest_id, person_position
+       FROM unnest($2::integer[], $3::integer[], $4::integer[])
+         AS input(seat_number, guest_id, person_position)
+     ),
+     valid_seats AS (
+       SELECT DISTINCT ON (input_seats.guest_id, input_seats.person_position)
+         input_seats.seat_number,
+         input_seats.guest_id,
+         input_seats.person_position
+       FROM input_seats
+       JOIN wedding_seating_tables seating_table
+         ON seating_table.id = $1::uuid
+        AND input_seats.seat_number BETWEEN 1 AND seating_table.capacity
+       JOIN wedding_seating_assignments assignment
+         ON assignment.guest_id = input_seats.guest_id
+        AND assignment.table_id = $1::uuid
+       WHERE input_seats.person_position BETWEEN 1 AND 10
+     ),
+     deleted AS (
+       DELETE FROM wedding_seating_seats seat
+       WHERE seat.table_id = $1::uuid
+          OR (seat.guest_id, seat.person_position) IN (
+            SELECT guest_id, person_position FROM valid_seats
+          )
+       RETURNING 1
+     ),
+     inserted AS (
+       INSERT INTO wedding_seating_seats (table_id, seat_number, guest_id, person_position)
+       SELECT $1::uuid, valid_seats.seat_number, valid_seats.guest_id, valid_seats.person_position
+       FROM valid_seats, (SELECT count(*) FROM deleted) AS deleted_count
+       RETURNING 1
+     )
+     SELECT
+       EXISTS (SELECT 1 FROM wedding_seating_tables WHERE id = $1::uuid) AS table_exists,
+       (SELECT count(*)::integer FROM inserted) AS saved_count`,
+    [
+      tableId,
+      seats.map((seat) => seat.seatNumber),
+      seats.map((seat) => seat.partyId),
+      seats.map((seat) => seat.position),
+    ],
+  );
+
+  return {
+    tableExists: rows[0]?.table_exists ?? false,
+    savedCount: rows[0]?.saved_count ?? 0,
+  };
+}
+
+/** Deletes a round table (its parties become unseated); the sweetheart table stays. */
+export async function deleteSeatingTableById(id: string) {
+  const rows = await sql().query<{ kind: SeatingTableKind | null; deleted: boolean }>(
+    `WITH target AS (
+       SELECT kind
+       FROM wedding_seating_tables
+       WHERE id = $1::uuid
+     ),
+     deleted AS (
+       DELETE FROM wedding_seating_tables
+       WHERE id = $1::uuid
+         AND kind = 'round'
+       RETURNING id
+     )
+     SELECT
+       (SELECT kind FROM target) AS kind,
+       EXISTS (SELECT 1 FROM deleted) AS deleted`,
+    [id],
+  );
+
+  const result = rows[0];
+
+  if (result?.deleted) {
+    return "deleted";
+  }
+
+  return result?.kind === "sweetheart" ? "protected" : "not_found";
+}
+
+export async function updateSeatingRoomSize(width: number, height: number) {
+  await sql().query(
+    `INSERT INTO wedding_seating_layout (id, room_width, room_height)
+     VALUES (1, $1, $2)
+     ON CONFLICT (id) DO UPDATE SET
+       room_width = EXCLUDED.room_width,
+       room_height = EXCLUDED.room_height,
+       updated_at = now()`,
+    [width, height],
   );
 }

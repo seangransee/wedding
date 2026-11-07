@@ -918,3 +918,132 @@ body {
     animation: none;
   }
 }
+
+/* ---------- Admin seating chart (/admin/seating) ---------- */
+
+/* Over-capacity tables get diagonal stripes on top of their red fill. */
+.seating-over-stripes {
+  background-image: repeating-linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.22) 0 6px,
+    transparent 6px 12px
+  );
+}
+
+.seating-room {
+  background-color: #fffdfd;
+  background-image: radial-gradient(circle, rgba(223, 127, 163, 0.32) 1.4px, transparent 1.6px);
+  background-size: 40px 40px;
+  background-position: 20px 20px;
+  box-shadow: 0 30px 60px -40px rgba(122, 18, 57, 0.55);
+}
+
+.seating-room-resizing {
+  outline: 2px dashed rgba(190, 24, 93, 0.6);
+  outline-offset: 4px;
+}
+
+/* Long-press dragging on touch screens: no text selection or iOS callout. */
+.seating-table,
+.seating-chip {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: manipulation;
+}
+
+/* Native one-finger panning only; pinch is handled by the floor plan. */
+.seating-plan-viewport {
+  touch-action: pan-x pan-y;
+}
+
+.seating-resize-handle,
+.seating-resize-corner {
+  z-index: 5;
+  touch-action: none;
+}
+
+.seating-resize-grip {
+  position: absolute;
+  inset: 50% auto auto 50%;
+  translate: -50% -50%;
+  border-radius: 999px;
+  background: #df7fa3;
+  box-shadow: 0 0 0 2px #fffdfd;
+  transition: background-color 140ms ease, transform 140ms ease;
+}
+
+.seating-resize-grip-vertical {
+  inline-size: 6px;
+  block-size: 44px;
+}
+
+.seating-resize-grip-horizontal {
+  inline-size: 44px;
+  block-size: 6px;
+}
+
+.seating-resize-handle:hover .seating-resize-grip,
+.seating-resize-handle:active .seating-resize-grip {
+  background: #be185d;
+  transform: scale(1.15);
+}
+
+.seating-resize-corner {
+  display: grid;
+  inline-size: 28px;
+  block-size: 28px;
+  place-items: center;
+  border: 2px solid #fffdfd;
+  border-radius: 999px;
+  background: #be185d;
+  color: #fff;
+  box-shadow: 0 6px 14px -6px rgba(74, 16, 39, 0.8);
+}
+
+.seating-dialog-overlay {
+  animation: seatingFadeIn 160ms ease-out;
+}
+
+.seating-dialog-content {
+  animation: seatingSheetIn 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@media (min-width: 768px) {
+  .seating-dialog-content {
+    animation-name: seatingDialogIn;
+  }
+}
+
+@keyframes seatingFadeIn {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes seatingSheetIn {
+  from {
+    transform: translateY(24px);
+    opacity: 0;
+  }
+}
+
+@keyframes seatingDialogIn {
+  from {
+    opacity: 0;
+    scale: 0.97;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .seating-dialog-overlay,
+  .seating-dialog-content {
+    animation: none;
+  }
+}
+
+/* Party names on floor-plan tables: Libre Baskerville's taller x-height reads better small. */
+.seating-chip-plan {
+  font-family: var(--font-geist-mono), "Libre Baskerville", Georgia, serif;
+  letter-spacing: -0.015em;
+}
