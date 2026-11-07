@@ -891,3 +891,30 @@ body {
     background-position: 160px 0, 0 160px, 0 0;
   }
 }
+
+/* RSVP save status: the check pops in each time a save lands. */
+.rsvp-save-pop {
+  animation: rsvpSavePop 420ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@keyframes rsvpSavePop {
+  0% {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+
+  60% {
+    transform: scale(1.15);
+    opacity: 1;
+  }
+
+  100% {
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rsvp-save-pop {
+    animation: none;
+  }
+}

@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  useEffect,
   useMemo,
   useRef,
   useState,
@@ -102,6 +103,59 @@ function missingLabel(missingName: boolean, missingMeal: boolean) {
   return missingName ? "Needs name" : "Needs meal";
 }
 
+// Typed changes save on their own after this pause, on blur, or with Save.
+const AUTOSAVE_DELAY_MS = 1500;
+// Keep "Saving..." on screen long enough to register before it flips to saved.
+const MIN_SAVING_DISPLAY_MS = 450;
+
+type SaveTone = "idle" | "pending" | "saving" | "saved" | "error";
+
+function SaveStatusIcon({ tone }: { tone: SaveTone }) {
+  if (tone === "saving") {
+    return (
+      <span
+        aria-hidden="true"
+        className="size-8 shrink-0 animate-spin rounded-full border-[3px] border-[#ffd6e4]/25 border-t-[#ffd6e4] sm:size-9"
+      />
+    );
+  }
+
+  if (tone === "saved") {
+    return (
+      <span
+        aria-hidden="true"
+        className="rsvp-save-pop grid size-8 shrink-0 place-items-center rounded-full bg-[#ffd6e4] text-[#052018] shadow-[0_0_0_4px_rgba(255,214,228,0.18)] sm:size-9"
+      >
+        <svg viewBox="0 0 20 20" fill="none" className="size-[1.1rem]">
+          <path d="M4.5 10.5l3.5 3.5 7.5-8" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </span>
+    );
+  }
+
+  if (tone === "error") {
+    return (
+      <span
+        aria-hidden="true"
+        className="grid size-8 shrink-0 place-items-center rounded-full border-2 border-[#ff9fb8] text-lg font-bold leading-none text-[#ff9fb8] sm:size-9"
+      >
+        !
+      </span>
+    );
+  }
+
+  return (
+    <span
+      aria-hidden="true"
+      className={`grid size-8 shrink-0 place-items-center rounded-full border-2 border-dashed sm:size-9 ${
+        tone === "pending" ? "border-[#ffd6e4]/85" : "border-[#ffd6e4]/45"
+      }`}
+    >
+      {tone === "pending" ? <span className="size-2.5 animate-pulse rounded-full bg-[#ffd6e4]" /> : null}
+    </span>
+  );
+}
+
 type ErrorLocation = "status" | "count" | "names" | "global" | null;
 
 function ErrorNote({ children }: { children: ReactNode }) {
@@ -171,13 +225,20 @@ export function RsvpForm({
   const [mailingAddress, setMailingAddress] = useState<MailingAddress>(initialMailingAddress);
   const [showCountry, setShowCountry] = useState(Boolean(initialMailingAddress.country));
   const [addressPasted, setAddressPasted] = useState(false);
-  const lastSavedMailingAddress = useRef(JSON.stringify(initialMailingAddress));
   const [localError, setLocalError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [justSaved, setJustSaved] = useState(false);
   const [openDietaryNotes, setOpenDietaryNotes] = useState<ReadonlySet<number>>(() => new Set());
   const formRef = useRef<HTMLFormElement>(null);
   const saveSequence = useRef(0);
+  const [hasUnsavedEdits, setHasUnsavedEdits] = useState(false);
+  const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
+  const [saveCount, setSaveCount] = useState(0);
+  // Every typed edit bumps editVersion; a save covers every edit up to the version it captured.
+  const editVersion = useRef(0);
+  const requestedVersion = useRef(0);
+  const autosaveTimer = useRef<number | null>(null);
+  const latestFlushEdits = useRef<() => void>(() => {});
   const effectiveAttendingCount = status === "yes" && guestCount === 1
     ? 1
     : attendingCount;
@@ -229,6 +290,11 @@ export function RsvpForm({
     },
     explicit = false,
   ) {
+    if (autosaveTimer.current !== null) {
+      window.clearTimeout(autosaveTimer.current);
+      autosaveTimer.current = null;
+    }
+
     const nextStatus = nextValues?.status ?? status;
     const nextAttendingCount =
       nextStatus === "yes" && guestCount === 1
@@ -253,6 +319,8 @@ export function RsvpForm({
     }
 
     setLocalError("");
+    const version = editVersion.current;
+    requestedVersion.current = version;
     const formData = new FormData();
     formData.set("slug", slug);
     formData.set("status", nextStatus);
@@ -279,26 +347,96 @@ export function RsvpForm({
     const sequence = saveSequence.current + 1;
     saveSequence.current = sequence;
     setIsSaving(true);
+    const startedAt = Date.now();
 
-    const result = await autosaveRsvp(formData);
+    let result: RsvpActionState;
+    try {
+      result = await autosaveRsvp(formData);
+    } catch {
+      result = {
+        ...saveState,
+        ok: false,
+        message: "We couldn't reach the server. Check your connection and tap Save to try again.",
+      };
+    }
 
-    if (result.ok) {
-      lastSavedMailingAddress.current = JSON.stringify(nextMailingAddress);
+    const elapsed = Date.now() - startedAt;
+    if (elapsed < MIN_SAVING_DISPLAY_MS) {
+      await new Promise((resolve) => window.setTimeout(resolve, MIN_SAVING_DISPLAY_MS - elapsed));
+    }
+
+    if (!result.ok) {
+      // Let a later blur, pause, or Save retry the failed edits.
+      requestedVersion.current = -1;
+    } else if (editVersion.current === version) {
+      setHasUnsavedEdits(false);
     }
 
     if (saveSequence.current === sequence) {
       setSaveState(result);
       setLocalError(result.ok ? "" : result.message);
       setIsSaving(false);
-      if (explicit && result.ok) {
-        setJustSaved(true);
+      if (result.ok) {
+        setLastSavedAt(new Date());
+        setSaveCount((count) => count + 1);
+        if (explicit) {
+          setJustSaved(true);
+        }
       }
     }
   }
 
-  function updateMailingAddress(field: keyof MailingAddress, value: string) {
+  function noteEdit() {
     setLocalError("");
     setJustSaved(false);
+    editVersion.current += 1;
+    setHasUnsavedEdits(true);
+    if (autosaveTimer.current !== null) {
+      window.clearTimeout(autosaveTimer.current);
+    }
+    autosaveTimer.current = window.setTimeout(() => {
+      autosaveTimer.current = null;
+      latestFlushEdits.current();
+    }, AUTOSAVE_DELAY_MS);
+  }
+
+  function flushEdits() {
+    if (editVersion.current !== requestedVersion.current) {
+      void saveDraft();
+    }
+  }
+
+  useEffect(() => {
+    latestFlushEdits.current = flushEdits;
+  });
+
+  useEffect(() => {
+    function handleVisibilityChange() {
+      if (document.visibilityState === "hidden") {
+        latestFlushEdits.current();
+      }
+    }
+
+    function handleBeforeUnload(event: BeforeUnloadEvent) {
+      if (editVersion.current !== requestedVersion.current) {
+        latestFlushEdits.current();
+        event.preventDefault();
+      }
+    }
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+      if (autosaveTimer.current !== null) {
+        window.clearTimeout(autosaveTimer.current);
+      }
+    };
+  }, []);
+
+  function updateMailingAddress(field: keyof MailingAddress, value: string) {
+    noteEdit();
     setAddressPasted(false);
     setMailingAddress((current) => ({ ...current, [field]: value }));
   }
@@ -314,8 +452,26 @@ export function RsvpForm({
     });
   }
 
+  const savedTime = lastSavedAt?.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  const saveIndicator: { tone: SaveTone; title: string; detail: string } = isSaving
+    ? { tone: "saving", title: "Saving…", detail: "Hang tight, just a second." }
+    : displayedError && currentErrorLocation !== "status"
+      ? { tone: "error", title: "Not saved", detail: displayedError }
+      : status === ""
+        ? { tone: "idle", title: "No RSVP yet", detail: "Choose an option above to reply." }
+        : status === "yes" && !effectiveAttendingCount
+          ? { tone: "pending", title: "Not saved yet", detail: "Choose how many are attending." }
+          : hasUnsavedEdits
+            ? { tone: "pending", title: "Not saved yet", detail: "Saves automatically when you pause." }
+            : justSaved
+              ? { tone: "saved", title: "Saved!", detail: "Your RSVP is recorded." }
+              : savedTime
+                ? { tone: "saved", title: "All changes saved", detail: `Last saved at ${savedTime}` }
+                : { tone: "saved", title: "All changes saved", detail: "Your RSVP is on file." };
+  const saveButtonIsPrimary = saveIndicator.tone === "pending" || saveIndicator.tone === "error";
+
   return (
-    <form ref={formRef} onSubmit={(event) => event.preventDefault()} className="grid gap-5 sm:gap-6">
+    <form ref={formRef} onSubmit={(event) => event.preventDefault()} className="grid gap-5 sm:gap-6 [&_input]:scroll-mb-32 [&_textarea]:scroll-mb-32">
       <input type="hidden" name="slug" value={slug} />
       <input type="hidden" name="status" value={status} />
       <input type="hidden" name="attendingCount" value={effectiveAttendingCount ?? ""} />
@@ -489,15 +645,9 @@ export function RsvpForm({
                     id={`attendee-name-${index}`}
                     name="attendeeNames"
                     value={attendee.fullName}
-                    onBlur={() => {
-                      void saveDraft({
-                        status: "yes",
-                        attendingCount: effectiveAttendingCount,
-                      });
-                    }}
+                    onBlur={flushEdits}
                     onChange={(event) => {
-                      setLocalError("");
-                      setJustSaved(false);
+                      noteEdit();
                       const next = [...visibleAttendeeDetails];
                       next[index] = {
                         ...next[index],
@@ -612,15 +762,9 @@ export function RsvpForm({
                       name="attendeeDietaryNotes"
                       value={attendee.dietaryNotes}
                       rows={2}
-                      onBlur={() => {
-                        void saveDraft({
-                          status: "yes",
-                          attendingCount: effectiveAttendingCount,
-                        });
-                      }}
+                      onBlur={flushEdits}
                       onChange={(event) => {
-                        setLocalError("");
-                        setJustSaved(false);
+                        noteEdit();
                         const next = [...visibleAttendeeDetails];
                         next[index] = {
                           ...next[index],
@@ -654,13 +798,11 @@ export function RsvpForm({
           role="group"
           aria-labelledby="mailing-address-heading"
           onBlur={(event) => {
-            // Save once focus leaves the address block instead of on every field hop.
+            // Save once focus leaves the address block (or after a typing pause), not on every field hop.
             if (event.currentTarget.contains(event.relatedTarget as Node | null)) {
               return;
             }
-            if (JSON.stringify(mailingAddress) !== lastSavedMailingAddress.current) {
-              void saveDraft();
-            }
+            flushEdits();
           }}
           className="grid gap-3 rounded-md border border-[#ffd6e4]/30 bg-[#fff6fa]/5 p-3.5 text-[#ffd6e4] sm:p-5"
         >
@@ -690,8 +832,7 @@ export function RsvpForm({
                 }
 
                 event.preventDefault();
-                setLocalError("");
-                setJustSaved(false);
+                noteEdit();
                 setMailingAddress(parsed);
                 setAddressPasted(true);
                 if (parsed.country) {
@@ -819,42 +960,47 @@ export function RsvpForm({
         </div>
       ) : null}
 
-      <div className="-mx-5 -mb-5 grid gap-2 border-t border-[#ffd6e4]/35 bg-[#fff6fa]/6 px-5 py-4 pb-[calc(1rem+env(safe-area-inset-bottom))] text-center text-lg font-semibold backdrop-blur-sm sm:-mx-8 sm:-mb-8 sm:px-8 sm:text-xl lg:-mx-10 lg:-mb-10 lg:px-10">
-        <button
-          type="button"
-          disabled={isSaving}
-          onClick={() => {
-            void saveDraft(undefined, true);
-          }}
-          className="mx-auto min-h-12 w-full max-w-sm rounded-md border border-[#ffd6e4]/65 bg-[#fff6fa]/10 px-5 text-lg font-semibold tracking-normal text-[#ffd6e4] transition hover:border-[#ffd6e4] hover:bg-[#fff6fa]/14 hover:text-[#ffd6e4] disabled:cursor-not-allowed disabled:border-[#565b62] disabled:bg-[#3a3f45] disabled:text-[#9ba1a9] disabled:hover:border-[#565b62] disabled:hover:bg-[#3a3f45] disabled:hover:text-[#9ba1a9] sm:min-h-14 sm:text-xl"
-        >
-          Save
-        </button>
-        <div role="status" aria-live="polite" className="empty:hidden">
-          {isSaving ? (
-            <p className="text-[#ffd6e4]">Saving...</p>
-          ) : justSaved ? (
-            <div className="mx-auto flex w-full max-w-sm items-center justify-center gap-2.5 rounded-md border-2 border-[#ffd6e4] bg-[#ffd6e4] px-4 py-3 text-lg font-bold text-[#052018] sm:text-xl">
-              <span
-                aria-hidden="true"
-                className="grid size-6 shrink-0 place-items-center rounded-full bg-[#052018] text-sm font-bold text-[#ffd6e4]"
+      <div
+        className={`${status ? "sticky bottom-0" : ""} z-20 -mx-5 -mb-5 rounded-b-[calc(0.5rem-1px)] border-t border-[#ffd6e4]/40 bg-[#031b12]/95 px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] shadow-[0_-18px_36px_-24px_rgba(0,0,0,0.95)] backdrop-blur-md sm:-mx-8 sm:-mb-8 sm:px-8 sm:py-4 sm:pb-[calc(1rem+env(safe-area-inset-bottom))] lg:-mx-10 lg:-mb-10 lg:px-10`}
+      >
+        <div className="mx-auto flex max-w-3xl items-center gap-3 sm:gap-5">
+          <div
+            role="status"
+            aria-live="polite"
+            className="flex min-w-0 flex-1 items-center gap-3"
+          >
+            <SaveStatusIcon
+              key={saveIndicator.tone === "saved" ? `saved-${saveCount}` : saveIndicator.tone}
+              tone={saveIndicator.tone}
+            />
+            <div className="min-w-0">
+              <p
+                className={`text-lg font-semibold leading-tight sm:text-xl ${
+                  saveIndicator.tone === "error" ? "text-[#ff9fb8]" : "text-[#ffd6e4]"
+                }`}
               >
-                ✓
-              </span>
-              Saved!
+                {saveIndicator.title}
+              </p>
+              <p className="text-sm leading-snug text-[#ffd6e4]/80 sm:text-base">
+                {saveIndicator.detail}
+              </p>
             </div>
-          ) : null}
+          </div>
+          <button
+            type="button"
+            disabled={isSaving}
+            onClick={() => {
+              void saveDraft(undefined, true);
+            }}
+            className={`min-h-12 shrink-0 rounded-md border px-6 text-lg font-semibold tracking-normal transition disabled:cursor-not-allowed disabled:border-[#565b62] disabled:bg-[#3a3f45] disabled:text-[#9ba1a9] disabled:shadow-none sm:min-h-14 sm:px-10 sm:text-xl ${
+              saveButtonIsPrimary
+                ? "border-[#ffd6e4] bg-[#ffd6e4] text-[#052018] shadow-[0_8px_22px_-12px_rgba(255,214,228,0.9)] hover:bg-[#ffe6ef]"
+                : "border-[#ffd6e4]/65 bg-[#fff6fa]/8 text-[#ffd6e4] hover:border-[#ffd6e4] hover:bg-[#fff6fa]/14"
+            }`}
+          >
+            Save
+          </button>
         </div>
-        {justSaved && !isSaving ? (
-          <p className="text-base font-normal text-[#ffd6e4]/85 sm:text-lg">
-            Your RSVP is recorded. Change anything above to update it.
-          </p>
-        ) : null}
-        {currentErrorLocation === "global" ? (
-          <p className="text-[#ffd6e4]" role="alert">
-            {displayedError}
-          </p>
-        ) : null}
       </div>
     </form>
   );
