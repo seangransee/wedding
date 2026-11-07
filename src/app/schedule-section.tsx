@@ -5,7 +5,7 @@ export function ScheduleSection({ showFridayWelcome }: { showFridayWelcome: bool
     <section
       id="schedule"
       aria-labelledby="schedule-heading"
-      className="relative z-10 mx-auto mt-12 max-w-5xl scroll-mt-40 sm:scroll-mt-28 sm:mt-16 lg:mt-20"
+      className="relative z-10 mx-auto w-full max-w-5xl scroll-mt-40 sm:scroll-mt-28"
     >
       <div className="guest-panel-surface rounded-lg border border-[#ffd6e4]/60 p-5 sm:p-8 lg:p-10">
         <header className="border-b border-[#ffd6e4]/45 pb-5 text-center sm:pb-6">

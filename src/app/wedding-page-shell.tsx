@@ -5,6 +5,7 @@ import { getWeddingCalendarUrl, WEDDING_DETAILS } from "./wedding-details";
 import { PhotosSection } from "./photos-section";
 import { RegistrySection } from "./registry-section";
 import { ScheduleSection } from "./schedule-section";
+import { WeddingPageLayout } from "./wedding-page-layout";
 
 export { LockedNotice } from "./locked-notice";
 
@@ -16,6 +17,7 @@ type WeddingPageShellProps = {
   panelNavLabel?: string;
   showHotelBlocks?: boolean;
   showFridayWelcome?: boolean;
+  scheduleFirst?: boolean;
 };
 
 const defaultPanelClassName =
@@ -77,79 +79,6 @@ function EventHeroCopy({ calendarWebsiteUrl }: { calendarWebsiteUrl: string }) {
   );
 }
 
-function PageNav({
-  hasPhotos,
-  panelId,
-  panelNavLabel,
-}: {
-  hasPhotos: boolean;
-  panelId: string;
-  panelNavLabel: string;
-}) {
-  const navItems = [
-    { href: `#${panelId}`, label: panelNavLabel },
-    { href: "#schedule", label: "Schedule" },
-    { href: "#our-story", label: "Our Story" },
-    { href: "#hotel-blocks", label: "Hotels" },
-    { href: "#registry", label: "Gifts" },
-    { href: "#faqs", label: "FAQs" },
-    ...(hasPhotos ? [{ href: "#photos", label: "Sexi Adventures" }] : []),
-  ];
-
-  return (
-    <nav
-      aria-label="On this page"
-      className="guest-page-nav sticky top-[calc(env(safe-area-inset-top)+0.5rem)] z-30 mx-auto rounded-lg border border-[#ffd6e4]/45 bg-[#031b12]/88 px-2 py-2 text-[#ffd6e4] shadow-[0_18px_45px_-30px_rgba(0,0,0,0.75)] backdrop-blur-md"
-    >
-      <div className="guest-page-nav-list">
-        {navItems.map((item) => (
-          <a
-            key={item.href}
-            href={item.href}
-            className="guest-page-nav-link inline-flex min-h-9 items-center justify-center rounded-md border border-[#ffd6e4]/35 text-[0.6rem] font-semibold uppercase tracking-[0.08em] text-[#ffd6e4] transition hover:border-[#ffd6e4] hover:text-[#ffd6e4] sm:text-[0.66rem]"
-          >
-            {item.label}
-          </a>
-        ))}
-      </div>
-    </nav>
-  );
-}
-
-function LongFormSections({
-  photos,
-  showHotelBlocks,
-  showFridayWelcome,
-}: {
-  photos: Awaited<ReturnType<typeof getWeddingPhotos>>;
-  showHotelBlocks: boolean;
-  showFridayWelcome: boolean;
-}) {
-  return (
-    <div className="pb-16">
-      <ScheduleSection showFridayWelcome={showFridayWelcome} />
-      <MarkdownContent id="our-story" fileName="our-story.md" styleEmojis />
-      <MarkdownContent
-        id="hotel-blocks"
-        fileName="hotel-blocks.md"
-        emphasizeHeadings
-        splitDetailedHeadings
-        buttonizeBookingLinks
-        lockedBlocks={!showHotelBlocks}
-      />
-      <RegistrySection />
-      <MarkdownContent
-        id="faqs"
-        fileName="faqs.md"
-        collapsibleQuestions
-        emphasizeHeadings
-        lockedBlocks={!showHotelBlocks}
-      />
-      <PhotosSection photos={photos} />
-    </div>
-  );
-}
-
 export async function WeddingPageShell({
   panel,
   calendarWebsiteUrl = WEDDING_DETAILS.websiteUrl,
@@ -158,26 +87,45 @@ export async function WeddingPageShell({
   panelNavLabel = "Wedding Details",
   showHotelBlocks = false,
   showFridayWelcome = false,
+  scheduleFirst = false,
 }: WeddingPageShellProps) {
   const photos = await getWeddingPhotos();
 
   return (
     <main className="guest-invitation-page relative min-h-screen bg-[#031b12] px-3 py-4 pb-[calc(1rem+env(safe-area-inset-bottom))] text-[#ffd6e4]">
       <DoubleHappinessFrame />
-      <PageNav
+      <WeddingPageLayout
+        scheduleFirst={scheduleFirst}
         hasPhotos={photos.length > 0}
         panelId={panelId}
         panelNavLabel={panelNavLabel}
+        panelClassName={panelClassName}
+        heroCopy={<EventHeroCopy calendarWebsiteUrl={calendarWebsiteUrl} />}
+        panel={panel}
+        schedule={<ScheduleSection showFridayWelcome={showFridayWelcome} />}
+        gifts={<RegistrySection />}
+        hotels={
+          <MarkdownContent
+            id="hotel-blocks"
+            fileName="hotel-blocks.md"
+            emphasizeHeadings
+            splitDetailedHeadings
+            buttonizeBookingLinks
+            lockedBlocks={!showHotelBlocks}
+          />
+        }
+        faqs={
+          <MarkdownContent
+            id="faqs"
+            fileName="faqs.md"
+            collapsibleQuestions
+            emphasizeHeadings
+            lockedBlocks={!showHotelBlocks}
+          />
+        }
+        ourStory={<MarkdownContent id="our-story" fileName="our-story.md" styleEmojis />}
+        photos={<PhotosSection photos={photos} />}
       />
-
-      <section className="guest-hero-section relative z-10 mx-auto grid min-h-[calc(100svh-2rem)] max-w-5xl items-end gap-4 pt-[36svh]">
-        <EventHeroCopy calendarWebsiteUrl={calendarWebsiteUrl} />
-        <div id={panelId} className={`${panelClassName} scroll-mt-40 sm:scroll-mt-28`}>
-          {panel}
-        </div>
-      </section>
-
-      <LongFormSections photos={photos} showHotelBlocks={showHotelBlocks} showFridayWelcome={showFridayWelcome} />
     </main>
   );
 }

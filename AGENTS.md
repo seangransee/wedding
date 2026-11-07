@@ -82,7 +82,7 @@ Core tables:
 - `src/app/admin/photos/page.tsx`: admin photo manager for reordering Sexi Adventures photos and hiding/restoring individual images without deleting files.
 - `src/app/[slug]/opengraph-image.tsx`, `src/app/savethedate/opengraph-image.tsx`, and `src/lib/opengraph-image.tsx`: generated PNG Open Graph images for per-guest invitation links and the public save-the-date link.
 
-Global styling lives in `src/app/globals.css`. The shared public/invitation page shell lives in `src/app/wedding-page-shell.tsx`, includes sticky in-page section navigation, renders long-form Markdown content from `content/`, renders the static-manifest-backed Sexi Adventures gallery when generated photo assets exist, and uses `public/sexi-background.jpg`; Open Graph image generation uses local fonts from `public/fonts/`.
+Global styling lives in `src/app/globals.css`. The shared public/invitation page shell lives in `src/app/wedding-page-shell.tsx` (section order and sticky in-page navigation live in the client `src/app/wedding-page-layout.tsx`), renders long-form Markdown content from `content/`, renders the static-manifest-backed Sexi Adventures gallery when generated photo assets exist, and uses `public/sexi-background.jpg`; Open Graph image generation uses local fonts from `public/fonts/`.
 
 ## Open Graph Images
 
@@ -161,7 +161,7 @@ Be careful changing validation: database constraints, server action validation, 
 - `INVITATION_BASE_URL` in `admin-client.tsx` is hardcoded to `https://sexiwedding.com` for copied links.
 - All long-form content should be driven by Markdown files in `content/`, not hard-coded in React or TypeScript. The renderer for these files lives in `src/app/markdown-content.tsx`.
 - Public `/` keeps Markdown invitation-only blocks locked behind an invitation link; guest invitation pages render those blocks.
-- The Schedule section (`#schedule`) sits below RSVP and above Our Story, with a matching navigation link. Its Friday content is conditionally rendered on the server from `guest.friDin`; public pages and unselected guests receive only Saturday's events.
+- Section order (page and sticky nav) is RSVP/Wedding Details, Schedule, Gifts, Hotels, FAQs, Our Story, Sexi Adventures. On invitation pages whose saved RSVP status is `yes` or `no`, Schedule moves above RSVP (into the hero slot) in both the page and the nav. `src/app/wedding-page-layout.tsx` freezes that order on first render so an RSVP save that refreshes the route never moves the form mid-edit; the new order applies on the next visit. Schedule (`#schedule`) has a matching navigation link. Its Friday content is conditionally rendered on the server from `guest.friDin`; public pages and unselected guests receive only Saturday's events.
 - FAQ questions in `content/faqs.md` render as collapsible dropdowns; keep each question as a `###` heading followed by its answer content.
 - The Gifts section (`#registry`) appears on both public and invitation pages with two options: Amazon and monetary gifts using Venmo or Zelle, labeled "Contribute to our next chapter." Venmo displays its handle, link, and QR code on all screen sizes. Zelle displays only its verified phone number, without a link or QR code. Keep the Venmo receiving link and QR asset in sync, without extra instructions or copy controls. Never invent payment destinations or publish account numbers.
 - Keep the website's Amazon registry copy generic. Individual gift item details belong only inside the Amazon registry.
