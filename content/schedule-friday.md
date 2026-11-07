@@ -1,7 +1,11 @@
 ## Friday, December 11, 2026
 
-### Casual evening welcome event
+### Welcome Party
 
-[Exchequer Restaurant & Pub](https://maps.app.goo.gl/6FBojqMLP8oPzAmX8)
+5:30 – 8:00 pm
 
-Time TBD
+- Speakeasy Bar
+- [Exchequer Restaurant & Pub](https://maps.app.goo.gl/6FBojqMLP8oPzAmX8)
+- 226 S. Wabash
+
+Regrets only

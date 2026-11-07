@@ -167,6 +167,55 @@ body {
   margin-top: 2rem;
 }
 
+/* Event time: the paragraph right after an event (###) heading. */
+.guest-schedule-day h4 + p {
+  margin-top: 0.15rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  line-height: 1.6;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+/* Venue/address lines: a list under an event renders as a tight stacked block. */
+.guest-schedule-day ul {
+  gap: 0;
+  margin-top: 0.5rem;
+  padding-left: 0;
+  line-height: 1.55;
+}
+
+.guest-schedule-day li {
+  list-style: none;
+}
+
+.guest-schedule-day li:first-child {
+  font-weight: 600;
+}
+
+.guest-schedule-day li:last-child:not(:first-child) {
+  opacity: 0.8;
+}
+
+.guest-schedule-day li a {
+  padding-block: 0.15rem;
+}
+
+/* Closing note under an event's venue block, e.g. "Regrets only". */
+.guest-schedule-day ul + p {
+  justify-self: start;
+  margin-top: 0.85rem;
+  border: 1px solid rgba(255, 214, 228, 0.55);
+  border-radius: 999px;
+  background: rgba(255, 246, 250, 0.06);
+  padding: 0.3rem 0.95rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  line-height: 1.5;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
 .guest-schedule-day a {
   display: inline-block;
   padding-block: 0.3rem;
