@@ -533,3 +533,119 @@ export async function generateInvitationOgImage(guestName: string) {
     },
   );
 }
+
+async function loadOgFonts() {
+  const [cormorantFont, libreFont, dancingFont, greatVibesFont] = await Promise.all([
+    fontDataCormorant,
+    fontDataLibre,
+    fontDataDancing,
+    fontDataGreatVibes,
+  ]);
+
+  return [
+    { name: "Cormorant Garamond", data: cormorantFont, style: "normal" as const, weight: 600 as const },
+    { name: "Libre Baskerville", data: libreFont, style: "normal" as const, weight: 700 as const },
+    { name: "Dancing Script", data: dancingFont, style: "normal" as const, weight: 600 as const },
+    { name: "Great Vibes", data: greatVibesFont, style: "normal" as const, weight: 400 as const },
+  ];
+}
+
+// Wraps a name onto at most `maxLines` lines of about `maxLineLength` characters.
+function wrapName(name: string, maxLineLength: number, maxLines: number) {
+  const words = (name.trim().replace(/\s+/g, " ") || "Friend")
+    .split(" ")
+    .flatMap((word) => (word.length > maxLineLength ? chunkLongWord(word, maxLineLength) : word));
+  const lines: string[] = [];
+
+  for (const word of words) {
+    const current = lines[lines.length - 1];
+
+    if (current && `${current} ${word}`.length <= maxLineLength) {
+      lines[lines.length - 1] = `${current} ${word}`;
+    } else if (lines.length < maxLines) {
+      lines.push(word);
+    } else {
+      lines[maxLines - 1] = `${lines[maxLines - 1].replace(/\.*$/, "")}...`;
+      break;
+    }
+  }
+
+  return lines;
+}
+
+const pink = "#ffd6e4";
+const deepGreen = "3, 27, 18";
+
+/** Link preview for guests who RSVP'd yes: "Name, wedding details inside" with the photo kept clear. */
+export async function generateAttendingOgImage(guestName: string) {
+  const [fonts, backgroundImage] = await Promise.all([loadOgFonts(), invitationBackgroundData]);
+
+  const nameLines = wrapName(guestName, 46, 2);
+  const nameFontSize = nameLines.length > 1 ? 32 : 38;
+
+  return new ImageResponse(
+    (
+      <div style={{ width: "100%", height: "100%", display: "flex", position: "relative", overflow: "hidden", background: `rgb(${deepGreen})` }}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={backgroundImage}
+          alt=""
+          style={{ position: "absolute", left: "-20px", top: "-470px", width: "1260px", height: "1890px" }}
+        />
+        <div
+          style={{
+            position: "absolute",
+            top: 0, left: 0, right: 0, bottom: 0,
+            background: `linear-gradient(180deg, rgba(${deepGreen}, 0.35) 0%, rgba(${deepGreen}, 0) 18%, rgba(${deepGreen}, 0) 60%, rgba(${deepGreen}, 0.8) 77%, rgba(${deepGreen}, 0.95) 100%)`,
+          }}
+        />
+        <div style={{ position: "absolute", top: "22px", left: "22px", right: "22px", bottom: "22px", border: "1px solid rgba(255, 214, 228, 0.6)", borderRadius: "6px" }} />
+        <div
+          style={{
+            position: "absolute",
+            top: "36px",
+            left: 0,
+            right: 0,
+            display: "flex",
+            justifyContent: "center",
+            color: pink,
+            fontFamily: "'Great Vibes', serif",
+            fontSize: "64px",
+            lineHeight: 1,
+            textShadow: `0 2px 12px rgba(${deepGreen}, 0.95)`,
+          }}
+        >
+          Sean + Lexi = Sexi
+        </div>
+        <div
+          style={{
+            position: "absolute",
+            left: 0,
+            right: 0,
+            bottom: "40px",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            color: pink,
+            textAlign: "center",
+            textShadow: `0 2px 14px rgba(${deepGreen}, 0.9)`,
+          }}
+        >
+          {nameLines.map((line, index) => (
+            <div
+              key={`${line}-${index}`}
+              style={{ display: "flex", fontFamily: "'Cormorant Garamond', serif", fontSize: `${nameFontSize}px`, lineHeight: 1.1 }}
+            >
+              {line}
+              {index === nameLines.length - 1 ? "," : ""}
+            </div>
+          ))}
+          <div style={{ display: "flex", fontFamily: "'Great Vibes', serif", fontSize: "80px", lineHeight: 1, marginTop: "2px" }}>
+            wedding details inside
+          </div>
+        </div>
+      </div>
+    ),
+    { ...size, fonts },
+  );
+}

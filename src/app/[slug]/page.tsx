@@ -15,7 +15,6 @@ type PageProps = {
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;
   const data = await getGuestPageData(slug);
-  const imageUrl = `/${slug}/opengraph-image`;
 
   if (!data) {
     return {
@@ -23,12 +22,22 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     };
   }
 
+  const isAttending = data.rsvp?.status === "yes";
+  // The query string only changes the URL so link-preview caches pick up the attending image.
+  const imageUrl = `/${slug}/opengraph-image${isAttending ? "?rsvp=yes" : ""}`;
+  const shareTitle = isAttending
+    ? `${data.guest.name}, wedding details inside`
+    : `${data.guest.name}, you're invited!`;
+  const description = isAttending
+    ? "Schedule, hotels, and details for Sean and Lexi's wedding."
+    : "RSVP for Sean and Lexi's wedding.";
+
   return {
     title: `${data.guest.name} | Sexi Wedding`,
-    description: "RSVP for Sean and Lexi's wedding.",
+    description,
     openGraph: {
-      title: `${data.guest.name}, you're invited!`,
-      description: "RSVP for Sean and Lexi's wedding.",
+      title: shareTitle,
+      description,
       type: "website",
       locale: "en_US",
       images: [
@@ -36,14 +45,16 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
           url: imageUrl,
           width: 1200,
           height: 630,
-          alt: `${data.guest.name}, you're invited to Sean and Lexi's wedding.`,
+          alt: isAttending
+            ? `${data.guest.name}, wedding details for Sean and Lexi's wedding inside.`
+            : `${data.guest.name}, you're invited to Sean and Lexi's wedding.`,
         },
       ],
     },
     twitter: {
       card: "summary_large_image",
-      title: `${data.guest.name}, you're invited!`,
-      description: "RSVP for Sean and Lexi's wedding.",
+      title: shareTitle,
+      description,
       images: [imageUrl],
     },
   };

@@ -89,7 +89,8 @@ Global styling lives in `src/app/globals.css`. The shared public/invitation page
 Open Graph images are a high-priority part of the experience for invitation and save-the-date links because these are shared directly with guests. Other pages should not add generated OG images unless explicitly requested.
 
 - `/savethedate/opengraph-image` must look polished for the public save-the-date link.
-- `/{slug}/opengraph-image` must look polished for each unique invitation link and include the guest name cleanly.
+- `/{slug}/opengraph-image` must look polished for each unique invitation link and include the guest name cleanly. Guests whose saved RSVP is `yes` get a different image (`generateAttendingOgImage`): the full photo with faces kept clear, the brand at the top, and "Name, / wedding details inside" in a dark-green fade below the chins; their page metadata uses the matching title and adds `?rsvp=yes` to the image URL so link-preview caches refetch it. Everyone else gets the "you're invited!" image (`generateInvitationOgImage`).
+- The OG renderer (Satori) ignores the CSS `inset` shorthand; use explicit `top`/`left`/`right`/`bottom` for overlays.
 - `src/lib/opengraph-image.tsx` contains both generators. It reads local font files from `public/fonts/` and uses `public/sexi-background.jpg` for invitation images.
 - When changing copy, dates, venue details, slug routes, fonts, or background imagery, verify the affected OG image too, not just the rendered page.
 

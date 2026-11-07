@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
-import { getGuestBySlug } from "@/lib/db";
-import { generateInvitationOgImage } from "@/lib/opengraph-image";
+import { getGuestPageData } from "@/lib/db";
+import { generateAttendingOgImage, generateInvitationOgImage } from "@/lib/opengraph-image";
 
 export const runtime = "nodejs";
 export const size = { width: 1200, height: 630 };
@@ -12,11 +12,14 @@ type ImageProps = {
 
 export default async function Image({ params }: ImageProps) {
   const { slug } = await params;
-  const guest = await getGuestBySlug(slug);
+  const data = await getGuestPageData(slug);
 
-  if (!guest) {
+  if (!data) {
     notFound();
   }
 
-  return generateInvitationOgImage(guest.name);
+  // Guests who said yes get "Name, wedding details inside" instead of the invitation.
+  return data.rsvp?.status === "yes"
+    ? generateAttendingOgImage(data.guest.name)
+    : generateInvitationOgImage(data.guest.name);
 }
