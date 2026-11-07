@@ -62,11 +62,45 @@ const MEAL_OPTIONS: Array<{ value: MealType; category: string; label: string; de
     category: "Vegetarian",
     label: "Truffle Mushroom Gnocchi",
     description: "Spinach, mushrooms, roasted tomatoes, parmesan, truffle mushroom cream sauce.",
-    dietaryNote: "Vegetarian. Can be made vegan; please request this in Dietary Restrictions/Allergies below.",
+    dietaryNote: "Can be made vegan; just add a dietary note below.",
   },
 ];
 
-const ADDRESS_INPUT_CLASS_NAME = "min-h-12 w-full min-w-0 rounded-md border border-[#ffd6e4]/55 bg-[#031b12]/55 px-3 text-lg font-normal text-[#ffd6e4] outline-none transition placeholder:text-[#ffd6e4]/45 focus:border-[#ffd6e4] focus:ring-2 focus:ring-[#ffd6e4]/25 sm:min-h-14 sm:text-xl";
+const INPUT_CLASS_NAME = "min-h-12 w-full min-w-0 rounded-md border border-[#ffd6e4]/55 bg-[#031b12]/55 px-3 font-normal text-[#ffd6e4] outline-none transition placeholder:text-[#ffd6e4]/45 focus:border-[#ffd6e4] focus:ring-2 focus:ring-[#ffd6e4]/25";
+
+const LABEL_CLASS_NAME = "text-base font-semibold leading-snug text-[#ffd6e4] sm:text-lg";
+
+const CHOICE_CLASS_NAME = "rounded-md border font-semibold leading-tight transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#ffd6e4]";
+
+function choiceStateClassName(selected: boolean) {
+  return selected
+    ? "border-[#ffd6e4] bg-[#ffd6e4] text-[#052018] shadow-[0_6px_18px_-10px_rgba(255,214,228,0.8)]"
+    : "border-[#ffd6e4]/45 bg-[#fff6fa]/6 text-[#ffd6e4] hover:border-[#ffd6e4] hover:bg-[#fff6fa]/10";
+}
+
+const LINK_BUTTON_CLASS_NAME = "min-h-11 w-fit text-left text-base font-semibold text-[#ffd6e4] underline decoration-[#ffd6e4]/55 underline-offset-4 transition hover:decoration-[#ffd6e4] sm:text-lg";
+
+function StepBadge({ done, children }: { done: boolean; children: ReactNode }) {
+  return (
+    <span
+      className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-sm font-semibold leading-snug ${
+        done
+          ? "border-[#ffd6e4] bg-[#ffd6e4] text-[#052018]"
+          : "border-dashed border-[#ffd6e4]/70 text-[#ffd6e4]"
+      }`}
+    >
+      {done ? <span aria-hidden="true">✓</span> : null}
+      {children}
+    </span>
+  );
+}
+
+function missingLabel(missingName: boolean, missingMeal: boolean) {
+  if (missingName && missingMeal) {
+    return "Needs name & meal";
+  }
+  return missingName ? "Needs name" : "Needs meal";
+}
 
 type ErrorLocation = "status" | "count" | "names" | "global" | null;
 
@@ -141,6 +175,7 @@ export function RsvpForm({
   const [localError, setLocalError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [justSaved, setJustSaved] = useState(false);
+  const [openDietaryNotes, setOpenDietaryNotes] = useState<ReadonlySet<number>>(() => new Set());
   const formRef = useRef<HTMLFormElement>(null);
   const saveSequence = useRef(0);
   const effectiveAttendingCount = status === "yes" && guestCount === 1
@@ -171,8 +206,8 @@ export function RsvpForm({
       (input) => input.value,
     );
     const dietaryNotes = Array.from(
-      formRef.current?.querySelectorAll<HTMLTextAreaElement>('textarea[name="attendeeDietaryNotes"]') ?? [],
-      (textarea) => textarea.value,
+      formRef.current?.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>('[name="attendeeDietaryNotes"]') ?? [],
+      (field) => field.value,
     );
     const count = Math.max(names.length, mealTypes.length, dietaryNotes.length);
 
@@ -268,42 +303,38 @@ export function RsvpForm({
     setMailingAddress((current) => ({ ...current, [field]: value }));
   }
 
+  const completedAttendees = visibleAttendeeDetails.filter(
+    (attendee) => attendee.fullName.trim() !== "" && attendee.mealType !== null,
+  ).length;
+
+  function openDietaryNote(index: number) {
+    setOpenDietaryNotes((current) => new Set(current).add(index));
+    window.requestAnimationFrame(() => {
+      document.getElementById(`attendee-dietary-notes-${index}`)?.focus();
+    });
+  }
+
   return (
-    <form ref={formRef} onSubmit={(event) => event.preventDefault()} className="grid gap-6 sm:gap-7">
+    <form ref={formRef} onSubmit={(event) => event.preventDefault()} className="grid gap-5 sm:gap-6">
       <input type="hidden" name="slug" value={slug} />
       <input type="hidden" name="status" value={status} />
       <input type="hidden" name="attendingCount" value={effectiveAttendingCount ?? ""} />
 
-      <div className="min-w-0">
-        <h2 className="break-words text-3xl font-semibold leading-tight text-[#ffd6e4] sm:text-5xl">
+      <div className="grid min-w-0 gap-1.5">
+        <h2 className="break-words text-[1.75rem] font-semibold leading-[1.1] text-[#ffd6e4] sm:text-4xl">
           {guestName}, you&apos;re invited!
         </h2>
-        {guestCount > 1 ? (
-          <p className="mt-3 text-lg font-semibold leading-[1.65] text-[#ffd6e4]/85 sm:text-xl">
-            This invitation is for up to {guestCount} guests.
-          </p>
-        ) : null}
+        <p className="text-base leading-snug text-[#ffd6e4]/85 sm:text-lg">
+          {guestCount > 1 ? <>For up to {guestCount} guests · </> : null}
+          Please reply by <strong className="font-semibold text-[#ffd6e4]">November 14</strong>
+        </p>
       </div>
 
-      <div className="grid gap-4">
-        <p className="text-lg font-semibold leading-[1.65] text-[#ffd6e4] sm:text-xl">
+      <div role="group" aria-labelledby="rsvp-status-label" className="grid gap-2.5">
+        <p id="rsvp-status-label" className="text-lg font-semibold leading-snug text-[#ffd6e4] sm:text-xl">
           Will you be attending?
         </p>
-        <p className="text-lg leading-[1.85] text-[#ffd6e4] sm:text-xl">
-          {fuckYes ? (
-            <>
-              Please RSVP with a final answer by{" "}
-              <strong className="font-semibold text-[#ffd6e4]">November 14th</strong>.
-            </>
-          ) : (
-            <>
-              If you&apos;re not sure, select &quot;still deciding&quot; so we know
-              you saw this. Please RSVP with a final answer by{" "}
-              <strong className="font-semibold text-[#ffd6e4]">November 14th</strong>.
-            </>
-          )}
-        </p>
-        <div className="grid gap-3">
+        <div className={`grid gap-2 ${rsvpOptions.length === 3 ? "grid-cols-3" : "grid-cols-2"}`}>
           {rsvpOptions.map((option) => {
             const selected = selectedOptionId === option.id;
             return (
@@ -340,94 +371,119 @@ export function RsvpForm({
                   });
                 }}
                 aria-pressed={selected}
-                className={`min-h-14 rounded-md border px-4 text-base font-semibold tracking-normal transition sm:text-lg ${
-                  selected
-                    ? "border-[#ffd6e4] bg-[#fff6fa]/12 text-[#ffd6e4]"
-                    : "border-[#ffd6e4]/45 bg-[#fff6fa]/6 text-[#ffd6e4] hover:border-[#ffd6e4] hover:text-[#ffd6e4]"
-                }`}
+                className={`${CHOICE_CLASS_NAME} ${choiceStateClassName(selected)} min-h-12 px-1.5 text-base sm:min-h-14 sm:text-lg`}
               >
                 {option.label}
               </button>
             );
           })}
         </div>
+        {!fuckYes && status === "" ? (
+          <p className="text-base leading-snug text-[#ffd6e4]/80 sm:text-lg">
+            Not sure yet? Pick &ldquo;Still deciding&rdquo; so we know you saw this.
+          </p>
+        ) : null}
         {currentErrorLocation === "status" ? (
           <ErrorNote>{displayedError}</ErrorNote>
         ) : null}
       </div>
 
-      {status === "yes" ? (
-        <div className="grid gap-5">
-          {guestCount > 1 ? (
-            <div className="grid gap-4">
-              <p className="text-lg font-semibold leading-[1.65] text-[#ffd6e4] sm:text-xl">
-                How many attending?
-              </p>
-              <div className="grid grid-cols-5 gap-2">
-                {Array.from({ length: guestCount }, (_, index) => index + 1).map(
-                  (count) => {
-                    const selected = attendingCount === count;
-                    return (
-                      <button
-                        key={count}
-                        type="button"
-                        onClick={() => {
-                          const nextNames = Array.from(
-                            { length: count },
-                            (_, attendeeIndex) => attendeeDetails[attendeeIndex] ?? {
-                              fullName: "",
-                              mealType: null,
-                              dietaryNotes: "",
-                            },
-                          );
-
-                          setLocalError("");
-                          setJustSaved(false);
-                          setAttendingCount(count);
-                          setAttendeeDetails(nextNames);
-                          void saveDraft({
-                            status: "yes",
-                            attendingCount: count,
-                            attendeeDetails: nextNames,
-                          });
-                        }}
-                        aria-pressed={selected}
-                        className={`min-h-12 rounded-md border text-lg font-semibold transition sm:min-h-14 sm:text-xl ${
-                          selected
-                            ? "border-[#ffd6e4] bg-[#fff6fa]/12 text-[#ffd6e4]"
-                            : "border-[#ffd6e4]/45 bg-[#fff6fa]/6 text-[#ffd6e4] hover:border-[#ffd6e4] hover:text-[#ffd6e4]"
-                        }`}
-                        aria-label={`${count} attending`}
-                      >
-                        {count}
-                      </button>
+      {status === "yes" && guestCount > 1 ? (
+        <div role="group" aria-labelledby="rsvp-count-label" className="grid gap-2.5">
+          <p id="rsvp-count-label" className="text-lg font-semibold leading-snug text-[#ffd6e4] sm:text-xl">
+            How many attending?
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {Array.from({ length: guestCount }, (_, index) => index + 1).map((count) => {
+              const selected = attendingCount === count;
+              return (
+                <button
+                  key={count}
+                  type="button"
+                  onClick={() => {
+                    const nextNames = Array.from(
+                      { length: count },
+                      (_, attendeeIndex) => attendeeDetails[attendeeIndex] ?? {
+                        fullName: "",
+                        mealType: null,
+                        dietaryNotes: "",
+                      },
                     );
-                  },
-                )}
+
+                    setLocalError("");
+                    setJustSaved(false);
+                    setAttendingCount(count);
+                    setAttendeeDetails(nextNames);
+                    void saveDraft({
+                      status: "yes",
+                      attendingCount: count,
+                      attendeeDetails: nextNames,
+                    });
+                  }}
+                  aria-pressed={selected}
+                  aria-label={`${count} attending`}
+                  className={`${CHOICE_CLASS_NAME} ${choiceStateClassName(selected)} size-12 text-lg sm:size-14 sm:text-xl`}
+                >
+                  {count}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
+
+      {status === "yes" && visibleAttendeeDetails.length > 0 ? (
+        <div className="grid gap-3">
+          {visibleAttendeeDetails.length > 1 ? (
+            <div className="grid gap-2">
+              <div className="flex items-baseline justify-between gap-3">
+                <p className="text-lg font-semibold leading-snug text-[#ffd6e4] sm:text-xl">
+                  Place cards &amp; meals
+                </p>
+                <p className="shrink-0 text-sm font-semibold uppercase tracking-[0.12em] text-[#ffd6e4]/85">
+                  {completedAttendees} of {visibleAttendeeDetails.length} done
+                </p>
+              </div>
+              <div
+                aria-hidden="true"
+                className="h-1.5 overflow-hidden rounded-full bg-[#ffd6e4]/18"
+              >
+                <div
+                  className="h-full rounded-full bg-[#ffd6e4] transition-[width] duration-300"
+                  style={{ width: `${(completedAttendees / visibleAttendeeDetails.length) * 100}%` }}
+                />
               </div>
             </div>
           ) : null}
+          {currentErrorLocation === "names" ? (
+            <ErrorNote>{displayedError}</ErrorNote>
+          ) : null}
+          {visibleAttendeeDetails.map((attendee, index) => {
+            const missingName = attendee.fullName.trim() === "";
+            const missingMeal = attendee.mealType === null;
+            const showDietaryNotes = attendee.dietaryNotes !== "" || openDietaryNotes.has(index);
 
-          {visibleAttendeeDetails.length > 0 ? (
-            <div className="grid gap-4">
-              <p className="text-lg leading-[1.85] text-[#ffd6e4] sm:text-xl">
-                {visibleAttendeeDetails.length === 1
-                  ? "Enter your full name exactly as it should appear on the place card."
-                  : "Enter each full name exactly as it should appear on the place card."}
-              </p>
-              <p className="text-lg leading-[1.85] text-[#ffd6e4] sm:text-xl">
-                Please select your meal type and note below if you have any dietary restrictions or allergies we need to be aware of.
-              </p>
-              {currentErrorLocation === "names" ? (
-                <ErrorNote>{displayedError}</ErrorNote>
-              ) : null}
-              {visibleAttendeeDetails.map((attendee, index) => (
-                <div
-                  key={index}
-                  className="grid gap-4 rounded-md border border-[#ffd6e4]/40 bg-[#fff6fa]/8 p-4 text-lg font-semibold leading-[1.5] text-[#ffd6e4] sm:text-xl"
-                >
-                  <label htmlFor={`attendee-name-${index}`}>
-                    {visibleAttendeeDetails.length === 1 ? "Full Name" : `Full Name ${index + 1}`}
+            return (
+              <div
+                key={index}
+                className={`grid gap-3.5 rounded-md border p-3.5 text-[#ffd6e4] sm:p-5 ${
+                  missingName || missingMeal
+                    ? "border-[#ffd6e4]/55 bg-[#fff6fa]/8"
+                    : "border-[#ffd6e4]/30 bg-[#fff6fa]/5"
+                }`}
+              >
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-sm font-semibold uppercase tracking-[0.14em] text-[#ffd6e4]/90">
+                    {visibleAttendeeDetails.length === 1 ? "Place card & meal" : `Guest ${index + 1}`}
+                  </p>
+                  <StepBadge done={!missingName && !missingMeal}>
+                    {missingName || missingMeal ? missingLabel(missingName, missingMeal) : "All set"}
+                  </StepBadge>
+                </div>
+
+                <div className="grid gap-1.5">
+                  <label htmlFor={`attendee-name-${index}`} className={LABEL_CLASS_NAME}>
+                    Name for place card
                   </label>
                   <input
                     id={`attendee-name-${index}`}
@@ -449,109 +505,113 @@ export function RsvpForm({
                       };
                       setAttendeeDetails(next);
                     }}
-                    autoComplete="name"
-                    className="min-h-12 min-w-0 rounded-md border border-[#ffd6e4]/55 bg-[#031b12]/55 px-3 text-lg font-normal text-[#ffd6e4] outline-none transition focus:border-[#ffd6e4] focus:ring-2 focus:ring-[#ffd6e4]/25 sm:min-h-14 sm:text-xl"
+                    autoComplete={index === 0 ? "name" : "off"}
+                    placeholder="Full name, exactly as printed"
+                    className={INPUT_CLASS_NAME}
                   />
-                  <fieldset
-                    role="radiogroup"
-                    aria-labelledby={`attendee-meal-label-${index}`}
-                    className="grid gap-2"
-                  >
-                    <legend id={`attendee-meal-label-${index}`} className="text-lg font-semibold text-[#ffd6e4] sm:text-xl">
-                      Meal Type
-                    </legend>
-                    <input
-                      type="hidden"
-                      name="attendeeMealTypes"
-                      value={attendee.mealType ?? ""}
-                    />
-                    <div className="grid gap-3">
-                      {MEAL_OPTIONS.map((option) => {
-                        const selected = attendee.mealType === option.value;
+                </div>
 
-                        return (
-                          <button
-                            key={option.value}
-                            type="button"
-                            role="radio"
-                            aria-checked={selected}
-                            aria-labelledby={`attendee-${index}-meal-${option.value}-name`}
-                            aria-describedby={`attendee-${index}-meal-${option.value}-description${option.dietaryNote ? ` attendee-${index}-meal-${option.value}-dietary-note` : ""}`}
-                            onClick={() => {
-                              const next = [...visibleAttendeeDetails];
-                              next[index] = {
-                                ...next[index],
-                                mealType: selected ? null : option.value,
-                              };
+                <div
+                  role="radiogroup"
+                  aria-labelledby={`attendee-meal-label-${index}`}
+                  className="grid gap-1.5"
+                >
+                  <p id={`attendee-meal-label-${index}`} className={LABEL_CLASS_NAME}>
+                    Meal
+                  </p>
+                  <input
+                    type="hidden"
+                    name="attendeeMealTypes"
+                    value={attendee.mealType ?? ""}
+                  />
+                  <div className="grid gap-2">
+                    {MEAL_OPTIONS.map((option) => {
+                      const selected = attendee.mealType === option.value;
+                      // Once a meal is picked, the other dishes shrink to their names.
+                      const showDescription = selected || attendee.mealType === null;
 
-                              setLocalError("");
-                              setJustSaved(false);
-                              setAttendeeDetails(next);
-                              void saveDraft({
-                                status: "yes",
-                                attendingCount: effectiveAttendingCount,
-                                attendeeDetails: next,
-                              });
-                            }}
-                            className={`grid min-h-12 grid-cols-[auto_minmax(0,1fr)] items-start gap-3 rounded-md border px-4 py-4 text-left transition focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#ffd6e4] sm:gap-4 sm:px-5 sm:py-5 ${
+                      return (
+                        <button
+                          key={option.value}
+                          type="button"
+                          role="radio"
+                          aria-checked={selected}
+                          aria-labelledby={`attendee-${index}-meal-${option.value}-name`}
+                          aria-describedby={showDescription ? `attendee-${index}-meal-${option.value}-description` : undefined}
+                          onClick={() => {
+                            const next = [...visibleAttendeeDetails];
+                            next[index] = {
+                              ...next[index],
+                              mealType: selected ? null : option.value,
+                            };
+
+                            setLocalError("");
+                            setJustSaved(false);
+                            setAttendeeDetails(next);
+                            void saveDraft({
+                              status: "yes",
+                              attendingCount: effectiveAttendingCount,
+                              attendeeDetails: next,
+                            });
+                          }}
+                          className={`grid grid-cols-[auto_minmax(0,1fr)] items-start gap-3 rounded-md border px-3 py-2.5 text-left transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#ffd6e4] sm:px-4 sm:py-3 ${
+                            selected
+                              ? "border-[#ffd6e4] bg-[#fff6fa]/16"
+                              : "border-[#ffd6e4]/35 bg-[#031b12]/35 hover:border-[#ffd6e4]/75 hover:bg-[#fff6fa]/8"
+                          }`}
+                        >
+                          <span
+                            aria-hidden="true"
+                            className={`mt-1 grid size-5 place-items-center rounded-full border ${
                               selected
-                                ? "border-[#ffd6e4] bg-[#fff6fa]/15 text-[#ffd6e4]"
-                                : "border-[#ffd6e4]/40 bg-[#031b12]/35 text-[#ffd6e4] hover:border-[#ffd6e4]/75 hover:bg-[#fff6fa]/8"
+                                ? "border-[#ffd6e4] bg-[#ffd6e4]"
+                                : "border-[#ffd6e4]/60 bg-[#fff6fa]/8"
                             }`}
                           >
+                            {selected ? (
+                              <span className="size-2.5 rounded-full bg-[#031b12]" />
+                            ) : null}
+                          </span>
+                          <span className="grid gap-0.5">
                             <span
-                              aria-hidden="true"
-                              className={`mt-1.5 grid size-5 place-items-center rounded-full border ${
-                                selected
-                                  ? "border-[#ffd6e4] bg-[#ffd6e4]"
-                                  : "border-[#ffd6e4]/55 bg-[#fff6fa]/10"
-                              }`}
+                              id={`attendee-${index}-meal-${option.value}-name`}
+                              className="flex flex-wrap items-baseline gap-x-2 leading-snug"
                             >
-                              {selected ? (
-                                <span className="size-2.5 rounded-full bg-[#031b12]" />
-                              ) : null}
-                            </span>
-                            <span className="grid gap-1.5">
-                              <span
-                                id={`attendee-${index}-meal-${option.value}-name`}
-                                className="grid gap-1.5 text-xl font-semibold leading-snug sm:text-2xl"
-                              >
-                                <span className="w-fit rounded-full border border-[#ffd6e4]/40 px-2.5 py-0.5 text-base leading-snug sm:text-lg">
-                                  {option.category}
-                                </span>
-                                <span>{option.label}</span>
+                              <span className="text-lg font-semibold sm:text-xl">{option.label}</span>
+                              <span className="text-xs font-semibold uppercase tracking-[0.14em] text-[#ffd6e4]/75">
+                                {option.category}
                               </span>
-                              {option.description ? (
-                                <span
-                                  id={`attendee-${index}-meal-${option.value}-description`}
-                                  className="max-w-[65ch] text-lg font-normal leading-relaxed text-[#ffd6e4]/90 sm:text-xl"
-                                >
-                                  {option.description}
-                                </span>
-                              ) : null}
-                              {option.dietaryNote ? (
-                                <span
-                                  id={`attendee-${index}-meal-${option.value}-dietary-note`}
-                                  className="max-w-[65ch] border-t border-[#ffd6e4]/25 pt-2 text-lg font-medium leading-relaxed text-[#ffd6e4] sm:text-xl"
-                                >
-                                  {option.dietaryNote}
-                                </span>
-                              ) : null}
                             </span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </fieldset>
-                  <div className="grid gap-2">
-                    <label htmlFor={`attendee-dietary-notes-${index}`}>
-                      Dietary Restrictions/Allergies
+                            {showDescription ? (
+                              <span
+                                id={`attendee-${index}-meal-${option.value}-description`}
+                                className="text-base leading-snug text-[#ffd6e4]/85 sm:text-lg"
+                              >
+                                {option.description}
+                                {option.dietaryNote ? (
+                                  <span className="mt-0.5 block italic text-[#ffd6e4]">
+                                    {option.dietaryNote}
+                                  </span>
+                                ) : null}
+                              </span>
+                            ) : null}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {showDietaryNotes ? (
+                  <div className="grid gap-1.5">
+                    <label htmlFor={`attendee-dietary-notes-${index}`} className={LABEL_CLASS_NAME}>
+                      Dietary restrictions or allergies
                     </label>
                     <textarea
                       id={`attendee-dietary-notes-${index}`}
                       name="attendeeDietaryNotes"
                       value={attendee.dietaryNotes}
-                      rows={3}
+                      rows={2}
                       onBlur={() => {
                         void saveDraft({
                           status: "yes",
@@ -568,13 +628,24 @@ export function RsvpForm({
                         };
                         setAttendeeDetails(next);
                       }}
-                      className="min-h-28 min-w-0 resize-y rounded-md border border-[#ffd6e4]/55 bg-[#031b12]/55 px-3 py-2 text-lg font-normal text-[#ffd6e4] outline-none transition focus:border-[#ffd6e4] focus:ring-2 focus:ring-[#ffd6e4]/25 sm:text-xl"
+                      className={`${INPUT_CLASS_NAME} min-h-20 resize-y py-2`}
                     />
                   </div>
-                </div>
-              ))}
-            </div>
-          ) : null}
+                ) : (
+                  <>
+                    <input type="hidden" name="attendeeDietaryNotes" value="" />
+                    <button
+                      type="button"
+                      onClick={() => openDietaryNote(index)}
+                      className={`${LINK_BUTTON_CLASS_NAME} -mt-1`}
+                    >
+                      + Add dietary restrictions or allergies
+                    </button>
+                  </>
+                )}
+              </div>
+            );
+          })}
         </div>
       ) : null}
 
@@ -591,19 +662,22 @@ export function RsvpForm({
               void saveDraft();
             }
           }}
-          className="grid gap-4 rounded-md border border-[#ffd6e4]/40 bg-[#fff6fa]/8 p-4 text-lg font-semibold leading-[1.5] text-[#ffd6e4] sm:text-xl"
+          className="grid gap-3 rounded-md border border-[#ffd6e4]/30 bg-[#fff6fa]/5 p-3.5 text-[#ffd6e4] sm:p-5"
         >
-          <div className="grid gap-1.5">
-            <p id="mailing-address-heading" className="text-xl sm:text-2xl">
-              Mailing Address
+          <div className="grid gap-0.5">
+            <p id="mailing-address-heading" className="text-lg font-semibold leading-snug sm:text-xl">
+              Mailing address{" "}
+              <span className="text-base font-normal text-[#ffd6e4]/75 sm:text-lg">(optional)</span>
             </p>
-            <p className="font-normal leading-relaxed text-[#ffd6e4]/90">
+            <p className="text-base leading-snug text-[#ffd6e4]/85 sm:text-lg">
               Where can we send you mail?
             </p>
           </div>
 
-          <div className="grid gap-2">
-            <label htmlFor="mailing-address-line1">Street address</label>
+          <div className="grid gap-1.5">
+            <label htmlFor="mailing-address-line1" className={LABEL_CLASS_NAME}>
+              Street address
+            </label>
             <input
               id="mailing-address-line1"
               name={mailingAddressFormName("line1")}
@@ -629,17 +703,17 @@ export function RsvpForm({
               autoComplete="shipping address-line1"
               enterKeyHint="next"
               placeholder="123 Main St"
-              className={ADDRESS_INPUT_CLASS_NAME}
+              className={INPUT_CLASS_NAME}
             />
             {addressPasted ? (
-              <p className="text-base font-normal leading-relaxed text-[#ffd6e4] sm:text-lg" role="status">
+              <p className="text-base leading-snug text-[#ffd6e4] sm:text-lg" role="status">
                 ✨ We filled in your address below. Give it a quick look!
               </p>
             ) : null}
           </div>
 
-          <div className="grid gap-2">
-            <label htmlFor="mailing-address-line2">
+          <div className="grid gap-1.5">
+            <label htmlFor="mailing-address-line2" className={LABEL_CLASS_NAME}>
               Apt, suite, or unit{" "}
               <span className="font-normal text-[#ffd6e4]/75">(optional)</span>
             </label>
@@ -651,27 +725,34 @@ export function RsvpForm({
               onChange={(event) => updateMailingAddress("line2", event.target.value)}
               autoComplete="shipping address-line2"
               enterKeyHint="next"
-              className={ADDRESS_INPUT_CLASS_NAME}
+              className={INPUT_CLASS_NAME}
             />
           </div>
 
-          <div className="grid gap-2">
-            <label htmlFor="mailing-address-city">City</label>
-            <input
-              id="mailing-address-city"
-              name={mailingAddressFormName("city")}
-              value={mailingAddress.city}
-              maxLength={MAILING_ADDRESS_MAX_LENGTH}
-              onChange={(event) => updateMailingAddress("city", event.target.value)}
-              autoComplete="shipping address-level2"
-              enterKeyHint="next"
-              className={ADDRESS_INPUT_CLASS_NAME}
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div className="grid min-w-0 gap-2">
-              <label htmlFor="mailing-address-region">
+          <div
+            className={`grid gap-2 ${
+              showCountry
+                ? "grid-cols-2"
+                : "grid-cols-[minmax(0,1fr)_4.25rem_6rem] sm:grid-cols-[minmax(0,1fr)_6rem_8rem]"
+            }`}
+          >
+            <div className={`grid min-w-0 gap-1.5 ${showCountry ? "col-span-2" : ""}`}>
+              <label htmlFor="mailing-address-city" className={LABEL_CLASS_NAME}>
+                City
+              </label>
+              <input
+                id="mailing-address-city"
+                name={mailingAddressFormName("city")}
+                value={mailingAddress.city}
+                maxLength={MAILING_ADDRESS_MAX_LENGTH}
+                onChange={(event) => updateMailingAddress("city", event.target.value)}
+                autoComplete="shipping address-level2"
+                enterKeyHint="next"
+                className={INPUT_CLASS_NAME}
+              />
+            </div>
+            <div className="grid min-w-0 gap-1.5">
+              <label htmlFor="mailing-address-region" className={LABEL_CLASS_NAME}>
                 {showCountry ? "State / Province" : "State"}
               </label>
               <input
@@ -683,12 +764,12 @@ export function RsvpForm({
                 autoComplete="shipping address-level1"
                 autoCapitalize={showCountry ? "words" : "characters"}
                 enterKeyHint="next"
-                className={ADDRESS_INPUT_CLASS_NAME}
+                className={INPUT_CLASS_NAME}
               />
             </div>
-            <div className="grid min-w-0 gap-2">
-              <label htmlFor="mailing-address-postal-code">
-                {showCountry ? "Postal code" : "ZIP code"}
+            <div className="grid min-w-0 gap-1.5">
+              <label htmlFor="mailing-address-postal-code" className={LABEL_CLASS_NAME}>
+                {showCountry ? "Postal code" : "ZIP"}
               </label>
               <input
                 id="mailing-address-postal-code"
@@ -700,14 +781,16 @@ export function RsvpForm({
                 inputMode={showCountry ? "text" : "numeric"}
                 autoCapitalize="characters"
                 enterKeyHint={showCountry ? "next" : "done"}
-                className={ADDRESS_INPUT_CLASS_NAME}
+                className={INPUT_CLASS_NAME}
               />
             </div>
           </div>
 
           {showCountry ? (
-            <div className="grid gap-2">
-              <label htmlFor="mailing-address-country">Country</label>
+            <div className="grid gap-1.5">
+              <label htmlFor="mailing-address-country" className={LABEL_CLASS_NAME}>
+                Country
+              </label>
               <input
                 id="mailing-address-country"
                 name={mailingAddressFormName("country")}
@@ -716,7 +799,7 @@ export function RsvpForm({
                 onChange={(event) => updateMailingAddress("country", event.target.value)}
                 autoComplete="shipping country-name"
                 enterKeyHint="done"
-                className={ADDRESS_INPUT_CLASS_NAME}
+                className={INPUT_CLASS_NAME}
               />
             </div>
           ) : (
@@ -728,7 +811,7 @@ export function RsvpForm({
                   document.getElementById("mailing-address-country")?.focus();
                 });
               }}
-              className="min-h-11 w-fit text-left text-base font-semibold text-[#ffd6e4] underline decoration-[#ffd6e4]/55 underline-offset-4 transition hover:decoration-[#ffd6e4] sm:text-lg"
+              className={`${LINK_BUTTON_CLASS_NAME} -mt-1`}
             >
               Outside the US? Add a country
             </button>
@@ -747,7 +830,7 @@ export function RsvpForm({
         >
           Save
         </button>
-        <div className="min-h-[1.75rem]" role="status" aria-live="polite">
+        <div role="status" aria-live="polite" className="empty:hidden">
           {isSaving ? (
             <p className="text-[#ffd6e4]">Saving...</p>
           ) : justSaved ? (

@@ -80,6 +80,10 @@ export default async function GuestPage({ params }: PageProps) {
       };
     },
   );
+  // Keep the RSVP form in the hero until a "yes" includes every place-card name and meal.
+  const rsvpDetailsComplete = attendeeDetails.every(
+    (attendee) => attendee.fullName.trim() !== "" && attendee.mealType !== null,
+  );
 
   return (
     <WeddingPageShell
@@ -89,7 +93,7 @@ export default async function GuestPage({ params }: PageProps) {
       showHotelBlocks
       showFridayWelcome={data.guest.friDin}
       showRehearsal={data.guest.reh}
-      scheduleFirst={data.rsvp?.status === "yes" || data.rsvp?.status === "no"}
+      scheduleFirst={data.rsvp?.status === "no" || (data.rsvp?.status === "yes" && rsvpDetailsComplete)}
       panel={
         <RsvpForm
           slug={slug}
