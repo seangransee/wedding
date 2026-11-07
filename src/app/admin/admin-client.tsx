@@ -1066,20 +1066,45 @@ function CopyInvitationLinkButton({ slug }: { slug: string }) {
   );
 }
 
+function ViewInvitationLink({ slug, name }: { slug: string; name: string }) {
+  return (
+    <Link
+      href={`/${slug}`}
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label={`View invitation for ${name}`}
+      title="View invitation"
+      className="grid size-7 place-items-center border border-[#d65b8a] bg-[#fff1f7] font-semibold text-[#8f2448] transition hover:border-[#be185d] hover:bg-[#ffe0ec]"
+    >
+      <Eye aria-hidden="true" className="size-4" />
+    </Link>
+  );
+}
+
+// Copy-link and view-invitation buttons, shared by the grid and the
+// Incomplete section.
+export function InvitationLinkButtons({
+  slug,
+  name,
+  className,
+}: {
+  slug: string;
+  name: string;
+  className?: string;
+}) {
+  return (
+    <div className={clsx("flex items-center gap-1.5", className)}>
+      <CopyInvitationLinkButton slug={slug} />
+      <ViewInvitationLink slug={slug} name={name} />
+    </div>
+  );
+}
+
 function ActionsCell({ row }: RenderCellProps<GuestWithRsvp>) {
   return (
     <div className="flex items-center gap-1.5">
       <CopyInvitationLinkButton slug={row.slug} />
-      <Link
-        href={`/${row.slug}`}
-        target="_blank"
-        rel="noopener noreferrer"
-        aria-label={`View invitation for ${row.name}`}
-        title="View invitation"
-        className="grid size-7 place-items-center border border-[#d65b8a] bg-[#fff1f7] font-semibold text-[#8f2448] transition hover:border-[#be185d] hover:bg-[#ffe0ec]"
-      >
-        <Eye aria-hidden="true" className="size-4" />
-      </Link>
+      <ViewInvitationLink slug={row.slug} name={row.name} />
       <DeleteGuestButton guestId={row.id} guestName={row.name} />
     </div>
   );

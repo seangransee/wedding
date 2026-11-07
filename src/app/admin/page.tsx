@@ -12,6 +12,7 @@ import {
   AdminLoginForm,
   GuestTable,
   IncompleteSection,
+  InvitationLinkButtons,
   LocalAuditTimestamp,
   type AdminSortDirection,
   type AdminSortKey,
@@ -303,21 +304,24 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                       return (
                         <li
                           key={guest.id}
-                          className="flex flex-wrap items-center gap-x-2 gap-y-0.5 border-b border-[#efb5c9] px-3 py-1.5 odd:bg-[#fff8fb] even:bg-[#ffeaf2]"
+                          className="flex items-start gap-2 border-b border-[#efb5c9] px-3 py-1.5 odd:bg-[#fff8fb] even:bg-[#ffeaf2]"
                         >
-                          <span className="font-semibold text-[#4a1027]">{guest.name}</span>
-                          <span className={`inline-flex border px-1.5 py-px text-[0.65rem] font-semibold ${rsvpClassName(guest.rsvpStatus)}`}>
-                            {rsvpLabel(guest.rsvpStatus)}
-                          </span>
-                          {guest.inviteSent ? null : (
-                            <span className="border border-dashed border-[#c084a0] px-1.5 py-px text-[0.65rem] text-[#8f5070]">
-                              Invite not sent
+                          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-0.5">
+                            <span className="font-semibold text-[#4a1027]">{guest.name}</span>
+                            <span className={`inline-flex border px-1.5 py-px text-[0.65rem] font-semibold ${rsvpClassName(guest.rsvpStatus)}`}>
+                              {rsvpLabel(guest.rsvpStatus)}
                             </span>
-                          )}
-                          <span className="font-mono text-[0.68rem] text-[#be185d]">/{guest.slug}</span>
-                          {contact ? (
-                            <span className="w-full text-[0.7rem] text-[#7d3150]">{contact}</span>
-                          ) : null}
+                            {guest.inviteSent ? null : (
+                              <span className="border border-dashed border-[#c084a0] px-1.5 py-px text-[0.65rem] text-[#8f5070]">
+                                Invite not sent
+                              </span>
+                            )}
+                            <span className="font-mono text-[0.68rem] text-[#be185d]">/{guest.slug}</span>
+                            {contact ? (
+                              <span className="w-full text-[0.7rem] text-[#7d3150]">{contact}</span>
+                            ) : null}
+                          </div>
+                          <InvitationLinkButtons className="shrink-0" name={guest.name} slug={guest.slug} />
                         </li>
                       );
                     })}
@@ -342,21 +346,24 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                       return (
                         <li
                           key={guest.id}
-                          className="flex flex-wrap items-center gap-x-2 gap-y-0.5 border-b border-[#efb5c9] px-3 py-1.5 odd:bg-[#fff8fb] even:bg-[#ffeaf2]"
+                          className="flex items-start gap-2 border-b border-[#efb5c9] px-3 py-1.5 odd:bg-[#fff8fb] even:bg-[#ffeaf2]"
                         >
-                          <span className="font-semibold text-[#4a1027]">{guest.name}</span>
-                          <span className="tabular-nums text-[#8f5070]">
-                            {guest.attendingCount} attending
-                          </span>
-                          <span className="font-mono text-[0.68rem] text-[#be185d]">/{guest.slug}</span>
-                          <ul className="w-full text-[0.7rem] text-[#991b1b]">
-                            {attendees.map((attendee) => (
-                              <li key={attendee.position}>{missingDetailsLabel(attendee)}</li>
-                            ))}
-                          </ul>
-                          {contact ? (
-                            <span className="w-full text-[0.7rem] text-[#7d3150]">{contact}</span>
-                          ) : null}
+                          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-0.5">
+                            <span className="font-semibold text-[#4a1027]">{guest.name}</span>
+                            <span className="tabular-nums text-[#8f5070]">
+                              {guest.attendingCount} attending
+                            </span>
+                            <span className="font-mono text-[0.68rem] text-[#be185d]">/{guest.slug}</span>
+                            <ul className="w-full text-[0.7rem] text-[#991b1b]">
+                              {attendees.map((attendee) => (
+                                <li key={attendee.position}>{missingDetailsLabel(attendee)}</li>
+                              ))}
+                            </ul>
+                            {contact ? (
+                              <span className="w-full text-[0.7rem] text-[#7d3150]">{contact}</span>
+                            ) : null}
+                          </div>
+                          <InvitationLinkButtons className="shrink-0" name={guest.name} slug={guest.slug} />
                         </li>
                       );
                     })}
