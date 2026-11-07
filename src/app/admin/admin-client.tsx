@@ -1,9 +1,9 @@
 "use client";
 
 import clsx from "clsx";
-import { ArrowUpDown, Check, Copy, Download, Eye, GripVertical, Plus, Search, Trash2, X } from "lucide-react";
+import { ArrowUpDown, Check, ChevronRight, Copy, Download, Eye, GripVertical, Plus, Search, Trash2, X } from "lucide-react";
 import Link from "next/link";
-import { useActionState, useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useActionState, useCallback, useEffect, useMemo, useRef, useState, useTransition, type ReactNode } from "react";
 import { createPortal, useFormStatus } from "react-dom";
 import {
   DataGrid,
@@ -40,6 +40,63 @@ const initialState: AdminActionState = {
   ok: false,
   message: "",
 };
+
+const INCOMPLETE_OPEN_STORAGE_KEY = "sexi-admin-incomplete-open";
+
+// Collapsible wrapper for the admin Incomplete section. Starts open on the
+// server render, then restores this browser's last open/closed choice.
+export function IncompleteSection({
+  count,
+  children,
+}: {
+  count: number;
+  children: ReactNode;
+}) {
+  const detailsRef = useRef<HTMLDetailsElement>(null);
+
+  useEffect(() => {
+    try {
+      if (window.localStorage.getItem(INCOMPLETE_OPEN_STORAGE_KEY) === "false" && detailsRef.current) {
+        detailsRef.current.open = false;
+      }
+    } catch {
+      // Storage unavailable; keep the default open state.
+    }
+  }, []);
+
+  return (
+    <details
+      ref={detailsRef}
+      open
+      id="incomplete"
+      className="group border-b border-[#df7fa3] bg-[#fff1f7]"
+      onToggle={(event) => {
+        try {
+          window.localStorage.setItem(
+            INCOMPLETE_OPEN_STORAGE_KEY,
+            String(event.currentTarget.open),
+          );
+        } catch {
+          // Storage unavailable; the toggle still works for this visit.
+        }
+      }}
+    >
+      <summary className="flex cursor-pointer list-none items-center justify-between bg-[#f4bfd2] px-3 py-2 transition hover:bg-[#efb0c6] group-open:border-b group-open:border-[#df7fa3] [&::-webkit-details-marker]:hidden">
+        <h2 className="flex items-center gap-1.5 text-sm font-semibold uppercase tracking-[0.12em] text-[#7a1239]">
+          <ChevronRight
+            aria-hidden="true"
+            className="size-4 transition-transform group-open:rotate-90"
+          />
+          Incomplete
+        </h2>
+        <span className="text-xs tabular-nums text-[#8f5070]">
+          {count} invitation{count === 1 ? "" : "s"}
+        </span>
+      </summary>
+      {children}
+    </details>
+  );
+}
 
 export type AdminSortKey = "default" | "name" | "max" | "invite" | "rsvp" | "attending" | "friDin" | "reh" | "fuckYes";
 export type AdminSortDirection = "asc" | "desc";

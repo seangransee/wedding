@@ -11,6 +11,7 @@ import {
   AdminCsvExportButton,
   AdminLoginForm,
   GuestTable,
+  IncompleteSection,
   LocalAuditTimestamp,
   type AdminSortDirection,
   type AdminSortKey,
@@ -283,15 +284,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
           </div>
         </div>
 
-        <div id="incomplete" className="border-b border-[#df7fa3] bg-[#fff1f7]">
-          <div className="flex items-center justify-between border-b border-[#df7fa3] bg-[#f4bfd2] px-3 py-2">
-            <h2 className="text-sm font-semibold uppercase tracking-[0.12em] text-[#7a1239]">
-              Incomplete
-            </h2>
-            <span className="text-xs tabular-nums text-[#8f5070]">
-              {incompleteCount} invitation{incompleteCount === 1 ? "" : "s"}
-            </span>
-          </div>
+        <IncompleteSection count={incompleteCount}>
           <div className="grid grid-cols-1 lg:grid-cols-2">
             <div className="border-b border-[#df7fa3] lg:border-r lg:border-b-0">
               <div className="flex items-center justify-between border-b border-[#efb5c9] bg-[#ffeaf2] px-3 py-1.5 text-xs">
@@ -372,8 +365,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
               </div>
             </div>
           </div>
-        </div>
-
+        </IncompleteSection>
 
         <AddGuestForm />
 
