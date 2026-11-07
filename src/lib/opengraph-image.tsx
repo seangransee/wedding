@@ -603,14 +603,14 @@ export async function generateAttendingOgImage(guestName: string) {
         <div
           style={{
             position: "absolute",
-            top: "36px",
+            top: "34px",
             left: 0,
             right: 0,
             display: "flex",
             justifyContent: "center",
             color: pink,
             fontFamily: "'Great Vibes', serif",
-            fontSize: "64px",
+            fontSize: "84px",
             lineHeight: 1,
             textShadow: `0 2px 12px rgba(${deepGreen}, 0.95)`,
           }}
@@ -640,7 +640,7 @@ export async function generateAttendingOgImage(guestName: string) {
               {index === nameLines.length - 1 ? "," : ""}
             </div>
           ))}
-          <div style={{ display: "flex", fontFamily: "'Great Vibes', serif", fontSize: "80px", lineHeight: 1, marginTop: "2px" }}>
+          <div style={{ display: "flex", fontFamily: "'Dancing Script', serif", fontWeight: 600, fontSize: "72px", lineHeight: 1.05, marginTop: "4px" }}>
             wedding details inside
           </div>
         </div>
