@@ -677,8 +677,6 @@ export function RsvpForm({
                   <div className="grid gap-2">
                     {MEAL_OPTIONS.map((option) => {
                       const selected = attendee.mealType === option.value;
-                      // Once a meal is picked, the other dishes shrink to their names.
-                      const showDescription = selected || attendee.mealType === null;
 
                       return (
                         <button
@@ -687,7 +685,7 @@ export function RsvpForm({
                           role="radio"
                           aria-checked={selected}
                           aria-labelledby={`attendee-${index}-meal-${option.value}-name`}
-                          aria-describedby={showDescription ? `attendee-${index}-meal-${option.value}-description` : undefined}
+                          aria-describedby={`attendee-${index}-meal-${option.value}-description`}
                           onClick={() => {
                             const next = [...visibleAttendeeDetails];
                             next[index] = {
@@ -732,19 +730,17 @@ export function RsvpForm({
                                 {option.category}
                               </span>
                             </span>
-                            {showDescription ? (
-                              <span
-                                id={`attendee-${index}-meal-${option.value}-description`}
-                                className="text-base leading-snug text-[#ffd6e4]/85 sm:text-lg"
-                              >
-                                {option.description}
-                                {option.dietaryNote ? (
-                                  <span className="mt-0.5 block italic text-[#ffd6e4]">
-                                    {option.dietaryNote}
-                                  </span>
-                                ) : null}
-                              </span>
-                            ) : null}
+                            <span
+                              id={`attendee-${index}-meal-${option.value}-description`}
+                              className="text-base leading-snug text-[#ffd6e4]/85 sm:text-lg"
+                            >
+                              {option.description}
+                              {option.dietaryNote ? (
+                                <span className="mt-0.5 block italic text-[#ffd6e4]">
+                                  {option.dietaryNote}
+                                </span>
+                              ) : null}
+                            </span>
                           </span>
                         </button>
                       );
