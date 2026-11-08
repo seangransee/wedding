@@ -2,12 +2,15 @@
  * Fits every party chip inside a floor-plan table by picking the largest font
  * that lets all of them show in full. Chips sit one per line while that fits;
  * otherwise several share a line, and the font only shrinks when even packed
- * lines can't hold everyone. Sizes are room units (1 unit = 1 CSS pixel at
+ * lines can't hold everyone. Parties with several named people can instead
+ * stack one name per row, which wins whenever it allows at least as big a font. Sizes are room units (1 unit = 1 CSS pixel at
  * 100% zoom).
  */
 
 /** Chip height per unit of font: line height plus vertical padding. */
 export const CHIP_HEIGHT_EM = 1.37;
+/** Extra height per unit of font for each additional stacked name row. */
+export const CHIP_ROW_EM = 1.25;
 /** Chip border (top and bottom) in room units. */
 export const CHIP_FIXED_HEIGHT = 2;
 /** Vertical gap between chip lines, per unit of font. */
@@ -27,6 +30,11 @@ export type ChipLayoutInput = {
   /** Width every chip adds regardless of font (borders). */
   chipFixedWidth: number;
   headerHeight: number;
+  /**
+   * Optional stacked form of each chip: one name per row. `chipEms` here is
+   * the width per unit of font with the widest row; `rows` is the row count.
+   */
+  stacked?: { chipEms: readonly number[]; rows: readonly number[] };
   maxFont: number;
   minFont: number;
 } & (
@@ -47,13 +55,19 @@ export type ChipLayout = {
   lineWidths: number[];
   /** False only when even `minFont` couldn't show everyone in full. */
   fits: boolean;
+  /** True when every chip is alone on its line with one name per row. */
+  stacked: boolean;
 };
 
-/** Available width of each of `lineCount` lines at `font`, or null if they don't fit vertically. */
-function lineSlots(input: ChipLayoutInput, lineCount: number, font: number): number[] | null {
-  const chipHeight = CHIP_HEIGHT_EM * font + CHIP_FIXED_HEIGHT;
+/**
+ * Available width of each line at `font`, where `rowsPerLine[line]` is how many
+ * name rows that line's chips stack, or null if they don't fit vertically.
+ */
+function lineSlots(input: ChipLayoutInput, rowsPerLine: readonly number[], font: number): number[] | null {
+  const lineCount = rowsPerLine.length;
+  const heights = rowsPerLine.map((rows) => (CHIP_HEIGHT_EM + (rows - 1) * CHIP_ROW_EM) * font + CHIP_FIXED_HEIGHT);
   const gap = CHIP_LINE_GAP_EM * font;
-  const blockHeight = lineCount * chipHeight + Math.max(0, lineCount - 1) * gap;
+  const blockHeight = heights.reduce((sum, height) => sum + height, 0) + Math.max(0, lineCount - 1) * gap;
   const totalHeight = input.headerHeight + CHIP_HEADER_GAP + blockHeight;
 
   if (input.shape === "rect") {
@@ -67,14 +81,16 @@ function lineSlots(input: ChipLayoutInput, lineCount: number, font: number): num
   }
 
   const widths: number[] = [];
+  let top = -totalHeight / 2 + input.headerHeight + CHIP_HEADER_GAP;
   for (let line = 0; line < lineCount; line += 1) {
-    const top = -totalHeight / 2 + input.headerHeight + CHIP_HEADER_GAP + line * (chipHeight + gap);
+    const chipHeight = heights[line];
     const edge = Math.max(Math.abs(top), Math.abs(top + chipHeight));
     if (edge >= radius) {
       return null;
     }
     // Chord of the circle at the line's outer edge, less a little breathing room.
     widths.push(Math.min(input.maxLineWidth, 2 * Math.sqrt(radius * radius - edge * edge) - font * 0.6));
+    top += chipHeight + gap;
   }
 
   return widths;
@@ -90,7 +106,7 @@ function chipWidth(input: ChipLayoutInput, index: number, font: number) {
  */
 function packed(input: ChipLayoutInput, lineCount: number, font: number): ChipLayout | null {
   const count = input.chipEms.length;
-  const widths = lineSlots(input, lineCount, font);
+  const widths = lineSlots(input, new Array<number>(lineCount).fill(1), font);
   if (!widths) {
     return null;
   }
@@ -127,16 +143,42 @@ function packed(input: ChipLayoutInput, lineCount: number, font: number): ChipLa
     end = start;
   }
 
-  return { fontSize: font, lines, lineWidths: widths, fits: true };
+  return { fontSize: font, lines, lineWidths: widths, fits: true, stacked: false };
+}
+
+/** Every chip alone on its line with one name per row, or null when that doesn't fit. */
+function stackedLayout(input: ChipLayoutInput, font: number): ChipLayout | null {
+  const stacked = input.stacked;
+  if (!stacked || !stacked.rows.some((rows) => rows > 1)) {
+    return null;
+  }
+
+  const widths = lineSlots(input, stacked.rows, font);
+  if (!widths || stacked.chipEms.some((em, index) => em * font + input.chipFixedWidth > widths[index])) {
+    return null;
+  }
+
+  return {
+    fontSize: font,
+    lines: stacked.chipEms.map((_, index) => [index]),
+    lineWidths: widths,
+    fits: true,
+    stacked: true,
+  };
 }
 
 export function layoutTableChips(input: ChipLayoutInput): ChipLayout {
   const count = input.chipEms.length;
   if (count === 0) {
-    return { fontSize: input.maxFont, lines: [], lineWidths: [], fits: true };
+    return { fontSize: input.maxFont, lines: [], lineWidths: [], fits: true, stacked: false };
   }
 
   for (let font = input.maxFont; font >= input.minFont; font *= FONT_STEP) {
+    const stacked = stackedLayout(input, font);
+    if (stacked) {
+      return stacked;
+    }
+
     // Prefer one chip per line, then as few chips per line as still fit.
     for (let lineCount = count; lineCount >= 1; lineCount -= 1) {
       const layout = packed(input, lineCount, font);
@@ -149,7 +191,8 @@ export function layoutTableChips(input: ChipLayoutInput): ChipLayout {
   // Nothing fits even at the smallest font: still list everyone, one per line.
   const font = input.minFont;
   const fallbackWidth = input.shape === "round" ? input.maxLineWidth : input.width;
-  const widths = lineSlots(input, count, font) ?? Array.from({ length: count }, () => fallbackWidth);
+  const widths = lineSlots(input, new Array<number>(count).fill(1), font) ??
+    Array.from({ length: count }, () => fallbackWidth);
 
-  return { fontSize: font, lines: widths.map((_, index) => [index]), lineWidths: widths, fits: false };
+  return { fontSize: font, lines: widths.map((_, index) => [index]), lineWidths: widths, fits: false, stacked: false };
 }

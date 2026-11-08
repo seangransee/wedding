@@ -74,3 +74,22 @@ test("the sweetheart table uses its rectangle", () => {
   assert.equal(layout.fontSize, 18.5);
   assert.deepEqual(layout.lines, [[0]]);
 });
+
+test("parties with several names stack one per row when that keeps the font bigger", () => {
+  // A long one-line family chip would force a tiny font; stacked, each row is short.
+  const layout = layoutTableChips({
+    ...round([24, 42, 9, 14]),
+    stacked: { chipEms: [8, 9.5, 7.5, 14], rows: [2, 4, 1, 1] },
+  });
+
+  assert.equal(layout.stacked, true);
+  assert.equal(layout.fits, true);
+  assert.deepEqual(layout.lines, [[0], [1], [2], [3]]);
+  assert.ok(layout.fontSize > layoutTableChips(round([24, 42, 9, 14])).fontSize);
+});
+
+test("single-name chips never use the stacked form", () => {
+  const layout = layoutTableChips({ ...round([5, 6]), stacked: { chipEms: [5, 6], rows: [1, 1] } });
+
+  assert.equal(layout.stacked, false);
+});

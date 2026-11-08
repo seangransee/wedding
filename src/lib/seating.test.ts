@@ -12,6 +12,7 @@ import {
   searchTokens,
   seatingUnits,
   shortPersonLabel,
+  planChipName,
   splitPersonName,
   unitMatchesSearch,
   tableFullTitle,
@@ -326,4 +327,46 @@ test("exports people in bubbles as plain not seated", () => {
     '"","Not seated","","In Bubble","In Bubble","Confirmed","",""',
     '"","Not seated: Dad\'s family","","In Bucket","In Bucket","Confirmed","",""',
   ]);
+});
+
+test("labels floor-plan chips with full place-card names once a party fills them in", () => {
+  const [family, unnamed, partial, declined] = seatingUnits([
+    party({
+      id: 1,
+      name: "The Rivera Family",
+      guestCount: 4,
+      attendingCount: 3,
+      attendees: [
+        { name: "Maria Rivera", mealType: "fish", dietaryNotes: "" },
+        { name: " Alex Rivera ", mealType: null, dietaryNotes: "" },
+        { name: "Sam Rivera", mealType: null, dietaryNotes: "" },
+        { name: "Dropped Out", mealType: null, dietaryNotes: "" },
+      ],
+    }),
+    party({ id: 2, name: "Jordan and Peyton Holloway" }),
+    party({
+      id: 3,
+      name: "Casey Lee + guest",
+      status: "deciding",
+      guestCount: 2,
+      attendingCount: null,
+      attendees: [{ name: "Casey Lee", mealType: null, dietaryNotes: "" }],
+    }),
+    party({ id: 4, name: "Declined Pair", status: "no", attendingCount: null, attendees: [{ name: "Pat Doe", mealType: null, dietaryNotes: "" }] }),
+  ]);
+
+  assert.equal(planChipName(family), "Maria Rivera, Alex Rivera & Sam Rivera");
+  assert.equal(planChipName(unnamed), "Jordan and Peyton Holloway");
+  assert.equal(planChipName(partial), "Casey Lee +1");
+  assert.equal(planChipName(declined), "Declined Pair");
+
+  const split = seatingUnits([
+    party({
+      id: 5,
+      name: "Jordan and Peyton Holloway",
+      split: true,
+      attendees: [{ name: "Jordan Holloway", mealType: null, dietaryNotes: "" }],
+    }),
+  ]);
+  assert.deepEqual(split.map(planChipName), ["Jordan Holloway", "Holloway 2"]);
 });

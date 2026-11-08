@@ -407,6 +407,40 @@ export function splitPersonName(
   return sharesFirstName ? shortPersonLabel(party, position) : firstName;
 }
 
+/**
+ * Floor-plan chip name rows. A whole party lists everyone's full place-card
+ * names once any are filled in, with "+1" after the last for people still
+ * unnamed; until then it keeps the invitation name. A split person shows their
+ * own full place-card name, or falls back to "Holloway 2".
+ */
+export function planChipNames(
+  unit: Pick<SeatingUnit, "name" | "position" | "attendees" | "status" | "guestCount" | "attendingCount">,
+): string[] {
+  if (unit.position !== null) {
+    return [unit.attendees[0]?.name.trim() || unit.name];
+  }
+
+  const positions = unitPositions(unit);
+  const names = positions.map((position) => unit.attendees[position - 1]?.name.trim() ?? "").filter(Boolean);
+  if (names.length === 0) {
+    return [unit.name];
+  }
+
+  const unnamed = positions.length - names.length;
+  if (unnamed > 0) {
+    names[names.length - 1] += ` +${unnamed}`;
+  }
+
+  return names;
+}
+
+/** Floor-plan chip names on one line: "Maria Rivera, Alex Rivera & Sam Rivera". */
+export function planChipName(unit: Parameters<typeof planChipNames>[0]) {
+  const names = planChipNames(unit);
+
+  return names.length > 1 ? `${names.slice(0, -1).join(", ")} & ${names.at(-1)}` : names[0];
+}
+
 /** The table one person sits at, whether with their whole party or on their own. */
 export function personTableId(party: Pick<SeatingParty, "split" | "people" | "tableId">, position: number) {
   if (!party.split) {

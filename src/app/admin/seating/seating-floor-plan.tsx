@@ -26,6 +26,8 @@ import {
   fullnessStyle,
   isPartyUnconfirmed,
   minimumRoomSize,
+  planChipName,
+  planChipNames,
   ROOM_MAX_SIZE,
   tableFullTitle,
   tableSize,
@@ -902,12 +904,19 @@ const CHIP_FIXED_WIDTH = 4;
 
 /**
  * Width of a table party chip per unit of font, mirroring PlanPartyChip:
- * 0.5em left padding, name, 0.3em gap, headcount badge, 0.15em right padding.
+ * 0.5em left padding, names, 0.3em gap, headcount badge, 0.15em right padding.
+ * `line` has every name on one line; `stacked` is one name per row.
  */
 function partyChipEm(unit: SeatingUnit, textVersion: number) {
   const badgeEm = Math.max(1.6, chipTextEm(partySeatsLabel(unit), textVersion, { bold: true }) + 0.8) * 0.8;
+  const chrome = 0.5 + 0.3 + badgeEm + 0.15 + 0.1;
+  const names = planChipNames(unit);
 
-  return 0.5 + chipTextEm(unit.name, textVersion) + 0.3 + badgeEm + 0.15 + 0.1;
+  return {
+    line: chrome + chipTextEm(planChipName(unit), textVersion),
+    stacked: chrome + Math.max(...names.map((name) => chipTextEm(name, textVersion))),
+    rows: names.length,
+  };
 }
 
 const PlanTable = memo(function PlanTable({
@@ -968,7 +977,8 @@ const PlanTable = memo(function PlanTable({
   const dimmed = matchingUnitIds !== null && matchCount === 0;
 
   // Text stays readable at any zoom: grow it in room units as the room shrinks.
-  const label = table.number || table.name || (round ? "New table" : "Sweetheart table");
+  // Unnamed round tables show just their headcount until a number or name is typed.
+  const label = table.number || table.name || (round ? "" : "Sweetheart table");
   const labelIsNumber = Boolean(table.number);
   const showName = detail && labelIsNumber && Boolean(table.name);
   const numberFont = detail
@@ -981,20 +991,24 @@ const PlanTable = memo(function PlanTable({
   const headerHeight = round
     ? detail && labelIsNumber
       ? numberFont * 1.05 + (showName ? nameFont * 1.2 : 0) + 6
-      : labelFont * 1.15 + countFont * 1.25 + 6
+      : (label ? labelFont * 1.15 : 0) + countFont * 1.25 + 6
     : Math.max(nameFont, countFont) * 1.35 + 8;
   // Party names use the higher-x-height serif so they stay legible when small,
   // and shrink as people are added so every name at the table shows in full.
   const maxChipFont = Math.max(12, 10 / zoom);
   const textVersion = useChipTextVersion();
-  const chipEms = useMemo(
+  const chipSizes = useMemo(
     () => (detail ? parties.map((party) => partyChipEm(party, textVersion)) : []),
     [detail, parties, textVersion],
   );
   const chipLayout = useMemo(
     () =>
       layoutTableChips({
-        chipEms,
+        chipEms: chipSizes.map((chip) => chip.line),
+        stacked: {
+          chipEms: chipSizes.map((chip) => chip.stacked),
+          rows: chipSizes.map((chip) => chip.rows),
+        },
         chipFixedWidth: CHIP_FIXED_WIDTH,
         headerHeight,
         maxFont: maxChipFont,
@@ -1011,7 +1025,7 @@ const PlanTable = memo(function PlanTable({
               height: size.height - 2 * borderWidth - 16,
             }),
       }),
-    [borderWidth, chipEms, headerHeight, maxChipFont, round, size.height, size.width],
+    [borderWidth, chipSizes, headerHeight, maxChipFont, round, size.height, size.width],
   );
   const chipFont = chipLayout.fontSize;
   const countLabel = (
@@ -1094,16 +1108,14 @@ const PlanTable = memo(function PlanTable({
           </>
         ) : (
           <>
-            <span
-              className={clsx(
-                "block max-w-[80%] truncate leading-[1.15]",
-                labelIsNumber ? "font-bold tabular-nums" : "font-semibold",
-                !table.number && !table.name && "italic opacity-70",
-              )}
-              style={{ fontSize: labelFont }}
-            >
-              {label}
-            </span>
+            {label ? (
+              <span
+                className={clsx("block max-w-[80%] truncate leading-[1.15]", labelIsNumber ? "font-bold tabular-nums" : "font-semibold")}
+                style={{ fontSize: labelFont }}
+              >
+                {label}
+              </span>
+            ) : null}
             <span className="leading-[1.25]">{countLabel}</span>
           </>
         )
@@ -1138,6 +1150,7 @@ const PlanTable = memo(function PlanTable({
                     isMatch={matchingUnitIds?.has(party.id) ?? false}
                     maxWidth={chipLayout.lineWidths[lineIndex]}
                     onOpenUnit={onOpenUnit}
+                    stacked={chipLayout.stacked}
                     unit={party}
                   />
                 );
@@ -1156,6 +1169,7 @@ function PlanPartyChip({
   isMatch,
   maxWidth,
   onOpenUnit,
+  stacked = false,
   unit: party,
   wrap = false,
 }: {
@@ -1164,6 +1178,8 @@ function PlanPartyChip({
   isMatch: boolean;
   maxWidth: number | string;
   onOpenUnit: (unitId: string) => void;
+  /** One name per row instead of all on one line. */
+  stacked?: boolean;
   unit: SeatingUnit;
   /** Let long names wrap instead of truncating (buckets never hide anyone). */
   wrap?: boolean;
@@ -1183,7 +1199,7 @@ function PlanPartyChip({
       aria-label={`${partyAriaLabel(party)}. Drag to another table, or click for options.`}
       className={clsx(
         "seating-chip seating-chip-plan flex min-w-0 cursor-grab items-center gap-[0.3em] border pl-[0.5em] pr-[0.15em] leading-[1.25] shadow-[0_1px_0_rgba(74,16,39,0.08)]",
-        wrap ? "rounded-[0.55em]" : "rounded-full",
+        wrap || stacked ? "rounded-[0.6em]" : "rounded-full",
         partyCardClasses(party.status),
         unconfirmed && "italic",
         party.status === "no" && "line-through",
@@ -1198,7 +1214,17 @@ function PlanPartyChip({
       onKeyDown={(event) => event.stopPropagation()}
       style={{ fontSize, maxWidth, paddingTop: fontSize * 0.06, paddingBottom: fontSize * 0.06 }}
     >
-      <span className={clsx("min-w-0", wrap ? "break-words text-left" : "truncate")}>{party.name}</span>
+      {stacked ? (
+        <span className={clsx("flex min-w-0 flex-col", wrap ? "text-left" : "items-center")}>
+          {planChipNames(party).map((name, index) => (
+            <span key={index} className={clsx("max-w-full", wrap ? "break-words" : "truncate")}>
+              {name}
+            </span>
+          ))}
+        </span>
+      ) : (
+        <span className={clsx("min-w-0", wrap ? "break-words text-left" : "truncate")}>{planChipName(party)}</span>
+      )}
       <PartySeatsBadge className="text-[0.8em] not-italic" party={party} />
     </button>
   );
@@ -1303,6 +1329,7 @@ const PlanBucket = memo(function PlanBucket({
       isMatch={matchingUnitIds?.has(unit.id) ?? false}
       maxWidth="100%"
       onOpenUnit={onOpenUnit}
+      stacked
       unit={unit}
       wrap
     />
