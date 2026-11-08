@@ -2,9 +2,11 @@
 
 import * as Dialog from "@radix-ui/react-dialog";
 import clsx from "clsx";
-import { ArrowRight, Check, Heart, Inbox, Merge, Plus, Search, Split, Trash2, UserMinus, Wand2, X } from "lucide-react";
+import { ArrowRight, Check, Heart, Inbox, Merge, Plus, Search, Split, Square, Trash2, UserMinus, Wand2, X } from "lucide-react";
 import { useRef, useState, type ReactNode } from "react";
 import {
+  AREA_NAME_MAX_LENGTH,
+  areaTitle,
   bucketTitle,
   canSplitParty,
   fullnessStyle,
@@ -22,6 +24,7 @@ import {
   tableTitle,
   unitMatchesSearch,
   unitPositions,
+  type SeatingArea,
   type SeatingMealType,
   type SeatingSeat,
   type SeatingUnit,
@@ -1183,6 +1186,150 @@ export function BucketDialog({
           >
             <Trash2 size={15} aria-hidden="true" />
             Delete bucket
+          </button>
+        )}
+        <button
+          type="button"
+          className="min-h-11 rounded-full border border-[#7a1239] bg-[#9f1d52] px-6 text-sm font-bold uppercase tracking-[0.1em] text-white transition hover:bg-[#bd2867]"
+          onClick={close}
+        >
+          Done
+        </button>
+      </div>
+    </Sheet>
+  );
+}
+
+const AREA_NAME_SUGGESTIONS = ["Stage", "Dance floor", "Bar", "DJ", "Cake", "Photo booth"];
+
+/** Rename or delete a floor area (stage, dance floor). Moving and resizing happen on the floor plan. */
+export function AreaDialog({
+  area,
+  autoFocusName,
+  onClose,
+  onDelete,
+  onRename,
+}: {
+  area: SeatingArea;
+  autoFocusName: boolean;
+  onClose: () => void;
+  onDelete: () => void;
+  onRename: (name: string) => void;
+}) {
+  const [name, setName] = useState(area.name);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const nameInputRef = useRef<HTMLInputElement>(null);
+  const savedNameRef = useRef(area.name);
+
+  function commitName(value = name) {
+    const next = value.trim();
+
+    if (next !== savedNameRef.current) {
+      savedNameRef.current = next;
+      onRename(next);
+    }
+  }
+
+  function close() {
+    commitName();
+    onClose();
+  }
+
+  return (
+    <Sheet
+      description={
+        <span>
+          {area.width} × {area.height} · Drag it on the floor plan to move it, or drag an edge or corner to change its
+          size and shape.
+        </span>
+      }
+      onClose={close}
+      onOpenAutoFocus={(event) => {
+        event.preventDefault();
+        if (autoFocusName) {
+          nameInputRef.current?.focus();
+        }
+      }}
+      title={
+        <span className="flex items-center gap-2">
+          <Square aria-hidden="true" className="shrink-0 text-[#5f8a5f]" size={20} />
+          <span className={clsx(!name.trim() && "italic text-[#a07088]")}>{areaTitle({ name: name.trim() })}</span>
+        </span>
+      }
+    >
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          close();
+        }}
+      >
+        <label className="grid gap-1 text-xs font-bold uppercase tracking-[0.12em] text-[#8f5070]">
+          Area name
+          <input
+            ref={nameInputRef}
+            className="h-12 w-full min-w-0 rounded-xl border border-[#df7fa3] bg-white px-3 text-lg normal-case tracking-normal text-[#4a1027] outline-none transition placeholder:text-[#d3a6bb] focus:border-[#be185d] focus:ring-2 focus:ring-[#be185d]/20"
+            enterKeyHint="done"
+            maxLength={AREA_NAME_MAX_LENGTH}
+            onBlur={() => commitName()}
+            onChange={(event) => setName(event.target.value)}
+            placeholder="e.g. Dance floor"
+            value={name}
+          />
+        </label>
+        <button type="submit" className="sr-only">
+          Save and close
+        </button>
+      </form>
+
+      <div className="mt-3 flex flex-wrap gap-1.5">
+        {AREA_NAME_SUGGESTIONS.map((suggestion) => (
+          <button
+            key={suggestion}
+            type="button"
+            aria-pressed={name.trim() === suggestion}
+            className={clsx(
+              "min-h-10 rounded-full border px-3.5 text-sm font-semibold transition",
+              name.trim() === suggestion
+                ? "border-[#5f8a5f] bg-[#e2eede] text-[#2f5233]"
+                : "border-[#efb5c9] bg-white text-[#7a1239] hover:bg-[#ffe0ec]",
+            )}
+            onClick={() => {
+              setName(suggestion);
+              commitName(suggestion);
+            }}
+          >
+            {suggestion}
+          </button>
+        ))}
+      </div>
+
+      <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-[#f3cddb] pt-4">
+        {confirmingDelete ? (
+          <span className="flex flex-wrap items-center gap-2">
+            <span className="text-sm font-semibold text-[#991b1b]">Delete {areaTitle({ name: name.trim() })}?</span>
+            <button
+              type="button"
+              className="min-h-10 rounded-full bg-[#b91c1c] px-4 text-sm font-bold text-white transition hover:bg-[#991b1b]"
+              onClick={onDelete}
+            >
+              Delete
+            </button>
+            <button
+              type="button"
+              className="min-h-10 rounded-full border border-[#efb5c9] bg-white px-4 text-sm font-semibold text-[#7a1239]"
+              onClick={() => setConfirmingDelete(false)}
+            >
+              Keep
+            </button>
+          </span>
+        ) : (
+          <button
+            type="button"
+            className="inline-flex min-h-10 items-center gap-1.5 rounded-full border border-[#fca5a5] bg-white px-4 text-sm font-semibold text-[#b91c1c] transition hover:bg-[#fef2f2]"
+            onClick={() => setConfirmingDelete(true)}
+          >
+            <Trash2 size={15} aria-hidden="true" />
+            Delete area
           </button>
         )}
         <button

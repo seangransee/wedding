@@ -3,23 +3,29 @@
 import { cookies } from "next/headers";
 import { ADMIN_COOKIE_NAME, ADMIN_PASSWORD } from "@/lib/cookies";
 import {
+  createSeatingArea,
   createSeatingBucket,
   createSeatingTable,
   deleteEmptySeatingBubbles,
+  deleteSeatingAreaById,
   deleteSeatingTableById,
   getSeatingChart,
   replaceSeatingTableSeats,
   setSeatingAssignment,
   setSeatingPersonAssignment,
   splitSeatingParty,
+  updateSeatingAreaName,
+  updateSeatingAreaRect,
   updateSeatingRoomSize,
   updateSeatingTableLabel,
   updateSeatingTablePosition,
 } from "@/lib/db";
 import {
+  AREA_MIN_SIZE,
   BUCKET_COORD_MAX,
   BUCKET_COORD_MIN,
   isUuid,
+  normalizeAreaName,
   normalizeTableName,
   normalizeTableNumber,
   ROOM_MAX_SIZE,
@@ -297,4 +303,87 @@ export async function resizeSeatingRoom(width: number, height: number): Promise<
 
   await updateSeatingRoomSize(width, height);
   return ok("Room resized.");
+}
+
+function isAreaRect(value: unknown): value is { x: number; y: number; width: number; height: number } {
+  const rect = value as { x?: unknown; y?: unknown; width?: unknown; height?: unknown } | null;
+
+  return (
+    typeof rect === "object" &&
+    rect !== null &&
+    isCoordinate(rect.x) &&
+    isCoordinate(rect.y) &&
+    isRoomSize(rect.width, AREA_MIN_SIZE) &&
+    isRoomSize(rect.height, AREA_MIN_SIZE)
+  );
+}
+
+/** Adds a named floor area, like the stage or dance floor. */
+export async function addSeatingArea(input: {
+  id: string;
+  name: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}): Promise<SeatingActionResult> {
+  await requireAdmin();
+
+  const name = labelText(input?.name);
+
+  if (!isUuid(input?.id) || name === null || !isAreaRect(input)) {
+    return fail("That new area was invalid.");
+  }
+
+  await createSeatingArea({
+    id: input.id,
+    name: normalizeAreaName(name),
+    x: input.x,
+    y: input.y,
+    width: input.width,
+    height: input.height,
+  });
+  return ok("Area added.");
+}
+
+/** Moves and/or resizes a floor area. */
+export async function updateSeatingArea(
+  areaId: string,
+  rect: { x: number; y: number; width: number; height: number },
+): Promise<SeatingActionResult> {
+  await requireAdmin();
+
+  if (!isUuid(areaId) || !isAreaRect(rect)) {
+    return fail("That area size or position was invalid.");
+  }
+
+  const saved = await updateSeatingAreaRect(areaId, rect.x, rect.y, rect.width, rect.height);
+
+  return saved ? ok("Area saved.") : fail(`That area no longer exists. ${RELOAD_HINT}`);
+}
+
+export async function renameSeatingArea(areaId: string, name: string): Promise<SeatingActionResult> {
+  await requireAdmin();
+
+  const nameText = labelText(name);
+
+  if (!isUuid(areaId) || nameText === null) {
+    return fail("That area name was invalid.");
+  }
+
+  const saved = await updateSeatingAreaName(areaId, normalizeAreaName(nameText));
+
+  return saved ? ok("Area renamed.") : fail(`That area no longer exists. ${RELOAD_HINT}`);
+}
+
+export async function deleteSeatingArea(areaId: string): Promise<SeatingActionResult> {
+  await requireAdmin();
+
+  if (!isUuid(areaId)) {
+    return fail("That area was invalid.");
+  }
+
+  // Deleting an already-deleted area is fine (e.g. a retried save).
+  await deleteSeatingAreaById(areaId);
+  return ok("Area deleted.");
 }

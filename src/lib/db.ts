@@ -4,6 +4,7 @@ import type { MailingAddress } from "./mailing-address";
 import {
   DEFAULT_ROOM,
   ROUND_TABLE_CAPACITY,
+  type SeatingArea,
   type SeatingAttendee,
   type SeatingBucket,
   type SeatingChartData,
@@ -1103,6 +1104,16 @@ type SeatingPartyRow = {
   people: string | null;
 };
 
+type SeatingAreaRow = {
+  id: string;
+  name: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  created_at_ms: number;
+};
+
 type SeatingSeatRow = {
   table_id: string;
   seat_number: number;
@@ -1200,7 +1211,7 @@ function SEAT_PERSON_AT_TABLE_SQL(guestId: string, position: string, tableId: st
 }
 
 export async function getSeatingChart(): Promise<SeatingChartData> {
-  const [layoutRows, tableRows, partyRows, seatRows] = await Promise.all([
+  const [layoutRows, tableRows, partyRows, seatRows, areaRows] = await Promise.all([
     sql().query<SeatingLayoutRow>(
       `SELECT room_width, room_height
        FROM wedding_seating_layout
@@ -1273,6 +1284,7 @@ export async function getSeatingChart(): Promise<SeatingChartData> {
        WHERE ${SEAT_PERSON_AT_TABLE_SQL("seat.guest_id", "seat.person_position", "seat.table_id")}
        ORDER BY seat.table_id, seat.seat_number`,
     ),
+    getSeatingAreaRows(),
   ]);
 
   const layout = layoutRows[0];
@@ -1285,6 +1297,17 @@ export async function getSeatingChart(): Promise<SeatingChartData> {
       .filter((row): row is SeatingTableRow & { kind: SeatingTableKind } => row.kind !== "bucket")
       .map(toSeatingTable),
     buckets: tableRows.filter((row) => row.kind === "bucket").map(toSeatingBucket),
+    areas: areaRows.map(
+      (row): SeatingArea => ({
+        id: row.id,
+        name: row.name,
+        x: row.x,
+        y: row.y,
+        width: row.width,
+        height: row.height,
+        createdAt: Number(row.created_at_ms),
+      }),
+    ),
     parties: partyRows.map(toSeatingParty),
     seats: seatRows.map((row): SeatingSeat => ({
       tableId: row.table_id,
@@ -1621,4 +1644,81 @@ export async function updateSeatingRoomSize(width: number, height: number) {
        updated_at = now()`,
     [width, height],
   );
+}
+
+/**
+ * Floor areas (stage, dance floor). Reads as none until migration 019 has run,
+ * so the rest of the seating chart keeps working while a deploy migrates.
+ */
+async function getSeatingAreaRows() {
+  try {
+    return await sql().query<SeatingAreaRow>(
+      `SELECT
+         id::text AS id,
+         name,
+         x,
+         y,
+         width,
+         height,
+         (extract(epoch FROM created_at) * 1000)::float8 AS created_at_ms
+       FROM wedding_seating_areas
+       ORDER BY created_at ASC, id ASC`,
+    );
+  } catch (error) {
+    if (error instanceof Error && /relation "wedding_seating_areas" does not exist/i.test(error.message)) {
+      return [];
+    }
+    throw error;
+  }
+}
+
+/** Idempotent: retrying with the same client-generated id is a no-op. */
+export async function createSeatingArea(input: {
+  id: string;
+  name: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}) {
+  await sql().query(
+    `INSERT INTO wedding_seating_areas (id, name, x, y, width, height)
+     VALUES ($1::uuid, $2, $3, $4, $5, $6)
+     ON CONFLICT (id) DO NOTHING`,
+    [input.id, input.name, input.x, input.y, input.width, input.height],
+  );
+}
+
+/** Moves and/or resizes an area (x/y is its top-left corner). */
+export async function updateSeatingAreaRect(id: string, x: number, y: number, width: number, height: number) {
+  const rows = await sql().query<{ id: string }>(
+    `UPDATE wedding_seating_areas
+     SET x = $2,
+         y = $3,
+         width = $4,
+         height = $5,
+         updated_at = now()
+     WHERE id = $1::uuid
+     RETURNING id`,
+    [id, x, y, width, height],
+  );
+
+  return rows.length > 0;
+}
+
+export async function updateSeatingAreaName(id: string, name: string) {
+  const rows = await sql().query<{ id: string }>(
+    `UPDATE wedding_seating_areas
+     SET name = $2,
+         updated_at = now()
+     WHERE id = $1::uuid
+     RETURNING id`,
+    [id, name],
+  );
+
+  return rows.length > 0;
+}
+
+export async function deleteSeatingAreaById(id: string) {
+  await sql().query(`DELETE FROM wedding_seating_areas WHERE id = $1::uuid`, [id]);
 }

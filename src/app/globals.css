@@ -945,6 +945,7 @@ body {
 
 /* Long-press dragging on touch screens: no text selection or iOS callout. */
 .seating-table,
+.seating-area,
 .seating-chip {
   -webkit-touch-callout: none;
   -webkit-user-select: none;
@@ -961,6 +962,41 @@ body {
 .seating-resize-corner {
   z-index: 5;
   touch-action: none;
+}
+
+/* Floor areas (stage, dance floor): soft sage hatching so they read as floor, not tables. */
+.seating-area {
+  border-style: solid;
+  border-color: #8aa889;
+  background-color: rgba(226, 238, 222, 0.82);
+  background-image: repeating-linear-gradient(
+    -45deg,
+    rgba(110, 145, 108, 0.14) 0 10px,
+    transparent 10px 22px
+  );
+  color: #2f5233;
+}
+
+.seating-area-handle {
+  touch-action: none;
+}
+
+.seating-area-corner {
+  border-style: solid;
+  border-color: #5f8a5f;
+  background: #fffdfd;
+  opacity: 0.55;
+  transition: opacity 140ms ease, background-color 140ms ease;
+}
+
+.seating-area-wrap:hover .seating-area-corner,
+.seating-area-handle:active .seating-area-corner {
+  opacity: 1;
+}
+
+.seating-area-handle:hover .seating-area-corner,
+.seating-area-handle:active .seating-area-corner {
+  background: #5f8a5f;
 }
 
 .seating-resize-grip {

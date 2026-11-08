@@ -25,6 +25,12 @@ export const BUCKET_WIDTH = 260;
 export const BUCKET_COORD_MIN = -3000;
 export const BUCKET_COORD_MAX = ROOM_MAX_SIZE + 3000;
 
+/** Floor areas (stage, dance floor): a new one's size, and the smallest one can be. */
+export const AREA_DEFAULT_WIDTH = 420;
+export const AREA_DEFAULT_HEIGHT = 280;
+export const AREA_MIN_SIZE = 40;
+export const AREA_NAME_MAX_LENGTH = 40;
+
 export const TABLE_NUMBER_MAX_LENGTH = 12;
 export const TABLE_NAME_MAX_LENGTH = 40;
 
@@ -69,6 +75,22 @@ export type SeatingBucket = {
    */
   bubble: boolean;
   /** Epoch milliseconds; buckets list in creation order. */
+  createdAt: number;
+};
+
+/**
+ * A named rectangle on the floor for something that isn't a table, like the
+ * stage or the dance floor. x/y is the top-left corner; areas stay inside the
+ * room. Nobody sits in an area.
+ */
+export type SeatingArea = {
+  id: string;
+  name: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  /** Epoch milliseconds; later areas draw on top. */
   createdAt: number;
 };
 
@@ -149,6 +171,7 @@ export type SeatingChartData = {
   room: SeatingRoom;
   tables: SeatingTable[];
   buckets: SeatingBucket[];
+  areas: SeatingArea[];
   parties: SeatingParty[];
   seats: SeatingSeat[];
 };
@@ -216,8 +239,11 @@ export function clampTableCenter(
   };
 }
 
-/** Smallest room that still contains every table, so resizing never hides one. */
-export function minimumRoomSize(tables: readonly Pick<SeatingTable, "kind" | "x" | "y">[]) {
+/** Smallest room that still contains every table and area, so resizing never hides one. */
+export function minimumRoomSize(
+  tables: readonly Pick<SeatingTable, "kind" | "x" | "y">[],
+  areas: readonly Pick<SeatingArea, "x" | "y" | "width" | "height">[] = [],
+) {
   let width = ROOM_MIN_WIDTH;
   let height = ROOM_MIN_HEIGHT;
 
@@ -225,6 +251,12 @@ export function minimumRoomSize(tables: readonly Pick<SeatingTable, "kind" | "x"
     const size = tableSize(table.kind);
     width = Math.max(width, Math.ceil(table.x + size.width / 2 + ROOM_WALL_MARGIN));
     height = Math.max(height, Math.ceil(table.y + size.height / 2 + ROOM_WALL_MARGIN));
+  }
+
+  // Areas may sit flush against a wall (a stage often does).
+  for (const area of areas) {
+    width = Math.max(width, area.x + area.width);
+    height = Math.max(height, area.y + area.height);
   }
 
   return { width: Math.min(width, ROOM_MAX_SIZE), height: Math.min(height, ROOM_MAX_SIZE) };
@@ -262,6 +294,97 @@ export function normalizeTableNumber(value: string) {
 
 export function normalizeTableName(value: string) {
   return normalizeLabel(value, TABLE_NAME_MAX_LENGTH);
+}
+
+export function normalizeAreaName(value: string) {
+  return normalizeLabel(value, AREA_NAME_MAX_LENGTH);
+}
+
+export function areaTitle(area: Pick<SeatingArea, "name">) {
+  return area.name || "Unnamed area";
+}
+
+type AreaRect = Pick<SeatingArea, "x" | "y" | "width" | "height">;
+
+/** Keeps an area at least AREA_MIN_SIZE and entirely inside the room. */
+export function clampAreaRect(rect: AreaRect, room: SeatingRoom): AreaRect {
+  const width = Math.round(clamp(rect.width, AREA_MIN_SIZE, Math.max(AREA_MIN_SIZE, room.width)));
+  const height = Math.round(clamp(rect.height, AREA_MIN_SIZE, Math.max(AREA_MIN_SIZE, room.height)));
+
+  return {
+    x: Math.round(clamp(rect.x, 0, Math.max(0, room.width - width))),
+    y: Math.round(clamp(rect.y, 0, Math.max(0, room.height - height))),
+    width,
+    height,
+  };
+}
+
+/** Which edges a resize handle moves: n/s/e/w and the four corners. */
+export type AreaResizeEdge = "n" | "s" | "e" | "w" | "ne" | "nw" | "se" | "sw";
+
+/**
+ * Resizes an area by dragging one edge or corner by (dx, dy) room units. The
+ * opposite edges stay put, and the area never shrinks below AREA_MIN_SIZE or
+ * leaves the room.
+ */
+export function resizeAreaRect(start: AreaRect, edge: AreaResizeEdge, dx: number, dy: number, room: SeatingRoom): AreaRect {
+  let left = start.x;
+  let top = start.y;
+  let right = start.x + start.width;
+  let bottom = start.y + start.height;
+
+  if (edge.includes("w")) {
+    left = clamp(left + dx, 0, right - AREA_MIN_SIZE);
+  }
+  if (edge.includes("e")) {
+    right = clamp(right + dx, left + AREA_MIN_SIZE, Math.max(left + AREA_MIN_SIZE, room.width));
+  }
+  if (edge.includes("n")) {
+    top = clamp(top + dy, 0, bottom - AREA_MIN_SIZE);
+  }
+  if (edge.includes("s")) {
+    bottom = clamp(bottom + dy, top + AREA_MIN_SIZE, Math.max(top + AREA_MIN_SIZE, room.height));
+  }
+
+  const x = Math.round(left);
+  const y = Math.round(top);
+
+  return { x, y, width: Math.round(right) - x, height: Math.round(bottom) - y };
+}
+
+/**
+ * Where a new area goes: the open spot (not overlapping any table or area)
+ * nearest the room's center, or the center itself when the floor is full.
+ */
+export function findOpenAreaSpot(
+  room: SeatingRoom,
+  areas: readonly AreaRect[],
+  tables: readonly Pick<SeatingTable, "kind" | "x" | "y">[] = [],
+) {
+  const width = Math.min(AREA_DEFAULT_WIDTH, room.width);
+  const height = Math.min(AREA_DEFAULT_HEIGHT, room.height);
+  const centerX = Math.round((room.width - width) / 2);
+  const centerY = Math.round((room.height - height) / 2);
+  const occupied: Rect[] = [
+    ...tables.map(tableRect),
+    ...areas.map((area) => ({ left: area.x, top: area.y, right: area.x + area.width, bottom: area.y + area.height })),
+  ];
+  const step = 20;
+  let best: { x: number; y: number; distance: number } | null = null;
+
+  // Grid aligned to the centered spot so an empty room gets a centered area.
+  for (let y = centerY % step; y + height <= room.height; y += step) {
+    for (let x = centerX % step; x + width <= room.width; x += step) {
+      const candidate = { left: x, top: y, right: x + width, bottom: y + height };
+      const distance = (x - centerX) ** 2 + (y - centerY) ** 2;
+
+      if ((!best || distance < best.distance) && !occupied.some((rect) => rectsOverlap(candidate, rect, 24))) {
+        best = { x, y, distance };
+      }
+    }
+  }
+
+  return clampAreaRect({ x: best?.x ?? centerX, y: best?.y ?? centerY, width, height }, room);
 }
 
 export function bucketTitle(bucket: Pick<SeatingBucket, "name">) {
@@ -737,7 +860,7 @@ function csvCell(value: number | string | null | undefined) {
  * an exact seat first, by seat), then everyone not seated yet. Declined
  * invitations are left out. Split parties list each person at their own table.
  */
-export function makeSeatingCsv(data: SeatingChartData) {
+export function makeSeatingCsv(data: Omit<SeatingChartData, "areas">) {
   const rows: Array<Array<number | string>> = [[
     "Table number",
     "Table name",

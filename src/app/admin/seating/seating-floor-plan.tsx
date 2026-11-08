@@ -17,9 +17,11 @@ import {
   type RefObject,
 } from "react";
 import {
+  areaTitle,
   BUCKET_WIDTH,
   bucketTitle,
   clamp,
+  clampAreaRect,
   clampBucketPosition,
   clampTableCenter,
   estimatedBucketHeight,
@@ -28,15 +30,19 @@ import {
   minimumRoomSize,
   planChipName,
   planChipNames,
+  resizeAreaRect,
   ROOM_MAX_SIZE,
   tableFullTitle,
   tableSize,
+  type AreaResizeEdge,
+  type SeatingArea,
   type SeatingRoom,
   type SeatingUnit,
 } from "@/lib/seating";
 import { CHIP_GAP_EM, CHIP_LINE_GAP_EM, layoutTableChips } from "@/lib/seating-chip-layout";
 import { chipTextEm, useChipTextVersion } from "./chip-text-metrics";
 import {
+  type AreaDragData,
   type BucketDragData,
   type BucketSummary,
   partyAriaLabel,
@@ -79,9 +85,15 @@ export function bubbleDropPosition(point: { x: number; y: number }, zoom: number
   return clampBucketPosition(point.x - font * 4.5, point.y - font * 1.1);
 }
 
+type AreaRect = Pick<SeatingArea, "x" | "y" | "width" | "height">;
+
 type FloorPlanProps = {
   ref?: Ref<FloorPlanHandle>;
   room: SeatingRoom;
+  areas: SeatingArea[];
+  draggingAreaId: string | null;
+  onOpenArea: (areaId: string) => void;
+  onUpdateArea: (areaId: string, rect: AreaRect) => void;
   summaries: TableSummary[];
   bucketSummaries: BucketSummary[];
   draggingBucketId: string | null;
@@ -138,6 +150,10 @@ function capturePointer(element: Element, pointerId: number) {
 }
 
 export function FloorPlan({
+  areas,
+  draggingAreaId,
+  onOpenArea,
+  onUpdateArea,
   bucketSummaries,
   draggingBucketId,
   dropBucketId,
@@ -171,7 +187,7 @@ export function FloorPlan({
   const panRef = useRef<{ pointerId: number; x: number; y: number; left: number; top: number } | null>(null);
 
   const tables = useMemo(() => summaries.map((summary) => summary.table), [summaries]);
-  const minimumRoom = useMemo(() => minimumRoomSize(tables), [tables]);
+  const minimumRoom = useMemo(() => minimumRoomSize(tables, areas), [areas, tables]);
   // Never draw the room smaller than its tables, even if the saved size is.
   const baseRoom = useMemo(
     () => ({
@@ -403,8 +419,11 @@ export function FloorPlan({
         const viewport = viewportRef.current;
         const table = tables.find((candidate) => candidate.id === tableId);
         const bucket = bucketSummaries.find((summary) => summary.bucket.id === tableId)?.bucket;
+        const area = areas.find((candidate) => candidate.id === tableId);
         const place = table
           ? { x: table.x, y: table.y, radius: tableSize(table.kind).width / 2 }
+          : area
+            ? { x: area.x + area.width / 2, y: area.y + area.height / 2, radius: Math.max(area.width, area.height) / 2 }
           : bucket
             ? bucket.bubble
               ? { x: bucket.x + 60, y: bucket.y + 20, radius: 80 }
@@ -452,7 +471,7 @@ export function FloorPlan({
         };
       },
     }),
-    [bucketSummaries, tables],
+    [areas, bucketSummaries, tables],
   );
 
   const computeResize = useCallback((session: ResizeSession) => {
@@ -683,6 +702,19 @@ export function FloorPlan({
                 </p>
               </div>
             ) : null}
+            {areas.map((area) => (
+              <PlanArea
+                key={area.id}
+                area={area}
+                highlighted={highlightedTableId === area.id}
+                isMoving={draggingAreaId === area.id}
+                onOpenArea={onOpenArea}
+                onUpdateArea={onUpdateArea}
+                roomHeight={effectiveRoom.height}
+                roomWidth={effectiveRoom.width}
+                zoom={zoom}
+              />
+            ))}
             {summaries.map((summary) => (
               <PlanTable
                 key={summary.table.id}
@@ -1417,6 +1449,237 @@ const PlanBucket = memo(function PlanBucket({
           Not seated yet. Drag people here.
         </span>
       )}
+    </div>
+  );
+});
+
+const AREA_RESIZE_EDGES: readonly AreaResizeEdge[] = ["n", "s", "e", "w", "nw", "ne", "sw", "se"];
+
+const AREA_RESIZE_CURSORS: Record<AreaResizeEdge, string> = {
+  n: "ns-resize",
+  s: "ns-resize",
+  e: "ew-resize",
+  w: "ew-resize",
+  nw: "nwse-resize",
+  se: "nwse-resize",
+  ne: "nesw-resize",
+  sw: "nesw-resize",
+};
+
+type AreaResizeSession = {
+  edge: AreaResizeEdge;
+  pointerId: number;
+  startClientX: number;
+  startClientY: number;
+  start: AreaRect;
+};
+
+/**
+ * A named rectangle on the floor (stage, dance floor). Drag the middle to
+ * move it, drag any edge or corner to resize it, and tap it to rename or
+ * delete. It draws beneath the tables and isn't a drop target, so people
+ * dropped on it land in a bubble like anywhere else on the floor.
+ */
+const PlanArea = memo(function PlanArea({
+  area,
+  highlighted,
+  isMoving,
+  onOpenArea,
+  onUpdateArea,
+  roomHeight,
+  roomWidth,
+  zoom,
+}: {
+  area: SeatingArea;
+  highlighted: boolean;
+  isMoving: boolean;
+  onOpenArea: (areaId: string) => void;
+  onUpdateArea: (areaId: string, rect: AreaRect) => void;
+  roomHeight: number;
+  roomWidth: number;
+  zoom: number;
+}) {
+  const drag = useDraggable({
+    id: `move-area-${area.id}`,
+    data: { type: "area", areaId: area.id } satisfies AreaDragData,
+  });
+  const [liveRect, setLiveRect] = useState<AreaRect | null>(null);
+  const resizeRef = useRef<AreaResizeSession | null>(null);
+  const room = { width: roomWidth, height: roomHeight };
+
+  let rect: AreaRect = liveRect ?? area;
+  if (drag.transform && !liveRect) {
+    rect = clampAreaRect({ ...area, x: area.x + drag.transform.x / zoom, y: area.y + drag.transform.y / zoom }, room);
+  }
+
+  function resizedRect(session: AreaResizeSession, clientX: number, clientY: number) {
+    return resizeAreaRect(
+      session.start,
+      session.edge,
+      (clientX - session.startClientX) / zoom,
+      (clientY - session.startClientY) / zoom,
+      room,
+    );
+  }
+
+  function handleResizeStart(edge: AreaResizeEdge, event: React.PointerEvent<HTMLDivElement>) {
+    if (event.pointerType === "mouse" && event.button !== 0) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    capturePointer(event.currentTarget, event.pointerId);
+    const start = { x: area.x, y: area.y, width: area.width, height: area.height };
+    resizeRef.current = { edge, pointerId: event.pointerId, startClientX: event.clientX, startClientY: event.clientY, start };
+    setLiveRect(start);
+  }
+
+  function handleResizeMove(event: React.PointerEvent<HTMLDivElement>) {
+    const session = resizeRef.current;
+
+    if (!session || session.pointerId !== event.pointerId) {
+      return;
+    }
+
+    const next = resizedRect(session, event.clientX, event.clientY);
+    setLiveRect((current) =>
+      current && current.x === next.x && current.y === next.y && current.width === next.width && current.height === next.height
+        ? current
+        : next,
+    );
+  }
+
+  function handleResizeEnd(event: React.PointerEvent<HTMLDivElement>) {
+    const session = resizeRef.current;
+
+    if (!session || session.pointerId !== event.pointerId) {
+      return;
+    }
+
+    resizeRef.current = null;
+    const next = resizedRect(session, event.clientX, event.clientY);
+    setLiveRect(null);
+
+    if (
+      next.x !== area.x ||
+      next.y !== area.y ||
+      next.width !== area.width ||
+      next.height !== area.height
+    ) {
+      onUpdateArea(area.id, next);
+    }
+  }
+
+  const resizing = liveRect !== null;
+  const title = areaTitle(area);
+  const borderWidth = Math.max(2, 1.5 / zoom);
+  // Big, letterspaced label that stays readable at any zoom but always fits the area.
+  const nameFont = Math.min(
+    Math.max(18, 14 / zoom),
+    rect.height * 0.32,
+    (rect.width * 0.86) / Math.max(4, title.length * 0.78),
+  );
+  const sizeFont = Math.max(11, 10 / zoom);
+  const edgeHit = Math.max(10, 16 / zoom);
+  const cornerHit = Math.max(16, 26 / zoom);
+  const cornerMark = Math.max(8, 10 / zoom);
+  const ring = highlighted ? `0 0 0 ${Math.max(5, 4 / zoom)}px rgba(236, 72, 153, 0.45)` : undefined;
+  const shadow = isMoving
+    ? `0 ${18 / zoom}px ${40 / zoom}px -${10 / zoom}px rgba(31, 61, 38, 0.45)`
+    : undefined;
+
+  return (
+    <div
+      className={clsx("seating-area-wrap absolute", (isMoving || resizing) && "z-20")}
+      style={{ left: rect.x, top: rect.y, width: rect.width, height: rect.height }}
+    >
+      <div
+        ref={drag.setNodeRef}
+        {...drag.attributes}
+        {...drag.listeners}
+        aria-label={`${title} area, ${area.width} by ${area.height}. Drag to move; drag an edge or corner to resize; press Enter to rename.`}
+        className={clsx(
+          "seating-area absolute inset-0 flex select-none items-center justify-center overflow-hidden rounded-[6px] text-center outline-none",
+          isMoving ? "cursor-grabbing" : "cursor-grab",
+          "transition-[box-shadow] duration-150 focus-visible:ring-4 focus-visible:ring-[#be185d]/50",
+        )}
+        data-no-pan
+        onClick={() => onOpenArea(area.id)}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            onOpenArea(area.id);
+          }
+        }}
+        style={{
+          borderWidth,
+          boxShadow: [ring, shadow].filter(Boolean).join(", ") || undefined,
+        }}
+      >
+        <span
+          className={clsx(
+            "max-w-[92%] break-words font-semibold uppercase leading-[1.1] tracking-[0.14em]",
+            !area.name && "italic normal-case tracking-normal opacity-70",
+          )}
+          style={{ fontSize: nameFont }}
+        >
+          {title}
+        </span>
+      </div>
+
+      {AREA_RESIZE_EDGES.map((edge) => {
+        const corner = edge.length === 2;
+        const hit = corner ? cornerHit : edgeHit;
+        const style: React.CSSProperties = { cursor: AREA_RESIZE_CURSORS[edge] };
+
+        if (corner) {
+          style.width = hit;
+          style.height = hit;
+          style[edge.includes("w") ? "left" : "right"] = -hit / 2;
+          style[edge.includes("n") ? "top" : "bottom"] = -hit / 2;
+        } else if (edge === "n" || edge === "s") {
+          style.left = cornerHit / 2;
+          style.right = cornerHit / 2;
+          style.height = hit;
+          style[edge === "n" ? "top" : "bottom"] = -hit / 2;
+        } else {
+          style.top = cornerHit / 2;
+          style.bottom = cornerHit / 2;
+          style.width = hit;
+          style[edge === "w" ? "left" : "right"] = -hit / 2;
+        }
+
+        return (
+          <div
+            key={edge}
+            aria-hidden="true"
+            className="seating-area-handle absolute grid place-items-center"
+            data-no-pan
+            onPointerCancel={handleResizeEnd}
+            onPointerDown={(event) => handleResizeStart(edge, event)}
+            onPointerMove={handleResizeMove}
+            onPointerUp={handleResizeEnd}
+            style={style}
+          >
+            {corner ? (
+              <span
+                className="seating-area-corner block rounded-[2px]"
+                style={{ width: cornerMark, height: cornerMark, borderWidth: Math.max(1.5, 1.2 / zoom) }}
+              />
+            ) : null}
+          </div>
+        );
+      })}
+
+      {resizing ? (
+        <span
+          className="pointer-events-none absolute left-1/2 top-full -translate-x-1/2 whitespace-nowrap rounded-md bg-[#1f3d26] px-[0.5em] py-[0.2em] font-bold tabular-nums text-white shadow-lg"
+          style={{ fontSize: sizeFont, marginTop: sizeFont * 0.6 }}
+        >
+          {rect.width} × {rect.height}
+        </span>
+      ) : null}
     </div>
   );
 });

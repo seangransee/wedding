@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  clampAreaRect,
   compareSeatingTables,
+  findOpenAreaSpot,
   currentSeats,
   findOpenTableSpot,
   fullnessStyle,
@@ -9,6 +11,7 @@ import {
   minimumRoomSize,
   partyMatchesSearch,
   partySeats,
+  resizeAreaRect,
   searchTokens,
   seatingUnits,
   shortPersonLabel,
@@ -109,6 +112,39 @@ test("puts new tables in the first open grid spot and grows the room when it is 
 test("never lets the room shrink past its tables", () => {
   assert.deepEqual(minimumRoomSize([]), { width: 480, height: 360 });
   assert.deepEqual(minimumRoomSize([{ kind: "round", x: 1218, y: 700 }]), { width: 1352, height: 834 });
+});
+
+test("keeps the room big enough for floor areas", () => {
+  assert.deepEqual(minimumRoomSize([], [{ x: 900, y: 600, width: 500, height: 420 }]), { width: 1400, height: 1020 });
+});
+
+test("resizes floor areas from any edge or corner within the room", () => {
+  const room = { width: 1400, height: 1000 };
+  const stage = { x: 400, y: 100, width: 300, height: 200 };
+
+  assert.deepEqual(resizeAreaRect(stage, "se", 100, 50, room), { x: 400, y: 100, width: 400, height: 250 });
+  assert.deepEqual(resizeAreaRect(stage, "nw", -50, -20, room), { x: 350, y: 80, width: 350, height: 220 });
+  assert.deepEqual(resizeAreaRect(stage, "e", 5000, 0, room), { x: 400, y: 100, width: 1000, height: 200 });
+  assert.deepEqual(resizeAreaRect(stage, "n", 0, -500, room), { x: 400, y: 0, width: 300, height: 300 });
+  // Never shrinks below the minimum size, and the opposite edge stays put.
+  assert.deepEqual(resizeAreaRect(stage, "w", 1000, 0, room), { x: 660, y: 100, width: 40, height: 200 });
+});
+
+test("keeps floor areas inside the room", () => {
+  const room = { width: 1400, height: 1000 };
+
+  assert.deepEqual(clampAreaRect({ x: 1300, y: -40, width: 300, height: 200 }, room), {
+    x: 1100,
+    y: 0,
+    width: 300,
+    height: 200,
+  });
+  const first = findOpenAreaSpot(room, []);
+  assert.deepEqual(first, { x: 490, y: 360, width: 420, height: 280 });
+  const second = findOpenAreaSpot(room, [first], [{ kind: "round", x: 146, y: 146 }]);
+  const overlaps = second.x < first.x + first.width + 24 && first.x < second.x + second.width + 24 &&
+    second.y < first.y + first.height + 24 && first.y < second.y + second.height + 24;
+  assert.equal(overlaps, false, "a new area doesn't cover an existing one");
 });
 
 test("labels seats with short names", () => {

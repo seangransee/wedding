@@ -41,7 +41,13 @@ export type BucketDragData = {
   bucketId: string;
 };
 
-export type DragData = PartyDragData | TableDragData | BucketDragData;
+/** Moving a floor area (stage, dance floor); resizing uses its own handles. */
+export type AreaDragData = {
+  type: "area";
+  areaId: string;
+};
+
+export type DragData = PartyDragData | TableDragData | BucketDragData | AreaDragData;
 
 /** A bucket plus everyone in it (all still not seated). */
 export type BucketSummary = {

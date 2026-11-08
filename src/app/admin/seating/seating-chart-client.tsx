@@ -29,11 +29,13 @@ import {
   PanelLeftOpen,
   Plus,
   RotateCcw,
+  Square,
   TriangleAlert,
 } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  clampAreaRect,
   clampBucketPosition,
   clampTableCenter,
   compareSeatingTables,
@@ -41,6 +43,7 @@ import {
   currentSeats,
   compareUnitsAtTable,
   estimatedBucketHeight,
+  findOpenAreaSpot,
   findOpenBucketSpot,
   findOpenTableSpot,
   fullnessStyle,
@@ -52,9 +55,11 @@ import {
   ROUND_TABLE_CAPACITY,
   searchTokens,
   seatingUnits,
+  areaTitle,
   bucketTitle,
   tableFullTitle,
   unitMatchesSearch,
+  type SeatingArea,
   type SeatingBucket,
   type SeatingChartData,
   type SeatingRoom,
@@ -63,21 +68,25 @@ import {
   type SeatingUnit,
 } from "@/lib/seating";
 import {
+  addSeatingArea,
   addSeatingBucket,
   addSeatingTable,
+  deleteSeatingArea,
   deleteSeatingTable,
   labelSeatingTable,
   loadSeatingChart,
   moveSeatingBucket,
   moveSeatingTable,
+  renameSeatingArea,
   resizeSeatingRoom,
   saveTableSeats,
   seatParty,
   seatPerson,
   splitParty,
+  updateSeatingArea,
   type SeatingActionResult,
 } from "./actions";
-import { BucketDialog, PartyDialog, TableDialog } from "./seating-dialogs";
+import { AreaDialog, BucketDialog, PartyDialog, TableDialog } from "./seating-dialogs";
 import { bubbleDropPosition, FloorPlan, type FloorPlanHandle } from "./seating-floor-plan";
 import { SeatingSidebar, UNSEATED_SECTION_ID } from "./seating-sidebar";
 import {
@@ -105,6 +114,7 @@ type DialogState =
   | { type: "party"; unitId: string }
   | { type: "table"; tableId: string; focusLabel: boolean }
   | { type: "bucket"; bucketId: string; focusName: boolean }
+  | { type: "area"; areaId: string; focusName: boolean }
   | null;
 
 type MobileView = "list" | "plan";
@@ -179,8 +189,8 @@ const seatingCollisionDetection: CollisionDetection = ({ droppableContainers, po
   return hits.sort((a, b) => Number(a.data?.value) - Number(b.data?.value));
 };
 
-function effectiveRoomSize(room: SeatingRoom, tables: readonly SeatingTable[]) {
-  const minimum = minimumRoomSize(tables);
+function effectiveRoomSize(room: SeatingRoom, tables: readonly SeatingTable[], areas: readonly SeatingArea[]) {
+  const minimum = minimumRoomSize(tables, areas);
   return { width: Math.max(room.width, minimum.width), height: Math.max(room.height, minimum.height) };
 }
 
@@ -196,8 +206,9 @@ export function SeatingChartClient({
   const [parties, setParties] = useState(initialData.parties);
   const [seats, setSeats] = useState(initialData.seats);
   const [buckets, setBuckets] = useState(initialData.buckets);
-  const stateRef = useRef({ room, tables, parties, seats, buckets });
-  stateRef.current = { room, tables, parties, seats, buckets };
+  const [areas, setAreas] = useState(initialData.areas);
+  const stateRef = useRef({ room, tables, parties, seats, buckets, areas });
+  stateRef.current = { room, tables, parties, seats, buckets, areas };
 
   const [saveState, setSaveState] = useState<SaveState>({ status: "saved", message: "All changes saved" });
   const queueRef = useRef<SaveOperation[]>([]);
@@ -314,6 +325,7 @@ export function SeatingChartClient({
       setParties(data.parties);
       setSeats(data.seats);
       setBuckets(data.buckets);
+      setAreas(data.areas);
     } catch {
       // Offline or logged out; the next refresh or save will surface it.
     }
@@ -664,8 +676,8 @@ export function SeatingChartClient({
   );
 
   const addTable = useCallback(() => {
-    const { room: currentRoom, tables: currentTables } = stateRef.current;
-    const spot = findOpenTableSpot(effectiveRoomSize(currentRoom, currentTables), currentTables);
+    const { room: currentRoom, tables: currentTables, areas: currentAreas } = stateRef.current;
+    const spot = findOpenTableSpot(effectiveRoomSize(currentRoom, currentTables, currentAreas), currentTables);
     const table: SeatingTable = {
       id: createSeatingId(),
       kind: "round",
@@ -700,14 +712,20 @@ export function SeatingChartClient({
   );
 
   const addBucket = useCallback(() => {
-    const { room: currentRoom, tables: currentTables, buckets: currentBuckets, parties: currentParties } = stateRef.current;
+    const {
+      room: currentRoom,
+      tables: currentTables,
+      buckets: currentBuckets,
+      parties: currentParties,
+      areas: currentAreas,
+    } = stateRef.current;
     const memberCounts = new Map<string, number>();
     for (const unit of seatingUnits(currentParties)) {
       if (unit.tableId) {
         memberCounts.set(unit.tableId, (memberCounts.get(unit.tableId) ?? 0) + 1);
       }
     }
-    const spot = findOpenBucketSpot(effectiveRoomSize(currentRoom, currentTables), currentBuckets, (index) =>
+    const spot = findOpenBucketSpot(effectiveRoomSize(currentRoom, currentTables, currentAreas), currentBuckets, (index) =>
       estimatedBucketHeight(memberCounts.get(currentBuckets[index].id) ?? 0),
     );
     const bucket: SeatingBucket = {
@@ -827,6 +845,48 @@ export function SeatingChartClient({
     [enqueueSave],
   );
 
+  const addArea = useCallback(() => {
+    const { room: currentRoom, tables: currentTables, areas: currentAreas } = stateRef.current;
+    const spot = findOpenAreaSpot(effectiveRoomSize(currentRoom, currentTables, currentAreas), currentAreas, currentTables);
+    const area: SeatingArea = { id: createSeatingId(), name: "", ...spot, createdAt: Date.now() };
+
+    setAreas((current) => [...current, area]);
+    enqueueSave({
+      key: `add:${area.id}`,
+      run: () =>
+        addSeatingArea({ id: area.id, name: "", x: area.x, y: area.y, width: area.width, height: area.height }),
+    });
+    setDialog({ type: "area", areaId: area.id, focusName: true });
+    flashTable(area.id);
+    window.requestAnimationFrame(() => planRef.current?.revealTable(area.id));
+  }, [enqueueSave, flashTable]);
+
+  /** Moves and/or resizes a floor area. */
+  const updateArea = useCallback(
+    (areaId: string, rect: Pick<SeatingArea, "x" | "y" | "width" | "height">) => {
+      setAreas((current) => current.map((area) => (area.id === areaId ? { ...area, ...rect } : area)));
+      enqueueSave({ key: `area:${areaId}`, run: () => updateSeatingArea(areaId, rect) });
+    },
+    [enqueueSave],
+  );
+
+  const renameArea = useCallback(
+    (areaId: string, name: string) => {
+      setAreas((current) => current.map((area) => (area.id === areaId ? { ...area, name } : area)));
+      enqueueSave({ key: `label:${areaId}`, run: () => renameSeatingArea(areaId, name) });
+    },
+    [enqueueSave],
+  );
+
+  const deleteArea = useCallback(
+    (areaId: string) => {
+      setAreas((current) => current.filter((area) => area.id !== areaId));
+      enqueueSave({ key: `delete:${areaId}`, run: () => deleteSeatingArea(areaId) });
+      setDialog(null);
+    },
+    [enqueueSave],
+  );
+
   const setTableSeats = useCallback(
     (tableId: string, nextSeats: SeatingSeat[]) => {
       setSeats((current) => [...current.filter((seat) => seat.tableId !== tableId), ...nextSeats]);
@@ -853,6 +913,7 @@ export function SeatingChartClient({
     (bucketId: string) => setDialog({ type: "bucket", bucketId, focusName: false }),
     [],
   );
+  const openArea = useCallback((areaId: string) => setDialog({ type: "area", areaId, focusName: false }), []);
 
   const toggleSection = useCallback(
     (sectionId: string) => {
@@ -967,6 +1028,21 @@ export function SeatingChartClient({
           moveBucket(bucket.id, next.x, next.y);
         }
       }
+    } else if (drag?.type === "area") {
+      const area = stateRef.current.areas.find((candidate) => candidate.id === drag.areaId);
+
+      if (area && (event.delta.x !== 0 || event.delta.y !== 0)) {
+        const zoom = zoomRef.current || 1;
+        const { room: currentRoom, tables: currentTables, areas: currentAreas } = stateRef.current;
+        const next = clampAreaRect(
+          { ...area, x: area.x + event.delta.x / zoom, y: area.y + event.delta.y / zoom },
+          effectiveRoomSize(currentRoom, currentTables, currentAreas),
+        );
+
+        if (next.x !== area.x || next.y !== area.y) {
+          updateArea(area.id, next);
+        }
+      }
     } else if (drag?.type === "table") {
       const table = stateRef.current.tables.find((candidate) => candidate.id === drag.tableId);
 
@@ -976,7 +1052,7 @@ export function SeatingChartClient({
           table.kind,
           table.x + event.delta.x / zoom,
           table.y + event.delta.y / zoom,
-          effectiveRoomSize(stateRef.current.room, stateRef.current.tables),
+          effectiveRoomSize(stateRef.current.room, stateRef.current.tables, stateRef.current.areas),
         );
 
         if (next.x !== table.x || next.y !== table.y) {
@@ -1019,6 +1095,10 @@ export function SeatingChartClient({
       const bucket = stateRef.current.buckets.find((candidate) => candidate.id === drag.bucketId);
       return bucket ? bucketTitle(bucket) : "bucket";
     }
+    if (drag?.type === "area") {
+      const area = stateRef.current.areas.find((candidate) => candidate.id === drag.areaId);
+      return area ? areaTitle(area) : "area";
+    }
     return "item";
   }
 
@@ -1043,6 +1123,7 @@ export function SeatingChartClient({
   const dialogUnit = dialog?.type === "party" ? unitById.get(dialog.unitId) ?? null : null;
   const dialogTable = dialog?.type === "table" ? summaryById.get(dialog.tableId) ?? null : null;
   const dialogBucket = dialog?.type === "bucket" ? bucketSummaryById.get(dialog.bucketId) ?? null : null;
+  const dialogArea = dialog?.type === "area" ? areas.find((area) => area.id === dialog.areaId) ?? null : null;
 
   return (
     <DndContext
@@ -1104,6 +1185,16 @@ export function SeatingChartClient({
                 title={sidebarOpen ? "Hide guest list" : "Show guest list"}
               >
                 {sidebarOpen ? <PanelLeftClose size={18} aria-hidden="true" /> : <PanelLeftOpen size={18} aria-hidden="true" />}
+              </button>
+              <button
+                type="button"
+                className="inline-flex h-10 items-center gap-1 rounded-full border border-[#7a1239] bg-[#fff8fb] px-3 text-xs font-bold uppercase tracking-[0.1em] text-[#7a1239] transition hover:bg-[#ffe0ec]"
+                onClick={addArea}
+                aria-label="Add an area, like the stage or dance floor"
+                title="Add a named area, like the stage or dance floor"
+              >
+                <Square size={15} aria-hidden="true" />
+                <span className="hidden sm:inline">Area</span>
               </button>
               <button
                 type="button"
@@ -1205,6 +1296,10 @@ export function SeatingChartClient({
           >
             <FloorPlan
               ref={planRef}
+              areas={areas}
+              draggingAreaId={activeDrag?.type === "area" ? activeDrag.areaId : null}
+              onOpenArea={openArea}
+              onUpdateArea={updateArea}
               bucketSummaries={planBucketSummaries}
               draggingBucketId={activeDrag?.type === "bucket" ? activeDrag.bucketId : null}
               draggingUnitId={draggingUnit?.id ?? null}
@@ -1270,6 +1365,17 @@ export function SeatingChartClient({
           onRemoveUnit={(unitId) => assignUnit(unitId, null)}
           onRename={(name) => renameBucket(dialogBucket.bucket.id, name)}
           summary={dialogBucket}
+        />
+      ) : null}
+
+      {dialog?.type === "area" && dialogArea ? (
+        <AreaDialog
+          key={`area-${dialogArea.id}`}
+          area={dialogArea}
+          autoFocusName={dialog.focusName}
+          onClose={() => setDialog(null)}
+          onDelete={() => deleteArea(dialogArea.id)}
+          onRename={(name) => renameArea(dialogArea.id, name)}
         />
       ) : null}
 
