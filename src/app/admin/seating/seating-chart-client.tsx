@@ -15,6 +15,7 @@ import {
   type DragStartEvent,
 } from "@dnd-kit/core";
 import { snapCenterToCursor } from "@dnd-kit/modifiers";
+import { getEventCoordinates } from "@dnd-kit/utilities";
 import clsx from "clsx";
 import {
   ArrowLeft,
@@ -77,7 +78,7 @@ import {
   type SeatingActionResult,
 } from "./actions";
 import { BucketDialog, PartyDialog, TableDialog } from "./seating-dialogs";
-import { FloorPlan, type FloorPlanHandle } from "./seating-floor-plan";
+import { bubbleDropPosition, FloorPlan, type FloorPlanHandle } from "./seating-floor-plan";
 import { SeatingSidebar, UNSEATED_SECTION_ID } from "./seating-sidebar";
 import {
   isBoolean,
@@ -398,6 +399,10 @@ export function SeatingChartClient({
     [buckets],
   );
   const bucketIds = useMemo(() => new Set(buckets.map((bucket) => bucket.id)), [buckets]);
+  const bubbleIds = useMemo(
+    () => new Set(buckets.filter((bucket) => bucket.bubble).map((bucket) => bucket.id)),
+    [buckets],
+  );
 
   // Confirmed first, then maybes, then no reply; guest-list order within each.
   // Includes people in buckets: they aren't seated either.
@@ -414,20 +419,32 @@ export function SeatingChartClient({
         ),
     [units, tableIds],
   );
-  // Not seated and not in any bucket.
+  // Not seated and not in a named bucket (people in bubbles are listed as plain Not seated).
   const looseUnits = useMemo(
-    () => unseatedUnits.filter((unit) => !(unit.tableId && bucketIds.has(unit.tableId))),
-    [bucketIds, unseatedUnits],
-  );
-  const bucketSummaries = useMemo<BucketSummary[]>(
     () =>
-      sortedBuckets.map((bucket) => {
-        const members = units
-          .filter((unit) => unit.tableId === bucket.id && partySeats(unit) > 0)
-          .sort(compareUnitsAtTable);
-        return { bucket, units: members, count: members.reduce((total, unit) => total + partySeats(unit), 0) };
-      }),
+      unseatedUnits.filter(
+        (unit) => !(unit.tableId && bucketIds.has(unit.tableId) && !bubbleIds.has(unit.tableId)),
+      ),
+    [bubbleIds, bucketIds, unseatedUnits],
+  );
+  // Every bucket and bubble drawn on the floor plan. A bubble with nobody left
+  // in it is hidden right away (the server deletes it with the move that emptied it).
+  const planBucketSummaries = useMemo<BucketSummary[]>(
+    () =>
+      sortedBuckets
+        .map((bucket) => {
+          const members = units
+            .filter((unit) => unit.tableId === bucket.id && partySeats(unit) > 0)
+            .sort(compareUnitsAtTable);
+          return { bucket, units: members, count: members.reduce((total, unit) => total + partySeats(unit), 0) };
+        })
+        .filter((summary) => !summary.bucket.bubble || summary.units.length > 0),
     [sortedBuckets, units],
+  );
+  // Named buckets only: these get their own sidebar sections and dialog choices.
+  const bucketSummaries = useMemo(
+    () => planBucketSummaries.filter((summary) => !summary.bucket.bubble),
+    [planBucketSummaries],
   );
   const bucketSummaryById = useMemo(
     () => new Map(bucketSummaries.map((summary) => [summary.bucket.id, summary])),
@@ -693,7 +710,14 @@ export function SeatingChartClient({
     const spot = findOpenBucketSpot(effectiveRoomSize(currentRoom, currentTables), currentBuckets, (index) =>
       estimatedBucketHeight(memberCounts.get(currentBuckets[index].id) ?? 0),
     );
-    const bucket: SeatingBucket = { id: createSeatingId(), name: "", x: spot.x, y: spot.y, createdAt: Date.now() };
+    const bucket: SeatingBucket = {
+      id: createSeatingId(),
+      name: "",
+      x: spot.x,
+      y: spot.y,
+      bubble: false,
+      createdAt: Date.now(),
+    };
 
     setBuckets((current) => [...current, bucket]);
     enqueueSave({
@@ -711,6 +735,51 @@ export function SeatingChartClient({
       enqueueSave({ key: `move:${bucketId}`, run: () => moveSeatingBucket(bucketId, x, y) });
     },
     [enqueueSave],
+  );
+
+  /**
+   * Puts someone in their own little bubble on the floor at a room point, so
+   * anywhere can be a staging area. If they're already alone in a bubble, that
+   * bubble just moves there.
+   */
+  const dropInBubble = useCallback(
+    (unitId: string, point: { x: number; y: number }) => {
+      const { parties: currentParties, buckets: currentBuckets } = stateRef.current;
+      const unit = seatingUnits(currentParties).find((candidate) => candidate.id === unitId);
+
+      if (!unit || partySeats(unit) === 0) {
+        return;
+      }
+
+      const position = bubbleDropPosition(point, zoomRef.current || 1);
+      const currentBubble = currentBuckets.find((bucket) => bucket.bubble && bucket.id === unit.tableId);
+
+      if (currentBubble) {
+        const othersInBubble = currentParties.some((party) =>
+          party.split
+            ? party.people.some(
+                (person) =>
+                  person.tableId === currentBubble.id &&
+                  !(party.id === unit.partyId && person.position === unit.position),
+              )
+            : party.tableId === currentBubble.id && party.id !== unit.partyId,
+        );
+
+        if (!othersInBubble) {
+          moveBucket(currentBubble.id, position.x, position.y);
+          return;
+        }
+      }
+
+      const bubble: SeatingBucket = { id: createSeatingId(), name: "", ...position, bubble: true, createdAt: Date.now() };
+      setBuckets((current) => [...current, bubble]);
+      enqueueSave({
+        key: `add:${bubble.id}`,
+        run: () => addSeatingBucket({ id: bubble.id, name: "", x: bubble.x, y: bubble.y, bubble: true }),
+      });
+      assignUnit(unitId, bubble.id);
+    },
+    [assignUnit, enqueueSave, moveBucket],
   );
 
   const renameBucket = useCallback(
@@ -876,6 +945,16 @@ export function SeatingChartClient({
         assignUnit(drag.unitId, over.bucketId);
       } else if (over?.type === "unseated") {
         assignUnit(drag.unitId, null);
+      } else if (over?.type === "room") {
+        // Empty floor, inside or outside the room: give them their own bubble there.
+        const start = getEventCoordinates(event.activatorEvent);
+        const point = start
+          ? planRef.current?.clientToRoom(start.x + event.delta.x, start.y + event.delta.y)
+          : null;
+
+        if (point) {
+          dropInBubble(drag.unitId, point);
+        }
       }
     } else if (drag?.type === "bucket") {
       const bucket = stateRef.current.buckets.find((candidate) => candidate.id === drag.bucketId);
@@ -952,7 +1031,7 @@ export function SeatingChartClient({
       const bucket = stateRef.current.buckets.find((candidate) => candidate.id === drop.bucketId);
       return bucket ? bucketTitle(bucket) : "a bucket";
     }
-    return drop?.type === "unseated" ? "Not seated" : "the floor";
+    return drop?.type === "unseated" ? "Not seated" : "the floor, in their own bubble";
   }
 
   const dropTableId = activeDrag?.type === "party" && overDrop?.type === "table" ? overDrop.tableId : null;
@@ -1126,7 +1205,7 @@ export function SeatingChartClient({
           >
             <FloorPlan
               ref={planRef}
-              bucketSummaries={bucketSummaries}
+              bucketSummaries={planBucketSummaries}
               draggingBucketId={activeDrag?.type === "bucket" ? activeDrag.bucketId : null}
               draggingUnitId={draggingUnit?.id ?? null}
               draggingTableId={activeDrag?.type === "table" ? activeDrag.tableId : null}
@@ -1155,6 +1234,7 @@ export function SeatingChartClient({
       {dialogUnit ? (
         <PartyDialog
           key={`party-${dialogUnit.id}`}
+          bubbleIds={bubbleIds}
           bucketSummaries={bucketSummaries}
           onOpenBucket={openBucket}
           onAssign={(tableId) => {

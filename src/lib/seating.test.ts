@@ -296,7 +296,7 @@ test("exports split people at their own tables", () => {
 });
 
 test("exports bucket members as not seated, labeled with their bucket", () => {
-  const buckets = [{ id: "b1", name: "Dad's family", x: -300, y: 0, createdAt: 1 }];
+  const buckets = [{ id: "b1", name: "Dad's family", x: -300, y: 0, bubble: false, createdAt: 1 }];
   const parties = [
     party({ id: 1, name: "In Bucket", guestCount: 1, attendingCount: 1, tableId: "b1" }),
     party({ id: 2, name: "Loose", guestCount: 1, attendingCount: 1 }),
@@ -306,6 +306,24 @@ test("exports bucket members as not seated, labeled with their bucket", () => {
 
   assert.deepEqual(rows.slice(1), [
     '"","Not seated","","Loose","Loose","Confirmed","",""',
+    '"","Not seated: Dad\'s family","","In Bucket","In Bucket","Confirmed","",""',
+  ]);
+});
+
+test("exports people in bubbles as plain not seated", () => {
+  const buckets = [
+    { id: "b1", name: "Dad's family", x: -300, y: 0, bubble: false, createdAt: 1 },
+    { id: "b2", name: "", x: 500, y: 400, bubble: true, createdAt: 2 },
+  ];
+  const parties = [
+    party({ id: 1, name: "In Bucket", guestCount: 1, attendingCount: 1, tableId: "b1" }),
+    party({ id: 2, name: "In Bubble", guestCount: 1, attendingCount: 1, tableId: "b2" }),
+  ];
+
+  const rows = makeSeatingCsv({ room: { width: 1400, height: 1000 }, tables: [], buckets, parties, seats: [] }).split("\r\n");
+
+  assert.deepEqual(rows.slice(1), [
+    '"","Not seated","","In Bubble","In Bubble","Confirmed","",""',
     '"","Not seated: Dad\'s family","","In Bucket","In Bucket","Confirmed","",""',
   ]);
 });

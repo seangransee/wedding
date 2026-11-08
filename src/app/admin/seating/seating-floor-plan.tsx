@@ -62,7 +62,20 @@ const WHEEL_ZOOM_MAX_DELTA = 24;
 
 export type FloorPlanHandle = {
   revealTable: (tableId: string) => void;
+  /** Converts a screen point to room units, or null if it isn't over the floor plan. */
+  clientToRoom: (clientX: number, clientY: number) => { x: number; y: number } | null;
 };
+
+/** Bubble chip text grows in room units as the room shrinks, like table chips. */
+function bubbleChipFont(zoom: number) {
+  return Math.max(12, 10 / zoom);
+}
+
+/** Top-left corner for a new bubble so a one-name bubble sits centered on the drop point. */
+export function bubbleDropPosition(point: { x: number; y: number }, zoom: number) {
+  const font = bubbleChipFont(zoom);
+  return clampBucketPosition(point.x - font * 4.5, point.y - font * 1.1);
+}
 
 type FloorPlanProps = {
   ref?: Ref<FloorPlanHandle>;
@@ -193,8 +206,8 @@ export function FloorPlan({
       const size = bucketSizes.get(bucket.id);
       minX = Math.min(minX, bucket.x);
       minY = Math.min(minY, bucket.y);
-      maxX = Math.max(maxX, bucket.x + (size?.width ?? BUCKET_WIDTH));
-      maxY = Math.max(maxY, bucket.y + (size?.height ?? estimatedBucketHeight(units.length)));
+      maxX = Math.max(maxX, bucket.x + (size?.width ?? (bucket.bubble ? 140 : BUCKET_WIDTH)));
+      maxY = Math.max(maxY, bucket.y + (size?.height ?? (bucket.bubble ? 40 * units.length : estimatedBucketHeight(units.length))));
     }
 
     return { minX, minY, maxX, maxY, width: maxX - minX, height: maxY - minY };
@@ -391,7 +404,9 @@ export function FloorPlan({
         const place = table
           ? { x: table.x, y: table.y, radius: tableSize(table.kind).width / 2 }
           : bucket
-            ? { x: bucket.x + BUCKET_WIDTH / 2, y: bucket.y + 60, radius: BUCKET_WIDTH / 2 }
+            ? bucket.bubble
+              ? { x: bucket.x + 60, y: bucket.y + 20, radius: 80 }
+              : { x: bucket.x + BUCKET_WIDTH / 2, y: bucket.y + 60, radius: BUCKET_WIDTH / 2 }
             : null;
 
         if (!viewport || !place || viewport.clientWidth === 0) {
@@ -415,6 +430,24 @@ export function FloorPlan({
             behavior: "smooth",
           });
         }
+      },
+      clientToRoom(clientX: number, clientY: number) {
+        const viewport = viewportRef.current;
+
+        if (!viewport || viewport.clientWidth === 0) {
+          return null;
+        }
+
+        const rect = viewport.getBoundingClientRect();
+        if (clientX < rect.left || clientX > rect.right || clientY < rect.top || clientY > rect.bottom) {
+          return null;
+        }
+
+        const { origin: currentOrigin, zoom: currentZoom } = layoutRef.current;
+        return {
+          x: (viewport.scrollLeft + clientX - rect.left - currentOrigin.left) / currentZoom,
+          y: (viewport.scrollTop + clientY - rect.top - currentOrigin.top) / currentZoom,
+        };
       },
     }),
     [bucketSummaries, tables],
@@ -1187,6 +1220,8 @@ type PlanBucketProps = {
 /**
  * A named holding area for people who aren't seated yet. It holds any number
  * of people, shows every one of them, and grows taller as more are added.
+ * Bubbles (dropped on empty floor) render as just their people, hugged by a
+ * soft outline, with no title.
  */
 const PlanBucket = memo(function PlanBucket({
   draggingUnitId,
@@ -1246,7 +1281,7 @@ const PlanBucket = memo(function PlanBucket({
 
   const dimmed = matchingUnitIds !== null && !units.some((unit) => matchingUnitIds.has(unit.id));
   // Same legibility rule as table chips: grow text in room units as the room shrinks.
-  const chipFont = Math.max(12, 10 / zoom);
+  const chipFont = bubbleChipFont(zoom);
   const titleFont = Math.max(15, 12 / zoom);
   // Wider when zoomed out so the bigger text still fits a name or two per row.
   const width = Math.max(BUCKET_WIDTH, Math.round(chipFont * 13));
@@ -1259,6 +1294,52 @@ const PlanBucket = memo(function PlanBucket({
   const shadow = isMoving
     ? `0 ${18 / zoom}px ${40 / zoom}px -${10 / zoom}px rgba(74, 16, 39, 0.55)`
     : `0 ${6 / zoom}px ${16 / zoom}px -${10 / zoom}px rgba(74, 16, 39, 0.35)`;
+
+  const chips = units.map((unit) => (
+    <PlanPartyChip
+      key={unit.id}
+      fontSize={chipFont}
+      isDragging={draggingUnitId === unit.id}
+      isMatch={matchingUnitIds?.has(unit.id) ?? false}
+      maxWidth="100%"
+      onOpenUnit={onOpenUnit}
+      unit={unit}
+      wrap
+    />
+  ));
+
+  if (bucket.bubble) {
+    // Just the people, in a soft bubble that hugs them. Click a name for options.
+    return (
+      <div
+        ref={setNodeRef}
+        {...drag.attributes}
+        {...drag.listeners}
+        aria-label={`Bubble on the floor: ${summary.count} not seated. Drag to move.`}
+        className={clsx(
+          "seating-bubble absolute flex w-max flex-wrap select-none rounded-[1.4em] border-dashed border-[#d58aab] bg-[#fff7fa]/90 outline-none",
+          isMoving ? "z-30 cursor-grabbing" : "cursor-grab",
+          dimmed && !isMoving && "opacity-30",
+          "transition-[opacity,box-shadow] duration-150 focus-visible:ring-4 focus-visible:ring-[#be185d]/50",
+        )}
+        data-no-pan
+        style={{
+          left: bucket.x,
+          top: bucket.y,
+          // Room for a long name on one line, or two short ones side by side.
+          maxWidth: Math.round(chipFont * 20),
+          fontSize: chipFont,
+          borderWidth: Math.max(1.5, 1.2 / zoom),
+          boxShadow: [ring, shadow].filter(Boolean).join(", "),
+          transform: `translate3d(${translateX}px, ${translateY}px, 0)`,
+          padding: chipFont * 0.3,
+          gap: chipFont * 0.3,
+        }}
+      >
+        {chips}
+      </div>
+    );
+  }
 
   return (
     <div
@@ -1302,18 +1383,7 @@ const PlanBucket = memo(function PlanBucket({
       </span>
       {units.length > 0 ? (
         <span className="flex flex-wrap" style={{ gap: chipFont * 0.3 }}>
-          {units.map((unit) => (
-            <PlanPartyChip
-              key={unit.id}
-              fontSize={chipFont}
-              isDragging={draggingUnitId === unit.id}
-              isMatch={matchingUnitIds?.has(unit.id) ?? false}
-              maxWidth="100%"
-              onOpenUnit={onOpenUnit}
-              unit={unit}
-              wrap
-            />
-          ))}
+          {chips}
         </span>
       ) : (
         <span className="italic leading-snug text-[#8f5070]" style={{ fontSize: chipFont }}>

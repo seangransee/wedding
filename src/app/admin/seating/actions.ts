@@ -5,6 +5,7 @@ import { ADMIN_COOKIE_NAME, ADMIN_PASSWORD } from "@/lib/cookies";
 import {
   createSeatingBucket,
   createSeatingTable,
+  deleteEmptySeatingBubbles,
   deleteSeatingTableById,
   getSeatingChart,
   replaceSeatingTableSeats,
@@ -83,6 +84,7 @@ export async function seatParty(guestId: number, tableId: string | null): Promis
   }
 
   const saved = await setSeatingAssignment(guestId, tableId);
+  await deleteEmptySeatingBubbles();
 
   return saved ? ok("Seat saved.") : fail(`That guest or table no longer exists. ${RELOAD_HINT}`);
 }
@@ -117,6 +119,7 @@ export async function seatPerson(
   }
 
   const saved = await setSeatingPersonAssignment(guestId, position, tableId);
+  await deleteEmptySeatingBubbles();
 
   return saved
     ? ok("Seat saved.")
@@ -153,11 +156,13 @@ export async function addSeatingTable(input: {
   return ok("Table added.");
 }
 
+/** Adds a named bucket, or (bubble: true) a little unnamed bubble dropped on the floor. */
 export async function addSeatingBucket(input: {
   id: string;
   name: string;
   x: number;
   y: number;
+  bubble?: boolean;
 }): Promise<SeatingActionResult> {
   await requireAdmin();
 
@@ -167,8 +172,9 @@ export async function addSeatingBucket(input: {
     return fail("That new bucket was invalid.");
   }
 
-  await createSeatingBucket({ id: input.id, name: normalizeTableName(name), x: input.x, y: input.y });
-  return ok("Bucket added.");
+  const bubble = input.bubble === true;
+  await createSeatingBucket({ id: input.id, name: normalizeTableName(name), x: input.x, y: input.y, bubble });
+  return ok(bubble ? "Bubble added." : "Bucket added.");
 }
 
 /** Buckets can sit outside the room, so they take a wider coordinate range than tables. */

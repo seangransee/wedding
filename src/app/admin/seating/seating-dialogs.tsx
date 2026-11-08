@@ -132,6 +132,7 @@ function joinTableId(siblings: readonly SeatingUnit[], preferred: string | null,
 }
 
 export function PartyDialog({
+  bubbleIds,
   bucketSummaries,
   onAssign,
   onClose,
@@ -146,6 +147,8 @@ export function PartyDialog({
   summaryById,
   unit,
 }: {
+  /** Bubbles on the floor (unnamed buckets made by dropping someone on empty floor). */
+  bubbleIds: ReadonlySet<string>;
   bucketSummaries: BucketSummary[];
   /** Seats the unit at a table, holds it in a bucket, or (null) moves it to Not seated. */
   onAssign: (tableId: string | null) => void;
@@ -179,14 +182,20 @@ export function PartyDialog({
     };
   });
   const joinTarget = isSplitPerson
-    ? joinTableId(siblings, unit.tableId, new Set([...summaryById.keys(), ...bucketById.keys()]))
+    ? joinTableId(siblings, unit.tableId, new Set([...summaryById.keys(), ...bucketById.keys(), ...bubbleIds]))
     : null;
   const joinSummary = joinTarget ? summaryById.get(joinTarget) ?? null : null;
   const joinBucket = joinTarget ? bucketById.get(joinTarget) ?? null : null;
   const placeTitle = (placeId: string | null) => {
     const table = placeId ? summaryById.get(placeId)?.table : undefined;
     const bucket = placeId ? bucketById.get(placeId) : undefined;
-    return table ? tableTitle(table) : bucket ? `${bucketTitle(bucket)} (bucket)` : "Not seated";
+    if (table) {
+      return tableTitle(table);
+    }
+    if (bucket) {
+      return `${bucketTitle(bucket)} (bucket)`;
+    }
+    return placeId && bubbleIds.has(placeId) ? "Not seated (their bubble)" : "Not seated";
   };
 
   return (
@@ -219,6 +228,8 @@ export function PartyDialog({
                   {bucketTitle(currentBucket)}
                 </button>
               </>
+            ) : unit.tableId && bubbleIds.has(unit.tableId) ? (
+              "Not seated, in a bubble on the floor"
             ) : (
               "Not seated"
             )}

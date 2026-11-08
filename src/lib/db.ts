@@ -1085,6 +1085,7 @@ type SeatingTableRow = {
   capacity: number;
   x: number;
   y: number;
+  bubble: boolean;
   created_at_ms: number;
 };
 
@@ -1115,6 +1116,7 @@ function toSeatingBucket(row: SeatingTableRow): SeatingBucket {
     name: row.name,
     x: row.x,
     y: row.y,
+    bubble: row.bubble,
     createdAt: Number(row.created_at_ms),
   };
 }
@@ -1213,6 +1215,7 @@ export async function getSeatingChart(): Promise<SeatingChartData> {
          capacity,
          x,
          y,
+         bubble,
          (extract(epoch FROM created_at) * 1000)::float8 AS created_at_ms
        FROM wedding_seating_tables
        ORDER BY created_at ASC, id ASC`,
@@ -1466,13 +1469,28 @@ export async function createSeatingTable(input: {
 }
 
 /** Idempotent: retrying with the same client-generated id is a no-op. */
-export async function createSeatingBucket(input: { id: string; name: string; x: number; y: number }) {
+export async function createSeatingBucket(input: { id: string; name: string; x: number; y: number; bubble: boolean }) {
   // Capacity is unused for buckets; 30 just satisfies the column's check.
   await sql().query(
-    `INSERT INTO wedding_seating_tables (id, kind, number, name, capacity, x, y)
-     VALUES ($1::uuid, 'bucket', '', $2, 30, $3, $4)
+    `INSERT INTO wedding_seating_tables (id, kind, number, name, capacity, x, y, bubble)
+     VALUES ($1::uuid, 'bucket', '', $2, 30, $3, $4, $5)
      ON CONFLICT (id) DO NOTHING`,
-    [input.id, input.name, input.x, input.y],
+    [input.id, input.name, input.x, input.y, input.bubble],
+  );
+}
+
+/** Bubbles only exist to hold someone, so delete any that nobody is in anymore. */
+export async function deleteEmptySeatingBubbles() {
+  await sql().query(
+    `DELETE FROM wedding_seating_tables seating_table
+     WHERE seating_table.kind = 'bucket'
+       AND seating_table.bubble
+       AND NOT EXISTS (
+         SELECT 1 FROM wedding_seating_assignments assignment WHERE assignment.table_id = seating_table.id
+       )
+       AND NOT EXISTS (
+         SELECT 1 FROM wedding_seating_person_assignments person WHERE person.table_id = seating_table.id
+       )`,
   );
 }
 

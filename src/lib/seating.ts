@@ -62,6 +62,12 @@ export type SeatingBucket = {
   name: string;
   x: number;
   y: number;
+  /**
+   * A bubble is a little unnamed bucket made by dropping someone on empty
+   * floor. It shows just its people, isn't listed as its own sidebar section
+   * (its people count as plain Not seated), and is deleted once empty.
+   */
+  bubble: boolean;
   /** Epoch milliseconds; buckets list in creation order. */
   createdAt: number;
 };
@@ -749,8 +755,9 @@ export function makeSeatingCsv(data: SeatingChartData) {
     }
   }
 
-  // Not seated: loose people first, then each bucket in the order it was made.
-  const buckets = [...data.buckets].sort((a, b) => a.createdAt - b.createdAt || a.id.localeCompare(b.id));
+  // Not seated: loose people (including anyone in a bubble) first, then each
+  // named bucket in the order it was made.
+  const buckets = data.buckets.filter((bucket) => !bucket.bubble).sort((a, b) => a.createdAt - b.createdAt || a.id.localeCompare(b.id));
   const bucketRank = new Map(buckets.map((bucket, index) => [bucket.id, index + 1]));
   const bucketOf = (unit: SeatingUnit) => (unit.tableId ? bucketRank.get(unit.tableId) ?? 0 : 0);
   const unseatedUnits = units
