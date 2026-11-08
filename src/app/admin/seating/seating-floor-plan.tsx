@@ -32,12 +32,15 @@ import {
   type SeatingRoom,
   type SeatingUnit,
 } from "@/lib/seating";
+import { CHIP_GAP_EM, CHIP_LINE_GAP_EM, layoutTableChips } from "@/lib/seating-chip-layout";
+import { chipTextEm, useChipTextVersion } from "./chip-text-metrics";
 import {
   type BucketDragData,
   type BucketSummary,
   partyAriaLabel,
   partyCardClasses,
   PartySeatsBadge,
+  partySeatsLabel,
   type DropData,
   type PartyDragData,
   type TableDragData,
@@ -859,6 +862,21 @@ type PlanTableProps = {
   zoom: number;
 };
 
+/** Smallest party-name font (room units) a crowded table may shrink to. */
+const MIN_CHIP_FONT = 3;
+/** Chip border plus the dashed headcount badge's border, in room units. */
+const CHIP_FIXED_WIDTH = 4;
+
+/**
+ * Width of a table party chip per unit of font, mirroring PlanPartyChip:
+ * 0.5em left padding, name, 0.3em gap, headcount badge, 0.15em right padding.
+ */
+function partyChipEm(unit: SeatingUnit, textVersion: number) {
+  const badgeEm = Math.max(1.6, chipTextEm(partySeatsLabel(unit), textVersion, { bold: true }) + 0.8) * 0.8;
+
+  return 0.5 + chipTextEm(unit.name, textVersion) + 0.3 + badgeEm + 0.15 + 0.1;
+}
+
 const PlanTable = memo(function PlanTable({
   detail,
   draggingUnitId,
@@ -926,34 +944,43 @@ const PlanTable = memo(function PlanTable({
   const nameFont = detail ? Math.max(13, 10 / zoom) : Math.min(Math.max(16, 12 / zoom), round ? 44 : 30);
   const labelFont = labelIsNumber ? numberFont : nameFont;
   const countFont = detail ? Math.max(14, 10.5 / zoom) : Math.min(Math.max(20, 13 / zoom), round ? 52 : 32);
-  // Party names use the higher-x-height serif so they stay legible when small.
-  const chipFont = Math.max(12, 10 / zoom);
-  const rowHeight = chipFont * 1.52;
+  const borderWidth = Math.max(3, 2 / zoom);
   const headerHeight = round
     ? detail && labelIsNumber
       ? numberFont * 1.05 + (showName ? nameFont * 1.2 : 0) + 6
       : labelFont * 1.15 + countFont * 1.25 + 6
     : Math.max(nameFont, countFont) * 1.35 + 8;
-  const bodyHeight = round ? size.height * 0.82 - headerHeight : size.height - headerHeight - 14;
-  const maxRows = Math.max(1, Math.floor(bodyHeight / rowHeight));
-  const visibleParties = parties.length > maxRows ? parties.slice(0, maxRows - 1) : parties;
-  const hiddenPartyCount = parties.length - visibleParties.length;
-  // Each name row gets as much width as the circle allows at its height.
-  const borderWidth = Math.max(3, 2 / zoom);
-  const rowCount = visibleParties.length + (hiddenPartyCount > 0 ? 1 : 0);
-  const blockTop = -(headerHeight + 3 + rowCount * rowHeight) / 2;
-  const innerRadius = size.width / 2 - borderWidth;
-  const chipMaxWidth = (index: number) => {
-    if (!round) {
-      return size.width - 28;
-    }
-
-    const centerY = blockTop + headerHeight + 3 + (index + 0.5) * rowHeight;
-    const edgeY = Math.abs(centerY) + rowHeight / 2;
-    const chord = 2 * Math.sqrt(Math.max(0, innerRadius * innerRadius - edgeY * edgeY));
-
-    return Math.max(size.width * 0.4, Math.min(size.width * 0.88, chord - chipFont * 1.1));
-  };
+  // Party names use the higher-x-height serif so they stay legible when small,
+  // and shrink as people are added so every name at the table shows in full.
+  const maxChipFont = Math.max(12, 10 / zoom);
+  const textVersion = useChipTextVersion();
+  const chipEms = useMemo(
+    () => (detail ? parties.map((party) => partyChipEm(party, textVersion)) : []),
+    [detail, parties, textVersion],
+  );
+  const chipLayout = useMemo(
+    () =>
+      layoutTableChips({
+        chipEms,
+        chipFixedWidth: CHIP_FIXED_WIDTH,
+        headerHeight,
+        maxFont: maxChipFont,
+        minFont: MIN_CHIP_FONT,
+        ...(round
+          ? {
+              shape: "round" as const,
+              radius: size.width / 2 - borderWidth - size.width * 0.02,
+              maxLineWidth: size.width - 2 * borderWidth - size.width * 0.1,
+            }
+          : {
+              shape: "rect" as const,
+              width: size.width - 2 * borderWidth - 28,
+              height: size.height - 2 * borderWidth - 16,
+            }),
+      }),
+    [borderWidth, chipEms, headerHeight, maxChipFont, round, size.height, size.width],
+  );
+  const chipFont = chipLayout.fontSize;
   const countLabel = (
     <span className="whitespace-nowrap font-bold tabular-nums" style={{ fontSize: countFont }}>
       {count}/{table.capacity}
@@ -1060,26 +1087,30 @@ const PlanTable = memo(function PlanTable({
         </span>
       )}
       {detail && parties.length > 0 ? (
-        <span
-          className="mt-[3px] flex w-full flex-col items-center"
-          style={{ gap: chipFont * 0.16 }}
-        >
-          {visibleParties.map((party, index) => (
-            <PlanPartyChip
-              key={party.id}
-              fontSize={chipFont}
-              isDragging={draggingUnitId === party.id}
-              isMatch={matchingUnitIds?.has(party.id) ?? false}
-              maxWidth={chipMaxWidth(index)}
-              onOpenUnit={onOpenUnit}
-              unit={party}
-            />
-          ))}
-          {hiddenPartyCount > 0 ? (
-            <span className="font-semibold leading-tight opacity-80" style={{ fontSize: chipFont * 0.9 }}>
-              +{hiddenPartyCount} more
+        <span className="mt-[3px] flex w-full flex-col items-center" style={{ gap: chipFont * CHIP_LINE_GAP_EM }}>
+          {chipLayout.lines.map((line, lineIndex) => (
+            <span
+              key={lineIndex}
+              className="flex max-w-full justify-center"
+              style={{ gap: chipFont * CHIP_GAP_EM }}
+            >
+              {line.map((index) => {
+                const party = parties[index];
+
+                return (
+                  <PlanPartyChip
+                    key={party.id}
+                    fontSize={chipFont}
+                    isDragging={draggingUnitId === party.id}
+                    isMatch={matchingUnitIds?.has(party.id) ?? false}
+                    maxWidth={chipLayout.lineWidths[lineIndex]}
+                    onOpenUnit={onOpenUnit}
+                    unit={party}
+                  />
+                );
+              })}
             </span>
-          ) : null}
+          ))}
         </span>
       ) : null}
     </div>
