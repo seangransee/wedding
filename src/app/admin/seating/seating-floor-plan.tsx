@@ -3,7 +3,7 @@
 import { useDraggable, useDroppable } from "@dnd-kit/core";
 import { usePinch } from "@use-gesture/react";
 import clsx from "clsx";
-import { Heart, Minus, Plus, Scan } from "lucide-react";
+import { Heart, Inbox, Minus, Plus, Scan } from "lucide-react";
 import {
   memo,
   useCallback,
@@ -17,18 +17,24 @@ import {
   type RefObject,
 } from "react";
 import {
+  BUCKET_WIDTH,
+  bucketTitle,
   clamp,
+  clampBucketPosition,
   clampTableCenter,
+  estimatedBucketHeight,
   fullnessStyle,
   isPartyUnconfirmed,
   minimumRoomSize,
   ROOM_MAX_SIZE,
   tableFullTitle,
   tableSize,
-  type SeatingParty,
   type SeatingRoom,
+  type SeatingUnit,
 } from "@/lib/seating";
 import {
+  type BucketDragData,
+  type BucketSummary,
   partyAriaLabel,
   partyCardClasses,
   PartySeatsBadge,
@@ -59,15 +65,19 @@ type FloorPlanProps = {
   ref?: Ref<FloorPlanHandle>;
   room: SeatingRoom;
   summaries: TableSummary[];
+  bucketSummaries: BucketSummary[];
+  draggingBucketId: string | null;
+  dropBucketId: string | null;
+  onOpenBucket: (bucketId: string) => void;
   zoomRef: RefObject<number>;
-  draggingPartyId: number | null;
+  draggingUnitId: string | null;
   draggingTableId: string | null;
   dropTableId: string | null;
   previewCounts: ReadonlyMap<string, number>;
   highlightedTableId: string | null;
-  matchingPartyIds: ReadonlySet<number> | null;
+  matchingUnitIds: ReadonlySet<string> | null;
   seatedNumbersByTable: ReadonlyMap<string, ReadonlySet<number>>;
-  onOpenParty: (partyId: number) => void;
+  onOpenUnit: (unitId: string) => void;
   onOpenTable: (tableId: string) => void;
   onResizeRoom: (room: SeatingRoom) => void;
 };
@@ -110,12 +120,16 @@ function capturePointer(element: Element, pointerId: number) {
 }
 
 export function FloorPlan({
-  draggingPartyId,
+  bucketSummaries,
+  draggingBucketId,
+  dropBucketId,
+  onOpenBucket,
+  draggingUnitId,
   draggingTableId,
   dropTableId,
   highlightedTableId,
-  matchingPartyIds,
-  onOpenParty,
+  matchingUnitIds,
+  onOpenUnit,
   onOpenTable,
   onResizeRoom,
   previewCounts,
@@ -151,12 +165,52 @@ export function FloorPlan({
   const effectiveRoom = liveRoom ?? baseRoom;
   const scaledWidth = effectiveRoom.width * zoom;
   const scaledHeight = effectiveRoom.height * zoom;
-  const origin = anchoredOrigin ?? {
-    left: Math.max(VIEW_PADDING, (viewportSize.width - scaledWidth) / 2),
-    top: Math.max(VIEW_PADDING, (viewportSize.height - scaledHeight) / 2),
+
+  // Buckets can sit outside the room, so the scrollable area covers the room
+  // plus every bucket. Bucket heights are measured once rendered.
+  const [bucketSizes, setBucketSizes] = useState<ReadonlyMap<string, { width: number; height: number }>>(new Map());
+  const measureBucket = useCallback((bucketId: string, width: number, height: number) => {
+    setBucketSizes((current) => {
+      const previous = current.get(bucketId);
+      if (previous?.width === width && previous.height === height) {
+        return current;
+      }
+      const next = new Map(current);
+      next.set(bucketId, { width, height });
+      return next;
+    });
+  }, []);
+  const bounds = useMemo(() => {
+    let minX = 0;
+    let minY = 0;
+    let maxX = effectiveRoom.width;
+    let maxY = effectiveRoom.height;
+
+    for (const { bucket, units } of bucketSummaries) {
+      const size = bucketSizes.get(bucket.id);
+      minX = Math.min(minX, bucket.x);
+      minY = Math.min(minY, bucket.y);
+      maxX = Math.max(maxX, bucket.x + (size?.width ?? BUCKET_WIDTH));
+      maxY = Math.max(maxY, bucket.y + (size?.height ?? estimatedBucketHeight(units.length)));
+    }
+
+    return { minX, minY, maxX, maxY, width: maxX - minX, height: maxY - minY };
+  }, [bucketSizes, bucketSummaries, effectiveRoom.height, effectiveRoom.width]);
+
+  // origin is where the room's top-left corner (room point 0,0) lands in the scroll area.
+  const centeredOrigin = {
+    left: Math.max(VIEW_PADDING, (viewportSize.width - bounds.width * zoom) / 2) - bounds.minX * zoom,
+    top: Math.max(VIEW_PADDING, (viewportSize.height - bounds.height * zoom) / 2) - bounds.minY * zoom,
   };
-  const contentWidth = Math.max(viewportSize.width, origin.left + scaledWidth + VIEW_PADDING);
-  const contentHeight = Math.max(viewportSize.height, origin.top + scaledHeight + VIEW_PADDING);
+  const origin = anchoredOrigin
+    ? {
+        left: Math.max(anchoredOrigin.left, VIEW_PADDING - bounds.minX * zoom),
+        top: Math.max(anchoredOrigin.top, VIEW_PADDING - bounds.minY * zoom),
+      }
+    : centeredOrigin;
+  const contentWidth = Math.max(viewportSize.width, origin.left + bounds.maxX * zoom + VIEW_PADDING);
+  const contentHeight = Math.max(viewportSize.height, origin.top + bounds.maxY * zoom + VIEW_PADDING);
+  const fitSize = useMemo(() => ({ width: bounds.width, height: bounds.height }), [bounds.height, bounds.width]);
   const layoutRef = useRef({ origin, zoom });
   layoutRef.current = { origin, zoom };
   zoomRef.current = zoom;
@@ -212,9 +266,9 @@ export function FloorPlan({
     autoFitRef.current = true;
     pendingScrollRef.current = null;
     setAnchoredOrigin(null);
-    setZoom(fitZoom({ width: viewport.clientWidth, height: viewport.clientHeight }, baseRoom));
+    setZoom(fitZoom({ width: viewport.clientWidth, height: viewport.clientHeight }, fitSize));
     viewport.scrollTo({ left: 0, top: 0 });
-  }, [baseRoom]);
+  }, [fitSize]);
 
   // Track the viewport size; it is 0x0 while hidden behind the mobile List tab.
   useEffect(() => {
@@ -239,7 +293,7 @@ export function FloorPlan({
     }
 
     setAnchoredOrigin(null);
-    setZoom(fitZoom(viewportSize, baseRoom));
+    setZoom(fitZoom(viewportSize, fitSize));
     // Only refit on viewport changes, not every room/table edit.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [viewportSize.width, viewportSize.height]);
@@ -257,6 +311,26 @@ export function FloorPlan({
     viewport.scrollLeft = layoutRef.current.origin.left + pending.ux * zoom - pending.cx;
     viewport.scrollTop = layoutRef.current.origin.top + pending.uy * zoom - pending.cy;
   }, [zoom]);
+
+  // When a bucket moves past the top/left edge, everything shifts within the
+  // scroll area; scroll by the same amount so the view doesn't jump.
+  const previousOriginRef = useRef({ left: origin.left, top: origin.top, zoom });
+  useLayoutEffect(() => {
+    const viewport = viewportRef.current;
+    const previous = previousOriginRef.current;
+    previousOriginRef.current = { left: origin.left, top: origin.top, zoom };
+
+    if (!viewport || previous.zoom !== zoom || pendingScrollRef.current) {
+      return;
+    }
+
+    const dx = origin.left - previous.left;
+    const dy = origin.top - previous.top;
+    if (dx || dy) {
+      viewport.scrollLeft += dx;
+      viewport.scrollTop += dy;
+    }
+  }, [origin.left, origin.top, zoom]);
 
   // Pinch on phones (and Safari trackpads) zooms around the fingers.
   usePinch(
@@ -310,15 +384,21 @@ export function FloorPlan({
       revealTable(tableId: string) {
         const viewport = viewportRef.current;
         const table = tables.find((candidate) => candidate.id === tableId);
+        const bucket = bucketSummaries.find((summary) => summary.bucket.id === tableId)?.bucket;
+        const place = table
+          ? { x: table.x, y: table.y, radius: tableSize(table.kind).width / 2 }
+          : bucket
+            ? { x: bucket.x + BUCKET_WIDTH / 2, y: bucket.y + 60, radius: BUCKET_WIDTH / 2 }
+            : null;
 
-        if (!viewport || !table || viewport.clientWidth === 0) {
+        if (!viewport || !place || viewport.clientWidth === 0) {
           return;
         }
 
         const { origin: currentOrigin, zoom: currentZoom } = layoutRef.current;
-        const x = currentOrigin.left + table.x * currentZoom;
-        const y = currentOrigin.top + table.y * currentZoom;
-        const margin = (tableSize(table.kind).width / 2) * currentZoom + 16;
+        const x = currentOrigin.left + place.x * currentZoom;
+        const y = currentOrigin.top + place.y * currentZoom;
+        const margin = place.radius * currentZoom + 16;
         const visible =
           x - margin >= viewport.scrollLeft &&
           x + margin <= viewport.scrollLeft + viewport.clientWidth &&
@@ -334,7 +414,7 @@ export function FloorPlan({
         }
       },
     }),
-    [tables],
+    [bucketSummaries, tables],
   );
 
   const computeResize = useCallback((session: ResizeSession) => {
@@ -569,17 +649,39 @@ export function FloorPlan({
               <PlanTable
                 key={summary.table.id}
                 detail={detail}
-                draggingPartyId={draggingPartyId}
+                draggingUnitId={draggingUnitId}
                 highlighted={highlightedTableId === summary.table.id}
                 isDropTarget={dropTableId === summary.table.id}
                 isMoving={draggingTableId === summary.table.id}
-                matchingPartyIds={matchingPartyIds}
-                onOpenParty={onOpenParty}
+                matchingUnitIds={matchingUnitIds}
+                onOpenUnit={onOpenUnit}
                 onOpenTable={onOpenTable}
                 previewCount={previewCounts.get(summary.table.id)}
                 roomHeight={effectiveRoom.height}
                 roomWidth={effectiveRoom.width}
                 seatedNumbers={seatedNumbersByTable.get(summary.table.id)}
+                summary={summary}
+                zoom={zoom}
+              />
+            ))}
+          </div>
+
+          {/* Buckets share the room's coordinates but may sit outside it. */}
+          <div
+            className="absolute left-0 top-0 z-10 size-0 origin-top-left"
+            style={{ transform: `translate(${origin.left}px, ${origin.top}px) scale(${zoom})` }}
+          >
+            {bucketSummaries.map((summary) => (
+              <PlanBucket
+                key={summary.bucket.id}
+                draggingUnitId={draggingUnitId}
+                highlighted={highlightedTableId === summary.bucket.id}
+                isDropTarget={dropBucketId === summary.bucket.id}
+                isMoving={draggingBucketId === summary.bucket.id}
+                matchingUnitIds={matchingUnitIds}
+                onMeasure={measureBucket}
+                onOpenBucket={onOpenBucket}
+                onOpenUnit={onOpenUnit}
                 summary={summary}
                 zoom={zoom}
               />
@@ -742,12 +844,12 @@ function FullnessLegend() {
 
 type PlanTableProps = {
   detail: boolean;
-  draggingPartyId: number | null;
+  draggingUnitId: string | null;
   highlighted: boolean;
   isDropTarget: boolean;
   isMoving: boolean;
-  matchingPartyIds: ReadonlySet<number> | null;
-  onOpenParty: (partyId: number) => void;
+  matchingUnitIds: ReadonlySet<string> | null;
+  onOpenUnit: (unitId: string) => void;
   onOpenTable: (tableId: string) => void;
   previewCount: number | undefined;
   roomHeight: number;
@@ -759,12 +861,12 @@ type PlanTableProps = {
 
 const PlanTable = memo(function PlanTable({
   detail,
-  draggingPartyId,
+  draggingUnitId,
   highlighted,
   isDropTarget,
   isMoving,
-  matchingPartyIds,
-  onOpenParty,
+  matchingUnitIds,
+  onOpenUnit,
   onOpenTable,
   previewCount,
   roomHeight,
@@ -773,7 +875,7 @@ const PlanTable = memo(function PlanTable({
   summary,
   zoom,
 }: PlanTableProps) {
-  const { table, parties } = summary;
+  const { table, units: parties } = summary;
   const round = table.kind === "round";
   const size = tableSize(table.kind);
   const count = previewCount ?? summary.count;
@@ -809,10 +911,10 @@ const PlanTable = memo(function PlanTable({
     translateY = next.y - table.y;
   }
 
-  const matchCount = matchingPartyIds
-    ? parties.filter((party) => matchingPartyIds.has(party.id)).length
+  const matchCount = matchingUnitIds
+    ? parties.filter((party) => matchingUnitIds.has(party.id)).length
     : 0;
-  const dimmed = matchingPartyIds !== null && matchCount === 0;
+  const dimmed = matchingUnitIds !== null && matchCount === 0;
 
   // Text stays readable at any zoom: grow it in room units as the room shrinks.
   const label = table.number || table.name || (round ? "New table" : "Sweetheart table");
@@ -966,11 +1068,11 @@ const PlanTable = memo(function PlanTable({
             <PlanPartyChip
               key={party.id}
               fontSize={chipFont}
-              isDragging={draggingPartyId === party.id}
-              isMatch={matchingPartyIds?.has(party.id) ?? false}
+              isDragging={draggingUnitId === party.id}
+              isMatch={matchingUnitIds?.has(party.id) ?? false}
               maxWidth={chipMaxWidth(index)}
-              onOpenParty={onOpenParty}
-              party={party}
+              onOpenUnit={onOpenUnit}
+              unit={party}
             />
           ))}
           {hiddenPartyCount > 0 ? (
@@ -989,19 +1091,22 @@ function PlanPartyChip({
   isDragging,
   isMatch,
   maxWidth,
-  onOpenParty,
-  party,
+  onOpenUnit,
+  unit: party,
+  wrap = false,
 }: {
   fontSize: number;
   isDragging: boolean;
   isMatch: boolean;
-  maxWidth: number;
-  onOpenParty: (partyId: number) => void;
-  party: SeatingParty;
+  maxWidth: number | string;
+  onOpenUnit: (unitId: string) => void;
+  unit: SeatingUnit;
+  /** Let long names wrap instead of truncating (buckets never hide anyone). */
+  wrap?: boolean;
 }) {
   const { attributes, listeners, setNodeRef } = useDraggable({
     id: `party-plan-${party.id}`,
-    data: { type: "party", partyId: party.id } satisfies PartyDragData,
+    data: { type: "party", unitId: party.id } satisfies PartyDragData,
   });
   const unconfirmed = isPartyUnconfirmed(party);
 
@@ -1013,7 +1118,8 @@ function PlanPartyChip({
       {...listeners}
       aria-label={`${partyAriaLabel(party)}. Drag to another table, or click for options.`}
       className={clsx(
-        "seating-chip seating-chip-plan flex min-w-0 cursor-grab items-center gap-[0.3em] rounded-full border pl-[0.5em] pr-[0.15em] leading-[1.25] shadow-[0_1px_0_rgba(74,16,39,0.08)]",
+        "seating-chip seating-chip-plan flex min-w-0 cursor-grab items-center gap-[0.3em] border pl-[0.5em] pr-[0.15em] leading-[1.25] shadow-[0_1px_0_rgba(74,16,39,0.08)]",
+        wrap ? "rounded-[0.55em]" : "rounded-full",
         partyCardClasses(party.status),
         unconfirmed && "italic",
         party.status === "no" && "line-through",
@@ -1023,16 +1129,169 @@ function PlanPartyChip({
       data-no-pan
       onClick={(event) => {
         event.stopPropagation();
-        onOpenParty(party.id);
+        onOpenUnit(party.id);
       }}
       onKeyDown={(event) => event.stopPropagation()}
       style={{ fontSize, maxWidth, paddingTop: fontSize * 0.06, paddingBottom: fontSize * 0.06 }}
     >
-      <span className="min-w-0 truncate">{party.name}</span>
+      <span className={clsx("min-w-0", wrap ? "break-words text-left" : "truncate")}>{party.name}</span>
       <PartySeatsBadge className="text-[0.8em] not-italic" party={party} />
     </button>
   );
 }
+
+type PlanBucketProps = {
+  draggingUnitId: string | null;
+  highlighted: boolean;
+  isDropTarget: boolean;
+  isMoving: boolean;
+  matchingUnitIds: ReadonlySet<string> | null;
+  onMeasure: (bucketId: string, width: number, height: number) => void;
+  onOpenBucket: (bucketId: string) => void;
+  onOpenUnit: (unitId: string) => void;
+  summary: BucketSummary;
+  zoom: number;
+};
+
+/**
+ * A named holding area for people who aren't seated yet. It holds any number
+ * of people, shows every one of them, and grows taller as more are added.
+ */
+const PlanBucket = memo(function PlanBucket({
+  draggingUnitId,
+  highlighted,
+  isDropTarget,
+  isMoving,
+  matchingUnitIds,
+  onMeasure,
+  onOpenBucket,
+  onOpenUnit,
+  summary,
+  zoom,
+}: PlanBucketProps) {
+  const { bucket, units } = summary;
+  const nodeRef = useRef<HTMLDivElement | null>(null);
+  const drag = useDraggable({
+    id: `move-bucket-${bucket.id}`,
+    data: { type: "bucket", bucketId: bucket.id } satisfies BucketDragData,
+  });
+  const drop = useDroppable({
+    id: `plan-bucket-${bucket.id}`,
+    data: { type: "bucket", bucketId: bucket.id, area: "plan" } satisfies DropData,
+  });
+  const setNodeRef = useCallback(
+    (node: HTMLDivElement | null) => {
+      nodeRef.current = node;
+      drag.setNodeRef(node);
+      drop.setNodeRef(node);
+    },
+    // setNodeRef functions from dnd-kit are stable.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
+
+  // Report the rendered size so the floor plan's scroll area covers it.
+  useEffect(() => {
+    const node = nodeRef.current;
+
+    if (!node) {
+      return;
+    }
+
+    const report = () => onMeasure(bucket.id, node.offsetWidth, node.offsetHeight);
+    report();
+    const observer = new ResizeObserver(report);
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [bucket.id, onMeasure]);
+
+  let translateX = 0;
+  let translateY = 0;
+  if (drag.transform) {
+    const next = clampBucketPosition(bucket.x + drag.transform.x / zoom, bucket.y + drag.transform.y / zoom);
+    translateX = next.x - bucket.x;
+    translateY = next.y - bucket.y;
+  }
+
+  const dimmed = matchingUnitIds !== null && !units.some((unit) => matchingUnitIds.has(unit.id));
+  // Same legibility rule as table chips: grow text in room units as the room shrinks.
+  const chipFont = Math.max(12, 10 / zoom);
+  const titleFont = Math.max(15, 12 / zoom);
+  // Wider when zoomed out so the bigger text still fits a name or two per row.
+  const width = Math.max(BUCKET_WIDTH, Math.round(chipFont * 13));
+  const borderWidth = Math.max(2, 1.5 / zoom);
+  const ring = isDropTarget
+    ? `0 0 0 ${Math.max(6, 5 / zoom)}px rgba(190, 24, 93, 0.55)`
+    : highlighted
+      ? `0 0 0 ${Math.max(5, 4 / zoom)}px rgba(236, 72, 153, 0.45)`
+      : undefined;
+  const shadow = isMoving
+    ? `0 ${18 / zoom}px ${40 / zoom}px -${10 / zoom}px rgba(74, 16, 39, 0.55)`
+    : `0 ${6 / zoom}px ${16 / zoom}px -${10 / zoom}px rgba(74, 16, 39, 0.35)`;
+
+  return (
+    <div
+      ref={setNodeRef}
+      {...drag.attributes}
+      {...drag.listeners}
+      aria-label={`${bucketTitle(bucket)} bucket: ${summary.count} not seated. Drag to move; press Enter to edit.`}
+      className={clsx(
+        "seating-bucket absolute flex select-none flex-col rounded-[16px] border-dashed border-[#b2577f] bg-[#fff4f8]/95 text-[#4a1027] outline-none",
+        isMoving ? "z-30 cursor-grabbing" : "cursor-grab",
+        dimmed && !isMoving && "opacity-30",
+        "transition-[opacity,box-shadow] duration-150 focus-visible:ring-4 focus-visible:ring-[#be185d]/50",
+      )}
+      data-no-pan
+      onClick={() => onOpenBucket(bucket.id)}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onOpenBucket(bucket.id);
+        }
+      }}
+      style={{
+        left: bucket.x,
+        top: bucket.y,
+        width,
+        borderWidth,
+        boxShadow: [ring, shadow].filter(Boolean).join(", "),
+        transform: `translate3d(${translateX}px, ${translateY}px, 0)`,
+        padding: `${chipFont * 0.55}px ${chipFont * 0.6}px`,
+        gap: chipFont * 0.45,
+      }}
+    >
+      <span className="flex min-w-0 items-center gap-[0.35em] leading-tight" style={{ fontSize: titleFont }}>
+        <Inbox aria-hidden="true" className="shrink-0 text-[#a04670]" size={titleFont} />
+        <span className={clsx("min-w-0 flex-1 break-words font-semibold", !bucket.name && "italic text-[#a07088]")}>
+          {bucketTitle(bucket)}
+        </span>
+        <span className="shrink-0 rounded-full border border-dashed border-[#a04670] bg-white px-[0.45em] text-[0.8em] font-bold tabular-nums text-[#7a1239]">
+          {summary.count}
+        </span>
+      </span>
+      {units.length > 0 ? (
+        <span className="flex flex-wrap" style={{ gap: chipFont * 0.3 }}>
+          {units.map((unit) => (
+            <PlanPartyChip
+              key={unit.id}
+              fontSize={chipFont}
+              isDragging={draggingUnitId === unit.id}
+              isMatch={matchingUnitIds?.has(unit.id) ?? false}
+              maxWidth="100%"
+              onOpenUnit={onOpenUnit}
+              unit={unit}
+              wrap
+            />
+          ))}
+        </span>
+      ) : (
+        <span className="italic leading-snug text-[#8f5070]" style={{ fontSize: chipFont }}>
+          Not seated yet. Drag people here.
+        </span>
+      )}
+    </div>
+  );
+});
 
 /** Small marks around the rim showing which exact seats are taken (only once any are). */
 function SeatDots({

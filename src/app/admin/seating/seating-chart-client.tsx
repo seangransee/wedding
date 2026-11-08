@@ -19,6 +19,7 @@ import clsx from "clsx";
 import {
   ArrowLeft,
   CloudCheck,
+  Inbox,
   Download,
   LayoutGrid,
   List,
@@ -32,38 +33,50 @@ import {
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  clampBucketPosition,
   clampTableCenter,
   compareSeatingTables,
   createSeatingId,
   currentSeats,
+  compareUnitsAtTable,
+  estimatedBucketHeight,
+  findOpenBucketSpot,
   findOpenTableSpot,
   fullnessStyle,
   isPartyUnconfirmed,
   makeSeatingCsv,
   minimumRoomSize,
-  partyMatchesSearch,
   partySeats,
+  personKey,
   ROUND_TABLE_CAPACITY,
   searchTokens,
+  seatingUnits,
+  bucketTitle,
   tableFullTitle,
+  unitMatchesSearch,
+  type SeatingBucket,
   type SeatingChartData,
-  type SeatingParty,
   type SeatingRoom,
   type SeatingSeat,
   type SeatingTable,
+  type SeatingUnit,
 } from "@/lib/seating";
 import {
+  addSeatingBucket,
   addSeatingTable,
   deleteSeatingTable,
   labelSeatingTable,
   loadSeatingChart,
+  moveSeatingBucket,
   moveSeatingTable,
   resizeSeatingRoom,
   saveTableSeats,
   seatParty,
+  seatPerson,
+  splitParty,
   type SeatingActionResult,
 } from "./actions";
-import { PartyDialog, TableDialog } from "./seating-dialogs";
+import { BucketDialog, PartyDialog, TableDialog } from "./seating-dialogs";
 import { FloorPlan, type FloorPlanHandle } from "./seating-floor-plan";
 import { SeatingSidebar, UNSEATED_SECTION_ID } from "./seating-sidebar";
 import {
@@ -73,6 +86,7 @@ import {
   PartySeatsBadge,
   PartyStatusIcon,
   useStoredState,
+  type BucketSummary,
   type DragData,
   type DropData,
   type TableSummary,
@@ -87,13 +101,16 @@ type SaveOperation = {
 type SaveState = { status: "saved" | "saving" | "error"; message: string };
 
 type DialogState =
-  | { type: "party"; partyId: number }
+  | { type: "party"; unitId: string }
   | { type: "table"; tableId: string; focusLabel: boolean }
+  | { type: "bucket"; bucketId: string; focusName: boolean }
   | null;
 
 type MobileView = "list" | "plan";
 
 const STATUS_RANK = { yes: 0, deciding: 1, none: 2, no: 3 } as const;
+/** Collision priority (lower wins): buckets draw above tables, then the Not seated list, then the floor. */
+const DROP_PRIORITY = { bucket: 0, table: 1, unseated: 2, room: 3 } as const;
 const REFRESH_INTERVAL_MS = 30_000;
 const STALE_INITIAL_DATA_MS = 15_000;
 
@@ -154,7 +171,7 @@ const seatingCollisionDetection: CollisionDetection = ({ droppableContainers, po
       }
     }
 
-    const priority = data.type === "table" ? 0 : data.type === "unseated" ? 1 : 2;
+    const priority = DROP_PRIORITY[data.type];
     hits.push({ id: container.id, data: { droppableContainer: container, value: priority } });
   }
 
@@ -177,8 +194,9 @@ export function SeatingChartClient({
   const [tables, setTables] = useState(initialData.tables);
   const [parties, setParties] = useState(initialData.parties);
   const [seats, setSeats] = useState(initialData.seats);
-  const stateRef = useRef({ room, tables, parties, seats });
-  stateRef.current = { room, tables, parties, seats };
+  const [buckets, setBuckets] = useState(initialData.buckets);
+  const stateRef = useRef({ room, tables, parties, seats, buckets });
+  stateRef.current = { room, tables, parties, seats, buckets };
 
   const [saveState, setSaveState] = useState<SaveState>({ status: "saved", message: "All changes saved" });
   const queueRef = useRef<SaveOperation[]>([]);
@@ -294,6 +312,7 @@ export function SeatingChartClient({
       setTables(data.tables);
       setParties(data.parties);
       setSeats(data.seats);
+      setBuckets(data.buckets);
     } catch {
       // Offline or logged out; the next refresh or save will surface it.
     }
@@ -326,61 +345,93 @@ export function SeatingChartClient({
   const sortedTables = useMemo(() => [...tables].sort(compareSeatingTables), [tables]);
   const tableIds = useMemo(() => new Set(tables.map((table) => table.id)), [tables]);
   const validSeats = useMemo(() => currentSeats(seats, parties, tables), [seats, parties, tables]);
+  // Whole parties plus one unit per person for split parties.
+  const units = useMemo(() => seatingUnits(parties), [parties]);
+  const unitById = useMemo(() => new Map(units.map((unit) => [unit.id, unit])), [units]);
 
-  const { seatNumbersByParty, seatedNumbersByTable, seatsByTable } = useMemo(() => {
-    const byParty = new Map<number, number[]>();
+  const { seatNumbersByUnit, seatedNumbersByTable, seatsByTable } = useMemo(() => {
+    const splitPartyIds = new Set(parties.filter((party) => party.split).map((party) => party.id));
+    const byUnit = new Map<string, number[]>();
     const numbersByTable = new Map<string, Set<number>>();
     const byTable = new Map<string, SeatingSeat[]>();
 
     for (const seat of validSeats) {
-      byParty.set(seat.partyId, [...(byParty.get(seat.partyId) ?? []), seat.seatNumber].sort((a, b) => a - b));
+      const unitId = splitPartyIds.has(seat.partyId) ? personKey(seat.partyId, seat.position) : String(seat.partyId);
+      byUnit.set(unitId, [...(byUnit.get(unitId) ?? []), seat.seatNumber].sort((a, b) => a - b));
       numbersByTable.set(seat.tableId, (numbersByTable.get(seat.tableId) ?? new Set()).add(seat.seatNumber));
       byTable.set(seat.tableId, [...(byTable.get(seat.tableId) ?? []), seat]);
     }
 
-    return { seatNumbersByParty: byParty, seatedNumbersByTable: numbersByTable, seatsByTable: byTable };
-  }, [validSeats]);
+    return { seatNumbersByUnit: byUnit, seatedNumbersByTable: numbersByTable, seatsByTable: byTable };
+  }, [parties, validSeats]);
 
   const summaries = useMemo<TableSummary[]>(() => {
-    const partiesByTable = new Map<string, SeatingParty[]>();
+    const unitsByTable = new Map<string, SeatingUnit[]>();
 
-    for (const party of parties) {
-      if (party.tableId && tableIds.has(party.tableId)) {
-        partiesByTable.set(party.tableId, [...(partiesByTable.get(party.tableId) ?? []), party]);
+    for (const unit of units) {
+      if (unit.tableId && tableIds.has(unit.tableId)) {
+        unitsByTable.set(unit.tableId, [...(unitsByTable.get(unit.tableId) ?? []), unit]);
       }
     }
 
     return sortedTables.map((table) => {
-      const tableParties = (partiesByTable.get(table.id) ?? []).sort(
-        (a, b) => (a.assignedAt ?? 0) - (b.assignedAt ?? 0) || a.sortOrder - b.sortOrder || a.id - b.id,
-      );
+      const tableUnits = (unitsByTable.get(table.id) ?? []).sort(compareUnitsAtTable);
       let count = 0;
       let unconfirmed = 0;
 
-      for (const party of tableParties) {
-        const partyCount = partySeats(party);
-        count += partyCount;
-        if (isPartyUnconfirmed(party)) {
-          unconfirmed += partyCount;
+      for (const unit of tableUnits) {
+        const unitCount = partySeats(unit);
+        count += unitCount;
+        if (isPartyUnconfirmed(unit)) {
+          unconfirmed += unitCount;
         }
       }
 
-      return { table, parties: tableParties, count, unconfirmed, style: fullnessStyle(count, table.capacity) };
+      return { table, units: tableUnits, count, unconfirmed, style: fullnessStyle(count, table.capacity) };
     });
-  }, [parties, sortedTables, tableIds]);
+  }, [units, sortedTables, tableIds]);
 
   const summaryById = useMemo(() => new Map(summaries.map((summary) => [summary.table.id, summary])), [summaries]);
 
+  const sortedBuckets = useMemo(
+    () => [...buckets].sort((a, b) => a.createdAt - b.createdAt || a.id.localeCompare(b.id)),
+    [buckets],
+  );
+  const bucketIds = useMemo(() => new Set(buckets.map((bucket) => bucket.id)), [buckets]);
+
   // Confirmed first, then maybes, then no reply; guest-list order within each.
-  const unseatedParties = useMemo(
+  // Includes people in buckets: they aren't seated either.
+  const unseatedUnits = useMemo(
     () =>
-      parties
-        .filter((party) => partySeats(party) > 0 && !(party.tableId && tableIds.has(party.tableId)))
+      units
+        .filter((unit) => partySeats(unit) > 0 && !(unit.tableId && tableIds.has(unit.tableId)))
         .sort(
           (a, b) =>
-            STATUS_RANK[a.status] - STATUS_RANK[b.status] || a.sortOrder - b.sortOrder || a.id - b.id,
+            STATUS_RANK[a.status] - STATUS_RANK[b.status] ||
+            a.sortOrder - b.sortOrder ||
+            a.partyId - b.partyId ||
+            (a.position ?? 0) - (b.position ?? 0),
         ),
-    [parties, tableIds],
+    [units, tableIds],
+  );
+  // Not seated and not in any bucket.
+  const looseUnits = useMemo(
+    () => unseatedUnits.filter((unit) => !(unit.tableId && bucketIds.has(unit.tableId))),
+    [bucketIds, unseatedUnits],
+  );
+  const bucketSummaries = useMemo<BucketSummary[]>(
+    () =>
+      sortedBuckets.map((bucket) => {
+        const members = units
+          .filter((unit) => unit.tableId === bucket.id && partySeats(unit) > 0)
+          .sort(compareUnitsAtTable);
+        return { bucket, units: members, count: members.reduce((total, unit) => total + partySeats(unit), 0) };
+      }),
+    [sortedBuckets, units],
+  );
+  const bucketSummaryById = useMemo(
+    () => new Map(bucketSummaries.map((summary) => [summary.bucket.id, summary])),
+    [bucketSummaries],
   );
 
   const totals = useMemo(() => {
@@ -388,14 +439,14 @@ export function SeatingChartClient({
     let unconfirmed = 0;
     let seated = 0;
 
-    for (const party of parties) {
-      const partyCount = partySeats(party);
-      potential += partyCount;
-      if (isPartyUnconfirmed(party)) {
-        unconfirmed += partyCount;
+    for (const unit of units) {
+      const unitCount = partySeats(unit);
+      potential += unitCount;
+      if (isPartyUnconfirmed(unit)) {
+        unconfirmed += unitCount;
       }
-      if (party.tableId && tableIds.has(party.tableId)) {
-        seated += partyCount;
+      if (unit.tableId && tableIds.has(unit.tableId)) {
+        seated += unitCount;
       }
     }
 
@@ -415,36 +466,35 @@ export function SeatingChartClient({
       seatsAvailable,
       tablesNeeded,
     };
-  }, [parties, tableIds, tables]);
+  }, [units, tableIds, tables]);
 
   const searchTokenList = useMemo(() => searchTokens(query), [query]);
-  const matchingPartyIds = useMemo(
+  const matchingUnitIds = useMemo(
     () =>
       searchTokenList.length
-        ? new Set(parties.filter((party) => partyMatchesSearch(party, searchTokenList)).map((party) => party.id))
+        ? new Set(units.filter((unit) => unitMatchesSearch(unit, searchTokenList)).map((unit) => unit.id))
         : null,
-    [parties, searchTokenList],
+    [units, searchTokenList],
   );
 
-  const draggingParty =
-    activeDrag?.type === "party" ? parties.find((party) => party.id === activeDrag.partyId) ?? null : null;
+  const draggingUnit = activeDrag?.type === "party" ? unitById.get(activeDrag.unitId) ?? null : null;
 
   // While dragging a party, show what the source and target tables would hold.
   const previewCounts = useMemo(() => {
     const counts = new Map<string, number>();
 
-    if (!draggingParty || !overDrop || overDrop.type === "room") {
+    if (!draggingUnit || !overDrop || overDrop.type === "room") {
       return counts;
     }
 
-    const sourceTableId = draggingParty.tableId && tableIds.has(draggingParty.tableId) ? draggingParty.tableId : null;
+    const sourceTableId = draggingUnit.tableId && tableIds.has(draggingUnit.tableId) ? draggingUnit.tableId : null;
     const targetTableId = overDrop.type === "table" ? overDrop.tableId : null;
 
     if (sourceTableId === targetTableId) {
       return counts;
     }
 
-    const partyCount = partySeats(draggingParty);
+    const partyCount = partySeats(draggingUnit);
     if (targetTableId) {
       counts.set(targetTableId, (summaryById.get(targetTableId)?.count ?? 0) + partyCount);
     }
@@ -453,7 +503,7 @@ export function SeatingChartClient({
     }
 
     return counts;
-  }, [draggingParty, overDrop, summaryById, tableIds]);
+  }, [draggingUnit, overDrop, summaryById, tableIds]);
 
   // ---------- Edits (optimistic, then autosaved) ----------
 
@@ -465,21 +515,24 @@ export function SeatingChartClient({
     flashTimeoutRef.current = window.setTimeout(() => setFlashTableId(null), 1400);
   }, []);
 
+  /** Seats a whole party at a table (joining it back together if it was split), or unseats it. */
   const assignParty = useCallback(
     (partyId: number, tableId: string | null) => {
       const party = stateRef.current.parties.find((candidate) => candidate.id === partyId);
 
-      if (!party || party.tableId === tableId) {
+      if (!party || (!party.split && party.tableId === tableId)) {
         return;
       }
 
       setParties((current) =>
         current.map((candidate) =>
-          candidate.id === partyId ? { ...candidate, tableId, assignedAt: tableId ? Date.now() : null } : candidate,
+          candidate.id === partyId
+            ? { ...candidate, tableId, assignedAt: tableId ? Date.now() : null, split: false, people: [] }
+            : candidate,
         ),
       );
-      // Exact seats belong to the old table.
-      setSeats((current) => current.filter((seat) => seat.partyId !== partyId));
+      // Exact seats at any other table belong to the old table.
+      setSeats((current) => current.filter((seat) => seat.partyId !== partyId || (tableId !== null && seat.tableId === tableId)));
       enqueueSave({ key: `party:${partyId}`, run: () => seatParty(partyId, tableId) });
 
       if (tableId) {
@@ -487,6 +540,94 @@ export function SeatingChartClient({
       }
     },
     [enqueueSave, flashTable],
+  );
+
+  /** Seats (or unseats) one person from a split party. */
+  const assignPerson = useCallback(
+    (partyId: number, position: number, tableId: string | null) => {
+      const party = stateRef.current.parties.find((candidate) => candidate.id === partyId);
+      const currentTableId = party?.people.find((person) => person.position === position)?.tableId ?? null;
+
+      if (!party?.split || currentTableId === tableId) {
+        return;
+      }
+
+      setParties((current) =>
+        current.map((candidate) =>
+          candidate.id === partyId
+            ? {
+                ...candidate,
+                people: [
+                  ...candidate.people.filter((person) => person.position !== position),
+                  ...(tableId ? [{ position, tableId, assignedAt: Date.now() }] : []),
+                ].sort((a, b) => a.position - b.position),
+              }
+            : candidate,
+        ),
+      );
+      setSeats((current) =>
+        current.filter((seat) => seat.partyId !== partyId || seat.position !== position || seat.tableId === tableId),
+      );
+      enqueueSave({ key: `person:${partyId}:${position}`, run: () => seatPerson(partyId, position, tableId) });
+
+      if (tableId) {
+        flashTable(tableId);
+      }
+    },
+    [enqueueSave, flashTable],
+  );
+
+  const assignUnit = useCallback(
+    (unitId: string, tableId: string | null) => {
+      const unit = seatingUnits(stateRef.current.parties).find((candidate) => candidate.id === unitId);
+
+      if (!unit) {
+        return;
+      }
+
+      if (unit.position === null) {
+        assignParty(unit.partyId, tableId);
+      } else {
+        assignPerson(unit.partyId, unit.position, tableId);
+      }
+    },
+    [assignParty, assignPerson],
+  );
+
+  /** Lets each person in a party sit at their own table; everyone starts where the party was. */
+  const splitPartyUp = useCallback(
+    (partyId: number) => {
+      const party = stateRef.current.parties.find((candidate) => candidate.id === partyId);
+
+      if (!party || party.split) {
+        return;
+      }
+
+      const peopleCount = Math.min(10, partySeats(party));
+      const { tableId, assignedAt } = party;
+
+      setParties((current) =>
+        current.map((candidate) =>
+          candidate.id === partyId
+            ? {
+                ...candidate,
+                split: true,
+                tableId: null,
+                assignedAt: null,
+                people: tableId
+                  ? Array.from({ length: peopleCount }, (_, index) => ({
+                      position: index + 1,
+                      tableId,
+                      assignedAt: assignedAt ?? Date.now(),
+                    }))
+                  : [],
+              }
+            : candidate,
+        ),
+      );
+      enqueueSave({ key: `split:${partyId}`, run: () => splitParty(partyId, peopleCount) });
+    },
+    [enqueueSave],
   );
 
   const moveTable = useCallback(
@@ -541,11 +682,74 @@ export function SeatingChartClient({
     [enqueueSave],
   );
 
+  const addBucket = useCallback(() => {
+    const { room: currentRoom, tables: currentTables, buckets: currentBuckets, parties: currentParties } = stateRef.current;
+    const memberCounts = new Map<string, number>();
+    for (const unit of seatingUnits(currentParties)) {
+      if (unit.tableId) {
+        memberCounts.set(unit.tableId, (memberCounts.get(unit.tableId) ?? 0) + 1);
+      }
+    }
+    const spot = findOpenBucketSpot(effectiveRoomSize(currentRoom, currentTables), currentBuckets, (index) =>
+      estimatedBucketHeight(memberCounts.get(currentBuckets[index].id) ?? 0),
+    );
+    const bucket: SeatingBucket = { id: createSeatingId(), name: "", x: spot.x, y: spot.y, createdAt: Date.now() };
+
+    setBuckets((current) => [...current, bucket]);
+    enqueueSave({
+      key: `add:${bucket.id}`,
+      run: () => addSeatingBucket({ id: bucket.id, name: "", x: bucket.x, y: bucket.y }),
+    });
+    setDialog({ type: "bucket", bucketId: bucket.id, focusName: true });
+    flashTable(bucket.id);
+    window.requestAnimationFrame(() => planRef.current?.revealTable(bucket.id));
+  }, [enqueueSave, flashTable]);
+
+  const moveBucket = useCallback(
+    (bucketId: string, x: number, y: number) => {
+      setBuckets((current) => current.map((bucket) => (bucket.id === bucketId ? { ...bucket, x, y } : bucket)));
+      enqueueSave({ key: `move:${bucketId}`, run: () => moveSeatingBucket(bucketId, x, y) });
+    },
+    [enqueueSave],
+  );
+
+  const renameBucket = useCallback(
+    (bucketId: string, name: string) => {
+      setBuckets((current) => current.map((bucket) => (bucket.id === bucketId ? { ...bucket, name } : bucket)));
+      enqueueSave({ key: `label:${bucketId}`, run: () => labelSeatingTable(bucketId, "", name) });
+    },
+    [enqueueSave],
+  );
+
+  const deleteBucket = useCallback(
+    (bucketId: string) => {
+      setBuckets((current) => current.filter((bucket) => bucket.id !== bucketId));
+      setParties((current) =>
+        current.map((party) =>
+          party.tableId === bucketId
+            ? { ...party, tableId: null, assignedAt: null }
+            : party.people.some((person) => person.tableId === bucketId)
+              ? { ...party, people: party.people.filter((person) => person.tableId !== bucketId) }
+              : party,
+        ),
+      );
+      enqueueSave({ key: `delete:${bucketId}`, run: () => deleteSeatingTable(bucketId) });
+      setDialog(null);
+    },
+    [enqueueSave],
+  );
+
   const deleteTable = useCallback(
     (tableId: string) => {
       setTables((current) => current.filter((table) => table.id !== tableId));
       setParties((current) =>
-        current.map((party) => (party.tableId === tableId ? { ...party, tableId: null, assignedAt: null } : party)),
+        current.map((party) =>
+          party.tableId === tableId
+            ? { ...party, tableId: null, assignedAt: null }
+            : party.people.some((person) => person.tableId === tableId)
+              ? { ...party, people: party.people.filter((person) => person.tableId !== tableId) }
+              : party,
+        ),
       );
       setSeats((current) => current.filter((seat) => seat.tableId !== tableId));
       enqueueSave({ key: `delete:${tableId}`, run: () => deleteSeatingTable(tableId) });
@@ -571,9 +775,13 @@ export function SeatingChartClient({
 
   // ---------- UI handlers ----------
 
-  const openParty = useCallback((partyId: number) => setDialog({ type: "party", partyId }), []);
+  const openUnit = useCallback((unitId: string) => setDialog({ type: "party", unitId }), []);
   const openTable = useCallback(
     (tableId: string) => setDialog({ type: "table", tableId, focusLabel: false }),
+    [],
+  );
+  const openBucket = useCallback(
+    (bucketId: string) => setDialog({ type: "bucket", bucketId, focusName: false }),
     [],
   );
 
@@ -588,7 +796,15 @@ export function SeatingChartClient({
 
   const setAllCollapsed = useCallback(
     (collapsed: boolean) => {
-      setCollapsedList(collapsed ? [UNSEATED_SECTION_ID, ...stateRef.current.tables.map((table) => table.id)] : []);
+      setCollapsedList(
+        collapsed
+          ? [
+              UNSEATED_SECTION_ID,
+              ...stateRef.current.buckets.map((bucket) => bucket.id),
+              ...stateRef.current.tables.map((table) => table.id),
+            ]
+          : [],
+      );
     },
     [setCollapsedList],
   );
@@ -608,7 +824,7 @@ export function SeatingChartClient({
   );
 
   function exportCsv() {
-    const csv = makeSeatingCsv({ room, tables, parties, seats });
+    const csv = makeSeatingCsv({ room, tables, buckets, parties, seats });
     const blob = new Blob([`\uFEFF${csv}`], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -655,9 +871,22 @@ export function SeatingChartClient({
 
     if (drag?.type === "party") {
       if (over?.type === "table") {
-        assignParty(drag.partyId, over.tableId);
+        assignUnit(drag.unitId, over.tableId);
+      } else if (over?.type === "bucket") {
+        assignUnit(drag.unitId, over.bucketId);
       } else if (over?.type === "unseated") {
-        assignParty(drag.partyId, null);
+        assignUnit(drag.unitId, null);
+      }
+    } else if (drag?.type === "bucket") {
+      const bucket = stateRef.current.buckets.find((candidate) => candidate.id === drag.bucketId);
+
+      if (bucket && (event.delta.x !== 0 || event.delta.y !== 0)) {
+        const zoom = zoomRef.current || 1;
+        const next = clampBucketPosition(bucket.x + event.delta.x / zoom, bucket.y + event.delta.y / zoom);
+
+        if (next.x !== bucket.x || next.y !== bucket.y) {
+          moveBucket(bucket.id, next.x, next.y);
+        }
       }
     } else if (drag?.type === "table") {
       const table = stateRef.current.tables.find((candidate) => candidate.id === drag.tableId);
@@ -701,11 +930,15 @@ export function SeatingChartClient({
 
   function describeDrag(drag: DragData | undefined) {
     if (drag?.type === "party") {
-      return stateRef.current.parties.find((party) => party.id === drag.partyId)?.name ?? "party";
+      return seatingUnits(stateRef.current.parties).find((unit) => unit.id === drag.unitId)?.name ?? "party";
     }
     if (drag?.type === "table") {
       const table = stateRef.current.tables.find((candidate) => candidate.id === drag.tableId);
       return table ? tableFullTitle(table) : "table";
+    }
+    if (drag?.type === "bucket") {
+      const bucket = stateRef.current.buckets.find((candidate) => candidate.id === drag.bucketId);
+      return bucket ? bucketTitle(bucket) : "bucket";
     }
     return "item";
   }
@@ -715,16 +948,22 @@ export function SeatingChartClient({
       const table = stateRef.current.tables.find((candidate) => candidate.id === drop.tableId);
       return table ? tableFullTitle(table) : "a table";
     }
+    if (drop?.type === "bucket") {
+      const bucket = stateRef.current.buckets.find((candidate) => candidate.id === drop.bucketId);
+      return bucket ? bucketTitle(bucket) : "a bucket";
+    }
     return drop?.type === "unseated" ? "Not seated" : "the floor";
   }
 
   const dropTableId = activeDrag?.type === "party" && overDrop?.type === "table" ? overDrop.tableId : null;
-  const highlightedTableId = dropTableId ?? hoveredTableId ?? flashTableId;
+  const dropBucketId = activeDrag?.type === "party" && overDrop?.type === "bucket" ? overDrop.bucketId : null;
+  const highlightedTableId = dropTableId ?? dropBucketId ?? hoveredTableId ?? flashTableId;
 
   // ---------- Dialog data ----------
 
-  const dialogParty = dialog?.type === "party" ? parties.find((party) => party.id === dialog.partyId) ?? null : null;
+  const dialogUnit = dialog?.type === "party" ? unitById.get(dialog.unitId) ?? null : null;
   const dialogTable = dialog?.type === "table" ? summaryById.get(dialog.tableId) ?? null : null;
+  const dialogBucket = dialog?.type === "bucket" ? bucketSummaryById.get(dialog.bucketId) ?? null : null;
 
   return (
     <DndContext
@@ -786,6 +1025,16 @@ export function SeatingChartClient({
                 title={sidebarOpen ? "Hide guest list" : "Show guest list"}
               >
                 {sidebarOpen ? <PanelLeftClose size={18} aria-hidden="true" /> : <PanelLeftOpen size={18} aria-hidden="true" />}
+              </button>
+              <button
+                type="button"
+                className="inline-flex h-10 items-center gap-1 rounded-full border border-[#7a1239] bg-[#fff8fb] px-3 text-xs font-bold uppercase tracking-[0.1em] text-[#7a1239] transition hover:bg-[#ffe0ec]"
+                onClick={addBucket}
+                aria-label="Add a bucket for people who aren't seated yet"
+                title="Add a named bucket to hold people who aren't seated yet"
+              >
+                <Inbox size={15} aria-hidden="true" />
+                <span className="hidden sm:inline">Bucket</span>
               </button>
               <button
                 type="button"
@@ -852,21 +1101,23 @@ export function SeatingChartClient({
               !sidebarOpen && "md:hidden",
             )}
             collapsedIds={collapsedIds}
-            draggingPartyId={draggingParty?.id ?? null}
+            bucketSummaries={bucketSummaries}
+            draggingUnitId={draggingUnit?.id ?? null}
             dropTarget={activeDrag?.type === "party" ? overDrop : null}
-            matchingPartyIds={matchingPartyIds}
+            matchingUnitIds={matchingUnitIds}
             onHoverTable={setHoveredTableId}
             onLocateTable={locateTable}
-            onOpenParty={openParty}
+            onOpenBucket={openBucket}
+            onOpenUnit={openUnit}
             onOpenTable={openTable}
             onQueryChange={setQuery}
             onSetAllCollapsed={setAllCollapsed}
             onToggleSection={toggleSection}
             previewCounts={previewCounts}
             query={query}
-            seatNumbersByParty={seatNumbersByParty}
+            seatNumbersByUnit={seatNumbersByUnit}
             summaries={summaries}
-            unseatedParties={unseatedParties}
+            unseatedUnits={looseUnits}
           />
           <section
             aria-label="Floor plan"
@@ -875,12 +1126,16 @@ export function SeatingChartClient({
           >
             <FloorPlan
               ref={planRef}
-              draggingPartyId={draggingParty?.id ?? null}
+              bucketSummaries={bucketSummaries}
+              draggingBucketId={activeDrag?.type === "bucket" ? activeDrag.bucketId : null}
+              draggingUnitId={draggingUnit?.id ?? null}
               draggingTableId={activeDrag?.type === "table" ? activeDrag.tableId : null}
+              dropBucketId={dropBucketId}
               dropTableId={dropTableId}
               highlightedTableId={highlightedTableId}
-              matchingPartyIds={matchingPartyIds}
-              onOpenParty={openParty}
+              matchingUnitIds={matchingUnitIds}
+              onOpenBucket={openBucket}
+              onOpenUnit={openUnit}
               onOpenTable={openTable}
               onResizeRoom={resizeRoom}
               previewCounts={previewCounts}
@@ -893,23 +1148,48 @@ export function SeatingChartClient({
         </div>
       </main>
 
-      <DragOverlay dropAnimation={null} modifiers={draggingParty ? [snapCenterToCursor] : undefined}>
-        {draggingParty ? <DraggedPartyChip party={draggingParty} /> : null}
+      <DragOverlay dropAnimation={null} modifiers={draggingUnit ? [snapCenterToCursor] : undefined}>
+        {draggingUnit ? <DraggedPartyChip unit={draggingUnit} /> : null}
       </DragOverlay>
 
-      {dialogParty ? (
+      {dialogUnit ? (
         <PartyDialog
-          key={`party-${dialogParty.id}`}
-          currentSummary={dialogParty.tableId ? summaryById.get(dialogParty.tableId) ?? null : null}
+          key={`party-${dialogUnit.id}`}
+          bucketSummaries={bucketSummaries}
+          onOpenBucket={openBucket}
           onAssign={(tableId) => {
-            assignParty(dialogParty.id, tableId);
+            assignUnit(dialogUnit.id, tableId);
             setDialog(null);
           }}
           onClose={() => setDialog(null)}
+          onJoin={(tableId) => {
+            assignParty(dialogUnit.partyId, tableId);
+            setDialog({ type: "party", unitId: String(dialogUnit.partyId) });
+          }}
           onOpenTable={openTable}
-          party={dialogParty}
-          seatNumbers={seatNumbersByParty.get(dialogParty.id)}
+          onOpenUnit={openUnit}
+          onSplit={() => {
+            splitPartyUp(dialogUnit.partyId);
+            setDialog({ type: "party", unitId: personKey(dialogUnit.partyId, 1) });
+          }}
+          seatNumbersByUnit={seatNumbersByUnit}
+          siblings={units.filter((unit) => unit.partyId === dialogUnit.partyId)}
           summaries={summaries}
+          summaryById={summaryById}
+          unit={dialogUnit}
+        />
+      ) : null}
+
+      {dialogBucket ? (
+        <BucketDialog
+          key={`bucket-${dialogBucket.bucket.id}`}
+          autoFocusName={dialog?.type === "bucket" && dialog.focusName}
+          onClose={() => setDialog(null)}
+          onDelete={() => deleteBucket(dialogBucket.bucket.id)}
+          onOpenUnit={openUnit}
+          onRemoveUnit={(unitId) => assignUnit(unitId, null)}
+          onRename={(name) => renameBucket(dialogBucket.bucket.id, name)}
+          summary={dialogBucket}
         />
       ) : null}
 
@@ -923,15 +1203,15 @@ export function SeatingChartClient({
                 table.id !== dialogTable.table.id && table.number.trim().toLowerCase() === number.toLowerCase(),
             )
           }
-          onAssignParty={assignParty}
+          onAssignUnit={assignUnit}
           onClose={() => setDialog(null)}
           onDelete={() => deleteTable(dialogTable.table.id)}
           onLabel={(number, name) => labelTable(dialogTable.table.id, number, name)}
-          onOpenParty={openParty}
+          onOpenUnit={openUnit}
           onSetSeats={(nextSeats) => setTableSeats(dialogTable.table.id, nextSeats)}
           seats={seatsByTable.get(dialogTable.table.id) ?? []}
           summary={dialogTable}
-          unseatedParties={unseatedParties}
+          unseatedUnits={unseatedUnits}
         />
       ) : null}
     </DndContext>
@@ -1018,19 +1298,19 @@ function SaveIndicator({ onRetry, state }: { onRetry: () => void; state: SaveSta
   );
 }
 
-function DraggedPartyChip({ party }: { party: SeatingParty }) {
+function DraggedPartyChip({ unit }: { unit: SeatingUnit }) {
   return (
     <div
       className={clsx(
         "flex w-max max-w-[18rem] cursor-grabbing items-center gap-2 rounded-xl border-[1.5px] px-3 py-2 text-base font-semibold shadow-[0_22px_44px_-18px_rgba(74,16,39,0.8)]",
-        partyCardClasses(party.status),
-        isPartyUnconfirmed(party) && "italic",
+        partyCardClasses(unit.status),
+        isPartyUnconfirmed(unit) && "italic",
       )}
       style={{ transform: "rotate(-2deg)" }}
     >
-      <PartyStatusIcon size={17} status={party.status} />
-      <span className="min-w-0 truncate">{party.name}</span>
-      <PartySeatsBadge className="text-sm not-italic" party={party} />
+      <PartyStatusIcon size={17} status={unit.status} />
+      <span className="min-w-0 truncate">{unit.name}</span>
+      <PartySeatsBadge className="text-sm not-italic" party={unit} />
     </div>
   );
 }

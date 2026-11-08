@@ -7,6 +7,7 @@ import {
   ChevronsDownUp,
   ChevronsUpDown,
   Heart,
+  Inbox,
   LocateFixed,
   Pencil,
   Search,
@@ -14,12 +15,13 @@ import {
 } from "lucide-react";
 import { memo, type ReactNode } from "react";
 import {
+  bucketTitle,
   fullnessStyle,
   isPartyUnconfirmed,
   partySeats,
   partyStatusLabel,
   tableTitle,
-  type SeatingParty,
+  type SeatingUnit,
 } from "@/lib/seating";
 import {
   FullnessBadge,
@@ -27,6 +29,7 @@ import {
   partyCardClasses,
   PartySeatsBadge,
   PartyStatusIcon,
+  type BucketSummary,
   type DropData,
   type PartyDragData,
   type TableSummary,
@@ -35,13 +38,15 @@ import {
 export const UNSEATED_SECTION_ID = "unseated";
 
 type SeatingSidebarProps = {
+  bucketSummaries: BucketSummary[];
   className?: string;
   collapsedIds: ReadonlySet<string>;
-  draggingPartyId: number | null;
+  draggingUnitId: string | null;
   dropTarget: DropData | null;
-  matchingPartyIds: ReadonlySet<number> | null;
+  matchingUnitIds: ReadonlySet<string> | null;
   onLocateTable: (tableId: string) => void;
-  onOpenParty: (partyId: number) => void;
+  onOpenBucket: (bucketId: string) => void;
+  onOpenUnit: (unitId: string) => void;
   onOpenTable: (tableId: string) => void;
   onQueryChange: (query: string) => void;
   onSetAllCollapsed: (collapsed: boolean) => void;
@@ -49,9 +54,9 @@ type SeatingSidebarProps = {
   onHoverTable: (tableId: string | null) => void;
   previewCounts: ReadonlyMap<string, number>;
   query: string;
-  seatNumbersByParty: ReadonlyMap<number, number[]>;
+  seatNumbersByUnit: ReadonlyMap<string, number[]>;
   summaries: TableSummary[];
-  unseatedParties: SeatingParty[];
+  unseatedUnits: SeatingUnit[];
 };
 
 const STATUS_GROUPS = [
@@ -60,40 +65,49 @@ const STATUS_GROUPS = [
   { status: "none", title: "No reply" },
 ] as const;
 
-function peopleCount(parties: readonly SeatingParty[]) {
+function peopleCount(parties: readonly SeatingUnit[]) {
   return parties.reduce((total, party) => total + partySeats(party), 0);
 }
 
 export function SeatingSidebar({
+  bucketSummaries,
   className,
   collapsedIds,
-  draggingPartyId,
+  draggingUnitId,
   dropTarget,
-  matchingPartyIds,
+  matchingUnitIds,
   onHoverTable,
   onLocateTable,
-  onOpenParty,
+  onOpenBucket,
+  onOpenUnit,
   onOpenTable,
   onQueryChange,
   onSetAllCollapsed,
   onToggleSection,
   previewCounts,
   query,
-  seatNumbersByParty,
+  seatNumbersByUnit,
   summaries,
-  unseatedParties,
+  unseatedUnits,
 }: SeatingSidebarProps) {
-  const searching = matchingPartyIds !== null;
+  const searching = matchingUnitIds !== null;
   const visibleUnseated = searching
-    ? unseatedParties.filter((party) => matchingPartyIds.has(party.id))
-    : unseatedParties;
+    ? unseatedUnits.filter((party) => matchingUnitIds.has(party.id))
+    : unseatedUnits;
   const visibleSummaries = searching
-    ? summaries.filter((summary) => summary.parties.some((party) => matchingPartyIds.has(party.id)))
+    ? summaries.filter((summary) => summary.units.some((party) => matchingUnitIds.has(party.id)))
     : summaries;
+  const visibleBuckets = searching
+    ? bucketSummaries.filter((summary) => summary.units.some((unit) => matchingUnitIds.has(unit.id)))
+    : bucketSummaries;
   const allCollapsed =
-    collapsedIds.has(UNSEATED_SECTION_ID) && summaries.every((summary) => collapsedIds.has(summary.table.id));
-  const unseatedUnconfirmed = peopleCount(unseatedParties.filter(isPartyUnconfirmed));
-  const noMatches = searching && visibleUnseated.length === 0 && visibleSummaries.length === 0;
+    collapsedIds.has(UNSEATED_SECTION_ID) &&
+    bucketSummaries.every((summary) => collapsedIds.has(summary.bucket.id)) &&
+    summaries.every((summary) => collapsedIds.has(summary.table.id));
+  const unseatedUnconfirmed = peopleCount(unseatedUnits.filter(isPartyUnconfirmed));
+  const anyoneInBuckets = bucketSummaries.some((summary) => summary.units.length > 0);
+  const noMatches =
+    searching && visibleUnseated.length === 0 && visibleBuckets.length === 0 && visibleSummaries.length === 0;
 
   return (
     <aside className={clsx("flex min-h-0 flex-col bg-[#fff8fb]", className)}>
@@ -139,7 +153,7 @@ export function SeatingSidebar({
           <SidebarSection
             badge={
               <span className="rounded-full bg-[#7a1239] px-2 text-xs font-bold leading-6 tabular-nums text-white">
-                {peopleCount(unseatedParties)}
+                {peopleCount(unseatedUnits)}
               </span>
             }
             collapsed={!searching && collapsedIds.has(UNSEATED_SECTION_ID)}
@@ -148,9 +162,11 @@ export function SeatingSidebar({
             isDropTarget={dropTarget?.type === "unseated"}
             onToggle={() => onToggleSection(UNSEATED_SECTION_ID)}
             subtitle={
-              unseatedParties.length === 0
-                ? "Everyone has a table"
-                : `${unseatedParties.length} ${unseatedParties.length === 1 ? "party" : "parties"}${
+              unseatedUnits.length === 0
+                ? anyoneInBuckets
+                  ? "Everyone else has a table or bucket"
+                  : "Everyone has a table"
+                : `${unseatedUnits.length} ${unseatedUnits.length === 1 ? "party" : "parties"}${
                     unseatedUnconfirmed ? ` · ${unseatedUnconfirmed} unconfirmed` : ""
                   }`
             }
@@ -158,7 +174,11 @@ export function SeatingSidebar({
           >
             {visibleUnseated.length === 0 ? (
               <p className="px-1 py-2 text-sm text-[#8f5070]">
-                {draggingPartyId !== null ? "Drop here to unseat." : "Everyone who might come has a table."}
+                {draggingUnitId !== null
+                  ? "Drop here to unseat."
+                  : anyoneInBuckets
+                    ? "Everyone else who might come has a table or a bucket."
+                    : "Everyone who might come has a table."}
               </p>
             ) : (
               STATUS_GROUPS.map((group) => {
@@ -178,9 +198,9 @@ export function SeatingSidebar({
                     {groupParties.map((party) => (
                       <ListPartyRow
                         key={party.id}
-                        isDragging={draggingPartyId === party.id}
+                        isDragging={draggingUnitId === party.id}
                         isMatch={searching}
-                        onOpenParty={onOpenParty}
+                        onOpenUnit={onOpenUnit}
                         party={party}
                         seatNumbers={undefined}
                       />
@@ -192,6 +212,71 @@ export function SeatingSidebar({
           </SidebarSection>
         ) : null}
 
+        {visibleBuckets.map((summary) => {
+          const { bucket } = summary;
+          const members = searching ? summary.units.filter((unit) => matchingUnitIds.has(unit.id)) : summary.units;
+
+          return (
+            <SidebarSection
+              key={bucket.id}
+              actions={
+                <>
+                  <button
+                    type="button"
+                    aria-label={`Show ${bucketTitle(bucket)} on the floor plan`}
+                    className="grid size-8 place-items-center rounded-full text-[#a04670] transition hover:bg-[#ffe0ec] hover:text-[#7a1239]"
+                    onClick={() => onLocateTable(bucket.id)}
+                    title="Show on floor plan"
+                  >
+                    <LocateFixed size={16} aria-hidden="true" />
+                  </button>
+                  <button
+                    type="button"
+                    aria-label={`Edit ${bucketTitle(bucket)}`}
+                    className="grid size-8 place-items-center rounded-full text-[#a04670] transition hover:bg-[#ffe0ec] hover:text-[#7a1239]"
+                    onClick={() => onOpenBucket(bucket.id)}
+                    title="Rename or delete"
+                  >
+                    <Pencil size={15} aria-hidden="true" />
+                  </button>
+                </>
+              }
+              badge={
+                <span className="rounded-full border border-dashed border-[#a04670] bg-white px-2 text-xs font-bold leading-6 tabular-nums text-[#7a1239]">
+                  {summary.count}
+                </span>
+              }
+              collapsed={!searching && collapsedIds.has(bucket.id)}
+              drop={{ type: "bucket", bucketId: bucket.id, area: "list" }}
+              dropId={`list-bucket-${bucket.id}`}
+              icon={<Inbox aria-hidden="true" className="shrink-0 text-[#a04670]" size={15} />}
+              isDropTarget={dropTarget?.type === "bucket" && dropTarget.bucketId === bucket.id}
+              muted={!bucket.name}
+              onHover={(hovering) => onHoverTable(hovering ? bucket.id : null)}
+              onToggle={() => onToggleSection(bucket.id)}
+              subtitle={`Bucket · not seated · ${summary.units.length} ${summary.units.length === 1 ? "party" : "parties"}`}
+              title={bucketTitle(bucket)}
+            >
+              {members.length === 0 ? (
+                <p className="px-1 py-2 text-sm text-[#8f5070]">
+                  {draggingUnitId !== null ? "Drop here to hold them in this bucket." : "Drag people here to group them."}
+                </p>
+              ) : (
+                members.map((unit) => (
+                  <ListPartyRow
+                    key={unit.id}
+                    isDragging={draggingUnitId === unit.id}
+                    isMatch={false}
+                    onOpenUnit={onOpenUnit}
+                    party={unit}
+                    seatNumbers={undefined}
+                  />
+                ))
+              )}
+            </SidebarSection>
+          );
+        })}
+
         {visibleSummaries.map((summary) => {
           const { table } = summary;
           const previewCount = previewCounts.get(table.id);
@@ -200,8 +285,8 @@ export function SeatingSidebar({
               ? summary
               : { ...summary, count: previewCount, style: fullnessStyle(previewCount, table.capacity) };
           const parties = searching
-            ? summary.parties.filter((party) => matchingPartyIds.has(party.id))
-            : summary.parties;
+            ? summary.units.filter((party) => matchingUnitIds.has(party.id))
+            : summary.units;
 
           return (
             <SidebarSection
@@ -250,17 +335,17 @@ export function SeatingSidebar({
             >
               {parties.length === 0 ? (
                 <p className="px-1 py-2 text-sm text-[#8f5070]">
-                  {draggingPartyId !== null ? "Drop here to seat at this table." : "Drag parties here."}
+                  {draggingUnitId !== null ? "Drop here to seat at this table." : "Drag parties here."}
                 </p>
               ) : (
                 parties.map((party) => (
                   <ListPartyRow
                     key={party.id}
-                    isDragging={draggingPartyId === party.id}
+                    isDragging={draggingUnitId === party.id}
                     isMatch={false}
-                    onOpenParty={onOpenParty}
+                    onOpenUnit={onOpenUnit}
                     party={party}
-                    seatNumbers={seatNumbersByParty.get(party.id)}
+                    seatNumbers={seatNumbersByUnit.get(party.id)}
                   />
                 ))
               )}
@@ -348,10 +433,20 @@ function SidebarSection({
   );
 }
 
-function partySubtitle(party: SeatingParty, seatNumbers: number[] | undefined) {
+function partySubtitle(party: SeatingUnit, seatNumbers: number[] | undefined) {
   const seatText = seatNumbers?.length
     ? `${seatNumbers.length === 1 ? "Seat" : "Seats"} ${seatNumbers.join(", ")}`
     : null;
+
+  if (party.position !== null) {
+    if (party.status === "no") {
+      return `Not coming · from ${party.party.name} · tap to remove`;
+    }
+
+    return [seatText, `${isPartyUnconfirmed(party) ? `${partyStatusLabel(party.status)} · ` : ""}from ${party.party.name}`]
+      .filter(Boolean)
+      .join(" · ");
+  }
 
   if (party.status === "no") {
     return "Declined · tap to remove from this table";
@@ -368,19 +463,19 @@ function partySubtitle(party: SeatingParty, seatNumbers: number[] | undefined) {
 const ListPartyRow = memo(function ListPartyRow({
   isDragging,
   isMatch,
-  onOpenParty,
+  onOpenUnit,
   party,
   seatNumbers,
 }: {
   isDragging: boolean;
   isMatch: boolean;
-  onOpenParty: (partyId: number) => void;
-  party: SeatingParty;
+  onOpenUnit: (unitId: string) => void;
+  party: SeatingUnit;
   seatNumbers: number[] | undefined;
 }) {
   const { attributes, listeners, setNodeRef } = useDraggable({
     id: `party-list-${party.id}`,
-    data: { type: "party", partyId: party.id } satisfies PartyDragData,
+    data: { type: "party", unitId: party.id } satisfies PartyDragData,
   });
   const subtitle = partySubtitle(party, seatNumbers);
   const unconfirmed = isPartyUnconfirmed(party);
@@ -398,7 +493,7 @@ const ListPartyRow = memo(function ListPartyRow({
         isDragging && "opacity-35",
         isMatch && "ring-2 ring-[#ec4899]/60",
       )}
-      onClick={() => onOpenParty(party.id)}
+      onClick={() => onOpenUnit(party.id)}
     >
       <PartyStatusIcon size={17} status={party.status} />
       <span className="min-w-0 flex-1">

@@ -3,16 +3,21 @@
 import { cookies } from "next/headers";
 import { ADMIN_COOKIE_NAME, ADMIN_PASSWORD } from "@/lib/cookies";
 import {
+  createSeatingBucket,
   createSeatingTable,
   deleteSeatingTableById,
   getSeatingChart,
   replaceSeatingTableSeats,
   setSeatingAssignment,
+  setSeatingPersonAssignment,
+  splitSeatingParty,
   updateSeatingRoomSize,
   updateSeatingTableLabel,
   updateSeatingTablePosition,
 } from "@/lib/db";
 import {
+  BUCKET_COORD_MAX,
+  BUCKET_COORD_MIN,
   isUuid,
   normalizeTableName,
   normalizeTableNumber,
@@ -48,6 +53,10 @@ function isCoordinate(value: unknown): value is number {
   return Number.isInteger(value) && (value as number) >= 0 && (value as number) <= ROOM_MAX_SIZE;
 }
 
+function isBucketCoordinate(value: unknown): value is number {
+  return Number.isInteger(value) && (value as number) >= BUCKET_COORD_MIN && (value as number) <= BUCKET_COORD_MAX;
+}
+
 function isRoomSize(value: unknown, min: number): value is number {
   return Number.isInteger(value) && (value as number) >= min && (value as number) <= ROOM_MAX_SIZE;
 }
@@ -65,6 +74,7 @@ export async function loadSeatingChart(): Promise<SeatingChartData> {
   return getSeatingChart();
 }
 
+/** Seats a whole party (joining it back together if it was split), or unseats it. */
 export async function seatParty(guestId: number, tableId: string | null): Promise<SeatingActionResult> {
   await requireAdmin();
 
@@ -75,6 +85,42 @@ export async function seatParty(guestId: number, tableId: string | null): Promis
   const saved = await setSeatingAssignment(guestId, tableId);
 
   return saved ? ok("Seat saved.") : fail(`That guest or table no longer exists. ${RELOAD_HINT}`);
+}
+
+function isPosition(value: unknown): value is number {
+  return Number.isInteger(value) && (value as number) >= 1 && (value as number) <= 10;
+}
+
+/** Splits a party so people 1..peopleCount can sit at different tables. */
+export async function splitParty(guestId: number, peopleCount: number): Promise<SeatingActionResult> {
+  await requireAdmin();
+
+  if (!isGuestId(guestId) || !isPosition(peopleCount)) {
+    return fail("That split was invalid.");
+  }
+
+  const saved = await splitSeatingParty(guestId, peopleCount);
+
+  return saved ? ok("Party split.") : fail(`That guest no longer exists. ${RELOAD_HINT}`);
+}
+
+/** Seats (or unseats) one person from a split party. */
+export async function seatPerson(
+  guestId: number,
+  position: number,
+  tableId: string | null,
+): Promise<SeatingActionResult> {
+  await requireAdmin();
+
+  if (!isGuestId(guestId) || !isPosition(position) || (tableId !== null && !isUuid(tableId))) {
+    return fail("That seat change was invalid.");
+  }
+
+  const saved = await setSeatingPersonAssignment(guestId, position, tableId);
+
+  return saved
+    ? ok("Seat saved.")
+    : fail(`That party was put back together or the table no longer exists. ${RELOAD_HINT}`);
 }
 
 function labelText(value: unknown) {
@@ -105,6 +151,37 @@ export async function addSeatingTable(input: {
     y: input.y,
   });
   return ok("Table added.");
+}
+
+export async function addSeatingBucket(input: {
+  id: string;
+  name: string;
+  x: number;
+  y: number;
+}): Promise<SeatingActionResult> {
+  await requireAdmin();
+
+  const name = labelText(input?.name);
+
+  if (!isUuid(input?.id) || name === null || !isBucketCoordinate(input.x) || !isBucketCoordinate(input.y)) {
+    return fail("That new bucket was invalid.");
+  }
+
+  await createSeatingBucket({ id: input.id, name: normalizeTableName(name), x: input.x, y: input.y });
+  return ok("Bucket added.");
+}
+
+/** Buckets can sit outside the room, so they take a wider coordinate range than tables. */
+export async function moveSeatingBucket(bucketId: string, x: number, y: number): Promise<SeatingActionResult> {
+  await requireAdmin();
+
+  if (!isUuid(bucketId) || !isBucketCoordinate(x) || !isBucketCoordinate(y)) {
+    return fail("That bucket position was invalid.");
+  }
+
+  const saved = await updateSeatingTablePosition(bucketId, x, y);
+
+  return saved ? ok("Bucket moved.") : fail(`That bucket no longer exists. ${RELOAD_HINT}`);
 }
 
 export async function moveSeatingTable(
@@ -201,8 +278,8 @@ export async function deleteSeatingTable(tableId: string): Promise<SeatingAction
     return fail("The sweetheart table can't be deleted.");
   }
 
-  // Deleting an already-deleted table is fine (e.g. a retried save).
-  return ok("Table deleted.");
+  // Deleting an already-deleted table or bucket is fine (e.g. a retried save).
+  return ok("Deleted.");
 }
 
 export async function resizeSeatingRoom(width: number, height: number): Promise<SeatingActionResult> {

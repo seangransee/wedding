@@ -10,7 +10,10 @@ import {
   partyMatchesSearch,
   partySeats,
   searchTokens,
+  seatingUnits,
   shortPersonLabel,
+  splitPersonName,
+  unitMatchesSearch,
   tableFullTitle,
   type SeatingParty,
   type SeatingTable,
@@ -38,6 +41,8 @@ function party(overrides: Partial<SeatingParty> & Pick<SeatingParty, "id" | "nam
     sortOrder: overrides.id,
     tableId: null,
     assignedAt: null,
+    split: false,
+    people: [],
     ...overrides,
   };
 }
@@ -175,7 +180,7 @@ test("exports one CSV row per person, seated people by seat, without declined gu
   ];
   const seats = [{ tableId: "t7", seatNumber: 3, partyId: 1, position: 2 }];
 
-  const rows = makeSeatingCsv({ room: { width: 1400, height: 1000 }, tables, parties, seats }).split("\r\n");
+  const rows = makeSeatingCsv({ room: { width: 1400, height: 1000 }, tables, buckets: [], parties, seats }).split("\r\n");
 
   assert.deepEqual(rows, [
     '"Table number","Table name","Seat","Guest","Invitation","RSVP","Meal","Dietary notes"',
@@ -183,5 +188,124 @@ test("exports one CSV row per person, seated people by seat, without declined gu
     '"7","College friends","3","Jordan Sample","Sample Couple","Confirmed","Beef",""',
     '"7","College friends","","Alex Sample","Sample Couple","Confirmed","Vegetarian","No mushrooms"',
     '"","Not seated","","\'=HYPERLINK(""x"")","Unseated Friend","Confirmed","Fish",""',
+  ]);
+});
+
+test("splits a party into one unit per person, named by place-card first name", () => {
+  const family = party({
+    id: 5,
+    name: "The Rivera Family",
+    guestCount: 4,
+    attendingCount: 3,
+    split: true,
+    people: [
+      { position: 1, tableId: "t1", assignedAt: 10 },
+      { position: 3, tableId: "t2", assignedAt: 20 },
+    ],
+    attendees: [
+      { name: "Maria Rivera", mealType: "fish", dietaryNotes: "" },
+      { name: "Alex Rivera", mealType: null, dietaryNotes: "" },
+      { name: "Alex Chen", mealType: null, dietaryNotes: "" },
+    ],
+  });
+
+  const units = seatingUnits([family, party({ id: 6, name: "Whole Pair", tableId: "t1" })]);
+
+  assert.deepEqual(
+    units.map((unit) => [unit.id, unit.name, unit.tableId, partySeats(unit)]),
+    [
+      ["5:1", "Maria", "t1", 1],
+      ["5:2", "Alex R.", null, 1],
+      ["5:3", "Alex C.", "t2", 1],
+      ["6", "Whole Pair", "t1", 2],
+    ],
+  );
+  assert.equal(unitMatchesSearch(units[0], searchTokens("maria")), true);
+  assert.equal(unitMatchesSearch(units[0], searchTokens("rivera family")), true);
+  assert.equal(unitMatchesSearch(units[0], searchTokens("chen")), false);
+});
+
+test("names unnamed split people after the party and keeps dropped-out people only while seated", () => {
+  const holloways = party({ id: 1, name: "Jordan and Peyton Holloway + kids", status: "deciding", guestCount: 3, attendingCount: null });
+  assert.equal(splitPersonName(holloways, 2), "Holloway 2");
+
+  const shrunk = party({
+    id: 2,
+    name: "Shrinking Party",
+    guestCount: 3,
+    attendingCount: 1,
+    split: true,
+    people: [
+      { position: 1, tableId: "t1", assignedAt: 1 },
+      { position: 3, tableId: "t2", assignedAt: 1 },
+    ],
+  });
+
+  assert.deepEqual(
+    seatingUnits([shrunk]).map((unit) => [unit.id, unit.status, partySeats(unit)]),
+    [
+      ["2:1", "yes", 1],
+      ["2:3", "no", 0],
+    ],
+  );
+});
+
+test("keeps exact seats for split people only at their own table", () => {
+  const tables = [table({ id: "t1" }), table({ id: "t2" })];
+  const parties = [
+    party({
+      id: 1,
+      name: "Split Pair",
+      split: true,
+      people: [
+        { position: 1, tableId: "t1", assignedAt: 1 },
+        { position: 2, tableId: "t2", assignedAt: 1 },
+      ],
+    }),
+  ];
+  const seats = [
+    { tableId: "t1", seatNumber: 1, partyId: 1, position: 1 },
+    { tableId: "t1", seatNumber: 2, partyId: 1, position: 2 }, // person 2 sits at t2 now
+    { tableId: "t2", seatNumber: 4, partyId: 1, position: 2 },
+  ];
+
+  assert.deepEqual(currentSeats(seats, parties, tables), [seats[0], seats[2]]);
+});
+
+test("exports split people at their own tables", () => {
+  const tables = [table({ id: "t1", number: "1" }), table({ id: "t2", number: "2" })];
+  const parties = [
+    party({
+      id: 1,
+      name: "Split Pair",
+      split: true,
+      people: [{ position: 2, tableId: "t2", assignedAt: 1 }],
+      attendees: [
+        { name: "Sam Lee", mealType: null, dietaryNotes: "" },
+        { name: "Pat Lee", mealType: "beef", dietaryNotes: "" },
+      ],
+    }),
+  ];
+
+  const rows = makeSeatingCsv({ room: { width: 1400, height: 1000 }, tables, buckets: [], parties, seats: [] }).split("\r\n");
+
+  assert.deepEqual(rows.slice(1), [
+    '"2","","","Pat Lee","Split Pair","Confirmed","Beef",""',
+    '"","Not seated","","Sam Lee","Split Pair","Confirmed","",""',
+  ]);
+});
+
+test("exports bucket members as not seated, labeled with their bucket", () => {
+  const buckets = [{ id: "b1", name: "Dad's family", x: -300, y: 0, createdAt: 1 }];
+  const parties = [
+    party({ id: 1, name: "In Bucket", guestCount: 1, attendingCount: 1, tableId: "b1" }),
+    party({ id: 2, name: "Loose", guestCount: 1, attendingCount: 1 }),
+  ];
+
+  const rows = makeSeatingCsv({ room: { width: 1400, height: 1000 }, tables: [], buckets, parties, seats: [] }).split("\r\n");
+
+  assert.deepEqual(rows.slice(1), [
+    '"","Not seated","","Loose","Loose","Confirmed","",""',
+    '"","Not seated: Dad\'s family","","In Bucket","In Bucket","Confirmed","",""',
   ]);
 });

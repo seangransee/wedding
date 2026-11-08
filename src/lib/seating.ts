@@ -19,6 +19,12 @@ export const DEFAULT_ROOM: SeatingRoom = { width: 1400, height: 1000 };
 /** Keep tables at least this far from the room's right/bottom walls. */
 export const ROOM_WALL_MARGIN = 24;
 
+/** Buckets are a fixed width and grow downward to fit everyone in them. */
+export const BUCKET_WIDTH = 260;
+/** Buckets can sit outside the room, within this range of room units. */
+export const BUCKET_COORD_MIN = -3000;
+export const BUCKET_COORD_MAX = ROOM_MAX_SIZE + 3000;
+
 export const TABLE_NUMBER_MAX_LENGTH = 12;
 export const TABLE_NAME_MAX_LENGTH = 40;
 
@@ -45,6 +51,21 @@ export type SeatingTable = {
   createdAt: number;
 };
 
+/**
+ * A named holding area for people who aren't seated yet, e.g. "Dad's family".
+ * Parties and split people are put in a bucket through their tableId, but
+ * bucket members still count as not seated. x/y is the top-left corner and
+ * may be outside the room.
+ */
+export type SeatingBucket = {
+  id: string;
+  name: string;
+  x: number;
+  y: number;
+  /** Epoch milliseconds; buckets list in creation order. */
+  createdAt: number;
+};
+
 export type SeatingMealType = "beef" | "fish" | "vegetarian";
 
 /** RSVP place-card details for one person; index = attendee position - 1. */
@@ -54,7 +75,18 @@ export type SeatingAttendee = {
   dietaryNotes: string;
 };
 
-/** One invitation (wedding_guests row). Parties are seated at a table as a unit. */
+/** Where one person from a split party sits. */
+export type SeatingPersonAssignment = {
+  position: number;
+  tableId: string;
+  /** Epoch milliseconds. */
+  assignedAt: number;
+};
+
+/**
+ * One invitation (wedding_guests row). Parties sit at a table together unless
+ * split, in which case each person has their own table (see people).
+ */
 export type SeatingParty = {
   id: number;
   name: string;
@@ -66,9 +98,37 @@ export type SeatingParty = {
   /** Indexed by person position - 1; blank entries where no details were given. */
   attendees: SeatingAttendee[];
   sortOrder: number;
+  /** The whole party's table; always null while split. */
   tableId: string | null;
   /** Epoch milliseconds of the latest table assignment; orders parties within a table. */
   assignedAt: number | null;
+  /** True when the party's people are seated individually. */
+  split: boolean;
+  /** Split parties only: the table of each seated person (unseated people have no entry). */
+  people: SeatingPersonAssignment[];
+};
+
+/**
+ * What gets seated and dragged around: a whole party, or one person from a
+ * split party. Shaped like a party so headcount and badge helpers work on both.
+ */
+export type SeatingUnit = {
+  /** "12" for a whole party, "12:3" for person 3 of a split party. */
+  id: string;
+  partyId: number;
+  /** The split-off person's 1-based position, or null for a whole party. */
+  position: number | null;
+  /** The invitation name, or a split person's place-card first name. */
+  name: string;
+  status: SeatingPartyStatus;
+  /** For a split person: 1. */
+  guestCount: number;
+  attendingCount: number | null;
+  attendees: SeatingAttendee[];
+  sortOrder: number;
+  tableId: string | null;
+  assignedAt: number | null;
+  party: SeatingParty;
 };
 
 /** Optional exact seat for one person (party + 1-based position) at the party's table. */
@@ -82,6 +142,7 @@ export type SeatingSeat = {
 export type SeatingChartData = {
   room: SeatingRoom;
   tables: SeatingTable[];
+  buckets: SeatingBucket[];
   parties: SeatingParty[];
   seats: SeatingSeat[];
 };
@@ -197,6 +258,40 @@ export function normalizeTableName(value: string) {
   return normalizeLabel(value, TABLE_NAME_MAX_LENGTH);
 }
 
+export function bucketTitle(bucket: Pick<SeatingBucket, "name">) {
+  return bucket.name || "Unnamed bucket";
+}
+
+/** Rough bucket height before it's measured: a header plus two names per row. */
+export function estimatedBucketHeight(memberCount: number) {
+  return 64 + Math.ceil(Math.max(1, memberCount) / 2) * 30;
+}
+
+/** Where a new bucket goes: just right of the room, below any buckets already there. */
+export function findOpenBucketSpot(
+  room: SeatingRoom,
+  buckets: readonly Pick<SeatingBucket, "x" | "y">[],
+  heightOf: (index: number) => number,
+) {
+  const x = Math.min(room.width + 48, BUCKET_COORD_MAX - BUCKET_WIDTH);
+  let y = 0;
+
+  buckets.forEach((bucket, index) => {
+    if (bucket.x + BUCKET_WIDTH > x && bucket.x < x + BUCKET_WIDTH) {
+      y = Math.max(y, bucket.y + heightOf(index) + 24);
+    }
+  });
+
+  return { x: Math.round(x), y: Math.round(Math.min(y, BUCKET_COORD_MAX - 200)) };
+}
+
+export function clampBucketPosition(x: number, y: number) {
+  return {
+    x: Math.round(clamp(x, BUCKET_COORD_MIN, BUCKET_COORD_MAX - BUCKET_WIDTH)),
+    y: Math.round(clamp(y, BUCKET_COORD_MIN, BUCKET_COORD_MAX - 100)),
+  };
+}
+
 /** "Table 7", the table's name, or a placeholder when neither is set. */
 export function tableTitle(table: Pick<SeatingTable, "kind" | "number" | "name">) {
   if (table.number) {
@@ -277,9 +372,120 @@ export function personKey(partyId: number, position: number) {
   return `${partyId}:${position}`;
 }
 
+/** A party can be split when more than one person from it might come. */
+export function canSplitParty(party: Pick<SeatingParty, "status" | "guestCount" | "attendingCount">) {
+  return partySeats(party) > 1;
+}
+
 /**
- * Seats that still apply: the party is still at that table, the person is
- * still part of the party's headcount, and the seat exists at the table.
+ * Chip label for one person from a split party: their place-card first name,
+ * or "Alex S." when someone else in the party shares it. Unnamed people fall
+ * back to "Holloway 2".
+ */
+export function splitPersonName(
+  party: Pick<SeatingParty, "name" | "attendees" | "status" | "guestCount" | "attendingCount">,
+  position: number,
+) {
+  const name = party.attendees[position - 1]?.name.trim();
+
+  if (!name) {
+    return shortPersonLabel(party, position);
+  }
+
+  const firstName = name.split(/\s+/)[0];
+  const sharesFirstName = party.attendees.some(
+    (attendee, index) =>
+      index !== position - 1 && attendee.name.trim().split(/\s+/)[0]?.toLowerCase() === firstName.toLowerCase(),
+  );
+
+  return sharesFirstName ? shortPersonLabel(party, position) : firstName;
+}
+
+/** The table one person sits at, whether with their whole party or on their own. */
+export function personTableId(party: Pick<SeatingParty, "split" | "people" | "tableId">, position: number) {
+  if (!party.split) {
+    return party.tableId;
+  }
+
+  return party.people.find((person) => person.position === position)?.tableId ?? null;
+}
+
+/**
+ * Seating units for every party: whole parties as-is, and one unit per person
+ * for split parties. A split person past the party's current headcount (they
+ * dropped out, or the party declined) only appears while they still hold a
+ * table, as a declined unit so they can be cleared off it.
+ */
+export function seatingUnits(parties: readonly SeatingParty[]): SeatingUnit[] {
+  return parties.flatMap((party): SeatingUnit[] => {
+    if (!party.split) {
+      return [{
+        id: String(party.id),
+        partyId: party.id,
+        position: null,
+        name: party.name,
+        status: party.status,
+        guestCount: party.guestCount,
+        attendingCount: party.attendingCount,
+        attendees: party.attendees,
+        sortOrder: party.sortOrder,
+        tableId: party.tableId,
+        assignedAt: party.assignedAt,
+        party,
+      }];
+    }
+
+    const headcount = partySeats(party);
+    const positions = new Set(Array.from({ length: headcount }, (_, index) => index + 1));
+    for (const person of party.people) {
+      positions.add(person.position);
+    }
+
+    return [...positions].sort((a, b) => a - b).map((position) => {
+      const assignment = party.people.find((person) => person.position === position);
+      const status = position <= headcount ? party.status : "no";
+
+      return {
+        id: personKey(party.id, position),
+        partyId: party.id,
+        position,
+        name: splitPersonName(party, position),
+        status,
+        guestCount: 1,
+        attendingCount: status === "yes" ? 1 : null,
+        attendees: [party.attendees[position - 1] ?? { name: "", mealType: null, dietaryNotes: "" }],
+        sortOrder: party.sortOrder,
+        tableId: assignment?.tableId ?? null,
+        assignedAt: assignment?.assignedAt ?? null,
+        party,
+      };
+    });
+  });
+}
+
+/** The party positions a unit covers: everyone who might come, or the one split person. */
+export function unitPositions(unit: Pick<SeatingUnit, "position" | "status" | "guestCount" | "attendingCount">) {
+  if (unit.position !== null) {
+    return partySeats(unit) > 0 ? [unit.position] : [];
+  }
+
+  return Array.from({ length: partySeats(unit) }, (_, index) => index + 1);
+}
+
+/** Within a table: in the order they were seated, then guest-list order, then by person. */
+export function compareUnitsAtTable(a: SeatingUnit, b: SeatingUnit) {
+  return (
+    (a.assignedAt ?? 0) - (b.assignedAt ?? 0) ||
+    a.sortOrder - b.sortOrder ||
+    a.partyId - b.partyId ||
+    (a.position ?? 0) - (b.position ?? 0)
+  );
+}
+
+/**
+ * Seats that still apply: the person is still at that table (with their party
+ * or on their own), still part of the party's headcount, and the seat exists
+ * at the table.
  */
 export function currentSeats(
   seats: readonly SeatingSeat[],
@@ -296,7 +502,7 @@ export function currentSeats(
     return Boolean(
       party &&
         table &&
-        party.tableId === seat.tableId &&
+        personTableId(party, seat.position) === seat.tableId &&
         seat.position >= 1 &&
         seat.position <= partySeats(party) &&
         seat.seatNumber >= 1 &&
@@ -458,6 +664,11 @@ export function partyMatchesSearch(
   return tokens.every((token) => haystack.includes(token));
 }
 
+/** A whole party matches like partyMatchesSearch; a split person by their own name or their invitation's. */
+export function unitMatchesSearch(unit: SeatingUnit, tokens: readonly string[]) {
+  return partyMatchesSearch({ name: `${unit.party.name} ${unit.name}`, attendees: unit.attendees }, tokens);
+}
+
 function mealLabel(mealType: SeatingMealType | null) {
   if (mealType === "beef") {
     return "Beef";
@@ -484,7 +695,7 @@ function csvCell(value: number | string | null | undefined) {
 /**
  * One row per person who might come: every table in display order (people with
  * an exact seat first, by seat), then everyone not seated yet. Declined
- * invitations are left out.
+ * invitations are left out. Split parties list each person at their own table.
  */
 export function makeSeatingCsv(data: SeatingChartData) {
   const rows: Array<Array<number | string>> = [[
@@ -503,13 +714,16 @@ export function makeSeatingCsv(data: SeatingChartData) {
       seat.seatNumber,
     ]),
   );
-  const coming = data.parties.filter((party) => partySeats(party) > 0);
   const tableIds = new Set(data.tables.map((table) => table.id));
+  const units = seatingUnits(data.parties)
+    .filter((unit) => partySeats(unit) > 0)
+    .sort(compareUnitsAtTable);
 
-  function personRows(party: SeatingParty) {
-    return Array.from({ length: partySeats(party) }, (_, index) => {
-      const position = index + 1;
-      const attendee = party.attendees[index];
+  function personRows(unit: SeatingUnit) {
+    const { party } = unit;
+
+    return unitPositions(unit).map((position) => {
+      const attendee = party.attendees[position - 1];
 
       return {
         seat: seatsByPerson.get(personKey(party.id, position)) ?? null,
@@ -525,10 +739,7 @@ export function makeSeatingCsv(data: SeatingChartData) {
   }
 
   for (const table of [...data.tables].sort(compareSeatingTables)) {
-    const tableParties = coming
-      .filter((party) => party.tableId === table.id)
-      .sort((a, b) => (a.assignedAt ?? 0) - (b.assignedAt ?? 0) || a.sortOrder - b.sortOrder);
-    const people = tableParties.flatMap(personRows);
+    const people = units.filter((unit) => unit.tableId === table.id).flatMap(personRows);
     const seated = people.filter((person) => person.seat !== null).sort((a, b) => a.seat! - b.seat!);
     const unseated = people.filter((person) => person.seat === null);
 
@@ -538,13 +749,26 @@ export function makeSeatingCsv(data: SeatingChartData) {
     }
   }
 
-  for (const party of coming) {
-    if (party.tableId && tableIds.has(party.tableId)) {
-      continue;
-    }
+  // Not seated: loose people first, then each bucket in the order it was made.
+  const buckets = [...data.buckets].sort((a, b) => a.createdAt - b.createdAt || a.id.localeCompare(b.id));
+  const bucketRank = new Map(buckets.map((bucket, index) => [bucket.id, index + 1]));
+  const bucketOf = (unit: SeatingUnit) => (unit.tableId ? bucketRank.get(unit.tableId) ?? 0 : 0);
+  const unseatedUnits = units
+    .filter((unit) => !(unit.tableId && tableIds.has(unit.tableId)))
+    .sort(
+      (a, b) =>
+        bucketOf(a) - bucketOf(b) ||
+        a.sortOrder - b.sortOrder ||
+        a.partyId - b.partyId ||
+        (a.position ?? 0) - (b.position ?? 0),
+    );
 
-    for (const person of personRows(party)) {
-      rows.push(["", "Not seated", "", ...person.cells]);
+  for (const unit of unseatedUnits) {
+    const bucket = buckets[bucketOf(unit) - 1];
+    const label = bucket ? `Not seated: ${bucketTitle(bucket)}` : "Not seated";
+
+    for (const person of personRows(unit)) {
+      rows.push(["", label, "", ...person.cells]);
     }
   }
 

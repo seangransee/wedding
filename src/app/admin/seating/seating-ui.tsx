@@ -7,16 +7,17 @@ import {
   partySeats,
   partyStatusLabel,
   type FullnessStyle,
-  type SeatingParty,
+  type SeatingBucket,
   type SeatingPartyStatus,
   type SeatingTable,
+  type SeatingUnit,
 } from "@/lib/seating";
 
 /** A table plus its parties and headcount, derived from client state. */
 export type TableSummary = {
   table: SeatingTable;
-  /** Every party at the table (declined ones included), in the order they were seated. */
-  parties: SeatingParty[];
+  /** Every party (or split-off person) at the table, declined ones included, in the order they were seated. */
+  units: SeatingUnit[];
   /** People counted toward capacity: confirmed counts plus unconfirmed invitations. */
   count: number;
   /** People from maybe / no-reply invitations, included in count. */
@@ -24,9 +25,10 @@ export type TableSummary = {
   style: FullnessStyle;
 };
 
+/** Dragging a whole party or one person from a split party. */
 export type PartyDragData = {
   type: "party";
-  partyId: number;
+  unitId: string;
 };
 
 export type TableDragData = {
@@ -34,10 +36,24 @@ export type TableDragData = {
   tableId: string;
 };
 
-export type DragData = PartyDragData | TableDragData;
+export type BucketDragData = {
+  type: "bucket";
+  bucketId: string;
+};
+
+export type DragData = PartyDragData | TableDragData | BucketDragData;
+
+/** A bucket plus everyone in it (all still not seated). */
+export type BucketSummary = {
+  bucket: SeatingBucket;
+  units: SeatingUnit[];
+  /** People who might come. */
+  count: number;
+};
 
 export type DropData =
   | { type: "table"; tableId: string; area: "plan" | "list"; shape: "round" | "rect" }
+  | { type: "bucket"; bucketId: string; area: "plan" | "list" }
   | { type: "unseated"; area: "list" }
   | { type: "room"; area: "plan" };
 
@@ -77,8 +93,10 @@ export function PartyStatusIcon({
   return <Clock3 aria-label={label} className={clsx("shrink-0 text-[#64748b]", className)} size={size} />;
 }
 
+type SeatsLike = Pick<SeatingUnit, "status" | "guestCount" | "attendingCount">;
+
 /** "2" for a confirmed party, "4?" while the headcount is only the invitation's max. */
-export function partySeatsLabel(party: SeatingParty) {
+export function partySeatsLabel(party: SeatsLike) {
   if (party.status === "no") {
     return "0";
   }
@@ -87,7 +105,7 @@ export function partySeatsLabel(party: SeatingParty) {
   return party.status === "yes" ? String(seats) : `${seats}?`;
 }
 
-export function PartySeatsBadge({ className, party }: { className?: string; party: SeatingParty }) {
+export function PartySeatsBadge({ className, party }: { className?: string; party: SeatsLike }) {
   const confirmed = party.status === "yes";
 
   return (
@@ -106,11 +124,12 @@ export function PartySeatsBadge({ className, party }: { className?: string; part
   );
 }
 
-export function partyAriaLabel(party: SeatingParty) {
-  const seats = partySeats(party);
+export function partyAriaLabel(unit: SeatingUnit) {
+  const seats = partySeats(unit);
   const people = `${seats} ${seats === 1 ? "person" : "people"}`;
+  const name = unit.position === null ? unit.name : `${unit.name} from ${unit.party.name}`;
 
-  return `${party.name}, ${people}, ${partyStatusLabel(party.status).toLowerCase()}`;
+  return `${name}, ${people}, ${partyStatusLabel(unit.status).toLowerCase()}`;
 }
 
 /** Headcount pill colored by how full the table is, e.g. "10/12". */
