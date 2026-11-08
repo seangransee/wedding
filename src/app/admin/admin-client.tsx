@@ -205,7 +205,9 @@ function rsvpClassName(status: string | null) {
 
 function csvCell(value: boolean | number | string | null | undefined) {
   const text = value === null || value === undefined ? "" : String(value);
-  return `"${text.replace(/"/g, '""')}"`;
+  // A leading apostrophe keeps spreadsheets from running guest-typed text as a formula.
+  const safe = typeof value === "string" && /^[=+\-@\t\r]/.test(text) ? `'${text}` : text;
+  return `"${safe.replace(/"/g, '""')}"`;
 }
 
 function mealLabel(mealType: RsvpAttendeeDetails["mealType"]) {
