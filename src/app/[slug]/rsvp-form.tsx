@@ -804,8 +804,7 @@ export function RsvpForm({
         >
           <div className="grid gap-0.5">
             <p id="mailing-address-heading" className="text-lg font-semibold leading-snug sm:text-xl">
-              Mailing address{" "}
-              <span className="text-base font-normal text-[#ffd6e4]/75 sm:text-lg">(optional)</span>
+              Mailing address
             </p>
             <p className="text-base leading-snug text-[#ffd6e4]/85 sm:text-lg">
               Where can we send you mail?
