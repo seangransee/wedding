@@ -37,6 +37,11 @@ function ScheduleEventCard({ event }: { event: ScheduleEventWithCalendar }) {
     <li className="schedule-event">
       {event.time ? <p className="schedule-event-time">{event.time}</p> : null}
       <h4 className="schedule-event-title">{event.title}</h4>
+      {event.details.map((detail) => (
+        <p key={detail} className="schedule-event-detail">
+          <InlineMarkdown text={detail} />
+        </p>
+      ))}
       {venueName ? (
         <address className="schedule-event-venue">
           <span className="schedule-event-venue-name">

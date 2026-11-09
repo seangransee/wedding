@@ -12,6 +12,7 @@ import "./globals.css";
 const primarySerif = Cormorant_Garamond({
   variable: "--font-geist-sans",
   weight: ["400", "600"],
+  style: ["normal", "italic"],
   subsets: ["latin"],
 });
 

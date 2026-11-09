@@ -592,6 +592,8 @@ export function MarkdownCopy({ fileName }: { fileName: string }) {
 export type ScheduleEvent = {
   title: string;
   time: string;
+  /** Paragraphs between the time line and the venue list, shown as italic lines under the title. */
+  details: string[];
   venue: string[];
   notes: string[];
 };
@@ -605,8 +607,9 @@ export type ScheduleDay = {
 
 /**
  * Reads a schedule file (`##` day, `###` events; under each event the first
- * paragraph is the time, a `-` list is the venue block, and later paragraphs
- * are notes) into structured data for the Schedule section.
+ * paragraph is the time, any paragraphs before the `-` list are details, the
+ * list is the venue block, and later paragraphs are notes) into structured
+ * data for the Schedule section.
  */
 export function readScheduleDay(fileName: string): ScheduleDay {
   const day: ScheduleDay = { weekday: "", date: "", intro: [], events: [] };
@@ -619,7 +622,7 @@ export function readScheduleDay(fileName: string): ScheduleDay {
       day.weekday = rest.length ? weekday.trim() : "";
       day.date = rest.length ? rest.join(",").trim() : node.text.trim();
     } else if (node.type === "heading") {
-      event = { title: node.text, time: "", venue: [], notes: [] };
+      event = { title: node.text, time: "", details: [], venue: [], notes: [] };
       day.events.push(event);
     } else if (node.type === "list") {
       event?.venue.push(...node.items);
@@ -628,6 +631,8 @@ export function readScheduleDay(fileName: string): ScheduleDay {
         day.intro.push(node.text);
       } else if (!event.time && event.venue.length === 0 && event.notes.length === 0) {
         event.time = node.text;
+      } else if (event.venue.length === 0 && event.notes.length === 0) {
+        event.details.push(node.text);
       } else {
         event.notes.push(node.text);
       }

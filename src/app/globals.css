@@ -218,6 +218,37 @@ body {
   line-height: 1.15;
 }
 
+/* Detail line under an event title, e.g. "Heavy appetizers will be served",
+   framed by short fading rules. */
+.schedule-event-detail {
+  display: flex;
+  max-width: 100%;
+  align-items: center;
+  gap: 0.7rem;
+  margin-top: 0.45rem;
+  color: var(--blush-pink);
+  font-size: 1.3rem;
+  font-style: italic;
+  line-height: 1.35;
+}
+
+.schedule-event-detail::before,
+.schedule-event-detail::after {
+  content: "";
+  flex: none;
+  width: 1.5rem;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 214, 228, 0.7));
+}
+
+.schedule-event-detail::after {
+  background: linear-gradient(90deg, rgba(255, 214, 228, 0.7), transparent);
+}
+
+.schedule-event-detail + .schedule-event-venue {
+  margin-top: 0.85rem;
+}
+
 .schedule-event-venue {
   display: grid;
   margin-top: 0.7rem;
