@@ -24,6 +24,7 @@ export default async function Home() {
     <WeddingPageShell
       panelId="rsvp"
       panelNavLabel="RSVP"
+      scheduleFirst
       panel={
         <LockedNotice title="RSVP">
           Click the invitation link we sent you to RSVP.
