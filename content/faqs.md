@@ -18,7 +18,7 @@ Chicago in December is cold — temperatures typically range from 20–35°F (-7
 
 ### What time should I arrive?
 
-Timing details are coming soon — we will update this page as soon as things are confirmed! We recommend giving yourself extra time to park or get dropped off, especially on a December Saturday in downtown Chicago.
+Seating begins in the ballrooms at the Blackstone Hotel at 4:30pm on Saturday, December 12th. We recommend giving yourself extra time to park or get dropped off, especially on a December Saturday in downtown Chicago.
 
 ### Is the ceremony indoors or outdoors?
 
