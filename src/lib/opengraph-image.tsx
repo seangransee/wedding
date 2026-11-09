@@ -431,7 +431,7 @@ export async function generateInvitationOgImage(guestName: string) {
               display: "flex",
               fontFamily:
                 "'Great Vibes', 'Dancing Script', 'Cormorant Garamond', serif",
-              fontSize: "70px",
+              fontSize: "96px",
               fontWeight: 400,
               lineHeight: 1,
               color: "#ffd6e4",
