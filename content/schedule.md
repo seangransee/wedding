@@ -4,5 +4,7 @@
 
 Seating begins at 4:30 pm
 
+Black Tie Optional
+
 - [The Blackstone Hotel](https://maps.app.goo.gl/UKgUKENz1W4efCC7A)
 - 636 S. Michigan Ave
