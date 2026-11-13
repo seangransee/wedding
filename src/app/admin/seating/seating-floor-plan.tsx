@@ -32,6 +32,8 @@ import {
   planChipNames,
   resizeAreaRect,
   ROOM_MAX_SIZE,
+  TABLE_CAPACITY_MAX,
+  TABLE_CAPACITY_MIN,
   tableFullTitle,
   tableSize,
   type AreaResizeEdge,
@@ -110,6 +112,9 @@ type FloorPlanProps = {
   onOpenUnit: (unitId: string) => void;
   onOpenTable: (tableId: string) => void;
   onResizeRoom: (room: SeatingRoom) => void;
+  /** Seats per round table, shown and changed from the legend. */
+  tableCapacity: number;
+  onChangeTableCapacity: (capacity: number) => void;
 };
 
 type ViewportSize = { width: number; height: number };
@@ -166,11 +171,13 @@ export function FloorPlan({
   onOpenUnit,
   onOpenTable,
   onResizeRoom,
+  onChangeTableCapacity,
   previewCounts,
   ref,
   room,
   seatedNumbersByTable,
   summaries,
+  tableCapacity,
   zoomRef,
 }: FloorPlanProps) {
   const viewportRef = useRef<HTMLDivElement>(null);
@@ -697,7 +704,7 @@ export function FloorPlan({
                 style={{ fontSize: Math.max(18, 13 / zoom) }}
               >
                 <p className="max-w-[80%] text-center font-semibold leading-snug text-[#a04670]">
-                  No tables yet. Use <span className="whitespace-nowrap">“+ Table”</span> to add 12-person
+                  No tables yet. Use <span className="whitespace-nowrap">“+ Table”</span> to add {tableCapacity}-person
                   tables, then drag them where they go.
                 </p>
               </div>
@@ -827,7 +834,7 @@ export function FloorPlan({
         </div>
       </div>
 
-      <FullnessLegend />
+      <FullnessLegend capacity={tableCapacity} onChangeCapacity={onChangeTableCapacity} />
 
       <div className="pointer-events-none absolute bottom-3 right-3 flex items-end gap-2 pb-[env(safe-area-inset-bottom)]">
         <div className="pointer-events-auto flex items-center overflow-hidden rounded-full border border-[#df7fa3] bg-[#fff8fb]/95 text-[#7a1239] shadow-[0_10px_24px_-14px_rgba(74,16,39,0.7)] backdrop-blur">
@@ -870,22 +877,41 @@ export function FloorPlan({
   );
 }
 
-const LEGEND_STEPS = [
-  { count: 0, label: "0" },
-  { count: 6, label: "" },
-  { count: 9, label: "" },
-  { count: 10, label: "10" },
-  { count: 11, label: "11" },
-  { count: 12, label: "12" },
-  { count: 13, label: "13+" },
-];
+/** Legend swatches: empty, filling, the last three counts before full, full, and over. */
+function legendSteps(capacity: number) {
+  const steps: Array<{ count: number; label: string }> = [];
 
-function FullnessLegend() {
+  for (const count of [0, Math.round(capacity / 2), capacity - 3, capacity - 2, capacity - 1, capacity, capacity + 1]) {
+    if (count < 0 || steps.some((step) => step.count === count)) {
+      continue;
+    }
+
+    const label =
+      count === 0 ? "0" : count > capacity ? `${count}+` : count >= capacity - 2 ? String(count) : "";
+    steps.push({ count, label });
+  }
+
+  return steps;
+}
+
+function FullnessLegend({
+  capacity,
+  onChangeCapacity,
+}: {
+  capacity: number;
+  onChangeCapacity: (capacity: number) => void;
+}) {
+  const stepButtonClass =
+    "grid size-7 place-items-center rounded-full border border-[#df7fa3] bg-white text-[#7a1239] transition hover:bg-[#ffe0ec] disabled:cursor-not-allowed disabled:opacity-35 disabled:hover:bg-white";
+
   return (
     <div className="pointer-events-none absolute left-3 top-3 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border border-[#efb5c9] bg-[#fff8fb]/92 px-2.5 py-1.5 text-[0.7rem] font-semibold text-[#7a1239] shadow-[0_10px_24px_-18px_rgba(74,16,39,0.7)] backdrop-blur">
-      <span className="flex items-center gap-1" aria-label="Table color by people seated: empty, filling, 10, 11, full at 12, over capacity">
-        {LEGEND_STEPS.map((step) => {
-          const style = fullnessStyle(step.count, 12);
+      <span
+        className="flex items-center gap-1"
+        aria-label={`Table color by people seated: empty, filling, ${capacity - 2}, ${capacity - 1}, full at ${capacity}, over capacity`}
+      >
+        {legendSteps(capacity).map((step) => {
+          const style = fullnessStyle(step.count, capacity);
 
           return (
             <span key={step.count} className="flex flex-col items-center gap-0.5" aria-hidden="true">
@@ -907,6 +933,35 @@ function FullnessLegend() {
           4?
         </span>
         unconfirmed
+      </span>
+      <span
+        className="pointer-events-auto flex items-center gap-1"
+        role="group"
+        aria-label="Seats per table"
+        title="Seats at every round table. The sweetheart table always seats 2."
+      >
+        <span>Seats per table</span>
+        <button
+          type="button"
+          aria-label={`Seat ${capacity - 1} per table`}
+          className={stepButtonClass}
+          disabled={capacity <= TABLE_CAPACITY_MIN}
+          onClick={() => onChangeCapacity(capacity - 1)}
+        >
+          <Minus size={13} aria-hidden="true" />
+        </button>
+        <span className="min-w-5 text-center text-sm font-bold tabular-nums" aria-live="polite">
+          {capacity}
+        </span>
+        <button
+          type="button"
+          aria-label={`Seat ${capacity + 1} per table`}
+          className={stepButtonClass}
+          disabled={capacity >= TABLE_CAPACITY_MAX}
+          onClick={() => onChangeCapacity(capacity + 1)}
+        >
+          <Plus size={13} aria-hidden="true" />
+        </button>
       </span>
     </div>
   );

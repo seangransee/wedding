@@ -7,6 +7,7 @@ import {
   currentSeats,
   findOpenTableSpot,
   fullnessStyle,
+  isTableCapacity,
   makeSeatingCsv,
   minimumRoomSize,
   partyMatchesSearch,
@@ -72,6 +73,23 @@ test("colors tables as empty, filling, full, or over", () => {
 test("gives 10, 11, and 12 people visibly different colors", () => {
   const backgrounds = new Set([10, 11, 12].map((count) => fullnessStyle(count, 12).background));
   assert.equal(backgrounds.size, 3);
+});
+
+test("colors 11-seat tables like 12-seat ones near full", () => {
+  assert.equal(fullnessStyle(11, 11).tone, "full");
+  assert.equal(fullnessStyle(12, 11).label, "1 over");
+  assert.equal(fullnessStyle(10, 11).background, fullnessStyle(11, 12).background);
+  assert.equal(fullnessStyle(9, 11).background, fullnessStyle(10, 12).background);
+});
+
+test("accepts seats per table from 2 to 20", () => {
+  assert.equal(isTableCapacity(11), true);
+  assert.equal(isTableCapacity(2), true);
+  assert.equal(isTableCapacity(20), true);
+  assert.equal(isTableCapacity(1), false);
+  assert.equal(isTableCapacity(21), false);
+  assert.equal(isTableCapacity(11.5), false);
+  assert.equal(isTableCapacity("11"), false);
 });
 
 test("sorts the sweetheart table first, then table numbers naturally, then unnumbered tables", () => {

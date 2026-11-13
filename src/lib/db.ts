@@ -3,7 +3,7 @@ import { Pool, type QueryResultRow } from "pg";
 import type { MailingAddress } from "./mailing-address";
 import {
   DEFAULT_ROOM,
-  ROUND_TABLE_CAPACITY,
+  DEFAULT_TABLE_CAPACITY,
   type SeatingArea,
   type SeatingAttendee,
   type SeatingBucket,
@@ -1076,6 +1076,7 @@ export async function saveRsvp(input: {
 type SeatingLayoutRow = {
   room_width: number;
   room_height: number;
+  table_capacity: number;
 };
 
 type SeatingTableRow = {
@@ -1213,7 +1214,7 @@ function SEAT_PERSON_AT_TABLE_SQL(guestId: string, position: string, tableId: st
 export async function getSeatingChart(): Promise<SeatingChartData> {
   const [layoutRows, tableRows, partyRows, seatRows, areaRows] = await Promise.all([
     sql().query<SeatingLayoutRow>(
-      `SELECT room_width, room_height
+      `SELECT room_width, room_height, table_capacity
        FROM wedding_seating_layout
        WHERE id = 1`,
     ),
@@ -1293,6 +1294,7 @@ export async function getSeatingChart(): Promise<SeatingChartData> {
     room: layout
       ? { width: layout.room_width, height: layout.room_height }
       : { ...DEFAULT_ROOM },
+    tableCapacity: layout?.table_capacity ?? DEFAULT_TABLE_CAPACITY,
     tables: tableRows
       .filter((row): row is SeatingTableRow & { kind: SeatingTableKind } => row.kind !== "bucket")
       .map(toSeatingTable),
@@ -1485,9 +1487,17 @@ export async function createSeatingTable(input: {
 }) {
   await sql().query(
     `INSERT INTO wedding_seating_tables (id, kind, number, name, capacity, x, y)
-     VALUES ($1::uuid, 'round', $2, $3, $4, $5, $6)
+     VALUES (
+       $1::uuid,
+       'round',
+       $2,
+       $3,
+       COALESCE((SELECT table_capacity FROM wedding_seating_layout WHERE id = 1), $4),
+       $5,
+       $6
+     )
      ON CONFLICT (id) DO NOTHING`,
-    [input.id, input.number, input.name, ROUND_TABLE_CAPACITY, input.x, input.y],
+    [input.id, input.number, input.name, DEFAULT_TABLE_CAPACITY, input.x, input.y],
   );
 }
 
@@ -1643,6 +1653,30 @@ export async function updateSeatingRoomSize(width: number, height: number) {
        room_height = EXCLUDED.room_height,
        updated_at = now()`,
     [width, height],
+  );
+}
+
+/**
+ * Sets the seats per round table and applies it to every round table. Exact
+ * seats past the new capacity are kept but ignored (reads filter them), so
+ * raising the number again brings them back.
+ */
+export async function updateSeatingTableCapacity(capacity: number) {
+  await sql().query(
+    `WITH layout AS (
+       INSERT INTO wedding_seating_layout (id, table_capacity)
+       VALUES (1, $1)
+       ON CONFLICT (id) DO UPDATE SET
+         table_capacity = EXCLUDED.table_capacity,
+         updated_at = now()
+       RETURNING id
+     )
+     UPDATE wedding_seating_tables
+     SET capacity = $1,
+         updated_at = now()
+     WHERE kind = 'round'
+       AND capacity <> $1`,
+    [capacity],
   );
 }
 

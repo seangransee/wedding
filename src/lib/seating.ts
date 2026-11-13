@@ -4,7 +4,11 @@
 // Positions and sizes are "room units": 1 unit is 1 CSS pixel at 100% zoom.
 // Table x/y are centers.
 
-export const ROUND_TABLE_CAPACITY = 12;
+/** Seats at each round table until the couple picks another number in the floor plan. */
+export const DEFAULT_TABLE_CAPACITY = 12;
+/** The range the floor plan's "Seats per table" setting allows. */
+export const TABLE_CAPACITY_MIN = 2;
+export const TABLE_CAPACITY_MAX = 20;
 export const SWEETHEART_TABLE_CAPACITY = 2;
 
 export const ROUND_TABLE_DIAMETER = 220;
@@ -169,6 +173,8 @@ export type SeatingSeat = {
 
 export type SeatingChartData = {
   room: SeatingRoom;
+  /** Seats at every round table (new ones too); the sweetheart table always seats 2. */
+  tableCapacity: number;
   tables: SeatingTable[];
   buckets: SeatingBucket[];
   areas: SeatingArea[];
@@ -220,8 +226,8 @@ export function tableSize(kind: SeatingTableKind) {
     : { width: ROUND_TABLE_DIAMETER, height: ROUND_TABLE_DIAMETER };
 }
 
-export function tableCapacity(kind: SeatingTableKind) {
-  return kind === "sweetheart" ? SWEETHEART_TABLE_CAPACITY : ROUND_TABLE_CAPACITY;
+export function isTableCapacity(value: unknown): value is number {
+  return Number.isInteger(value) && (value as number) >= TABLE_CAPACITY_MIN && (value as number) <= TABLE_CAPACITY_MAX;
 }
 
 /** Keeps a table center inside the room so the whole table stays visible. */
@@ -744,9 +750,10 @@ export type FullnessStyle = {
 };
 
 // Fill colors for a partly filled table, indexed by how full it is on a
-// 12-seat scale (1..11). Pale cream when nearly empty, warming through yellow
+// 12-seat scale (1..11), whatever the table's real capacity. Pale cream when nearly empty, warming through yellow
 // and lime, with deliberately bigger jumps for 9, 10, and 11 so a table that is
 // one or two short is easy to tell apart from a full one.
+const FILLING_SCALE = 12;
 const FILLING_STEPS: ReadonlyArray<readonly [number, number, number]> = [
   [0.978, 0.02, 95],
   [0.972, 0.03, 96],
@@ -797,7 +804,7 @@ export function fullnessStyle(count: number, capacity: number): FullnessStyle {
     };
   }
 
-  const stepIndex = clamp(Math.round((count / capacity) * ROUND_TABLE_CAPACITY), 1, FILLING_STEPS.length) - 1;
+  const stepIndex = clamp(Math.round((count / capacity) * FILLING_SCALE), 1, FILLING_STEPS.length) - 1;
   const [lightness, chroma, hue] = FILLING_STEPS[stepIndex];
 
   return {
@@ -860,7 +867,7 @@ function csvCell(value: number | string | null | undefined) {
  * an exact seat first, by seat), then everyone not seated yet. Declined
  * invitations are left out. Split parties list each person at their own table.
  */
-export function makeSeatingCsv(data: Omit<SeatingChartData, "areas">) {
+export function makeSeatingCsv(data: Omit<SeatingChartData, "areas" | "tableCapacity">) {
   const rows: Array<Array<number | string>> = [[
     "Table number",
     "Table name",

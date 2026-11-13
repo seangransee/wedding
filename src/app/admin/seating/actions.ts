@@ -17,6 +17,7 @@ import {
   updateSeatingAreaName,
   updateSeatingAreaRect,
   updateSeatingRoomSize,
+  updateSeatingTableCapacity,
   updateSeatingTableLabel,
   updateSeatingTablePosition,
 } from "@/lib/db";
@@ -24,6 +25,7 @@ import {
   AREA_MIN_SIZE,
   BUCKET_COORD_MAX,
   BUCKET_COORD_MIN,
+  isTableCapacity,
   isUuid,
   normalizeAreaName,
   normalizeTableName,
@@ -303,6 +305,17 @@ export async function resizeSeatingRoom(width: number, height: number): Promise<
 
   await updateSeatingRoomSize(width, height);
   return ok("Room resized.");
+}
+
+export async function setSeatingTableCapacity(capacity: number): Promise<SeatingActionResult> {
+  await requireAdmin();
+
+  if (!isTableCapacity(capacity)) {
+    return fail("That number of seats per table was invalid.");
+  }
+
+  await updateSeatingTableCapacity(capacity);
+  return ok("Seats per table updated.");
 }
 
 function isAreaRect(value: unknown): value is { x: number; y: number; width: number; height: number } {

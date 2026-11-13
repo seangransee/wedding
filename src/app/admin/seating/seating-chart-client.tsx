@@ -52,7 +52,6 @@ import {
   minimumRoomSize,
   partySeats,
   personKey,
-  ROUND_TABLE_CAPACITY,
   searchTokens,
   seatingUnits,
   areaTitle,
@@ -79,6 +78,7 @@ import {
   moveSeatingTable,
   renameSeatingArea,
   resizeSeatingRoom,
+  setSeatingTableCapacity,
   saveTableSeats,
   seatParty,
   seatPerson,
@@ -202,13 +202,14 @@ export function SeatingChartClient({
   loadedAt: number;
 }) {
   const [room, setRoom] = useState(initialData.room);
+  const [tableCapacity, setTableCapacity] = useState(initialData.tableCapacity);
   const [tables, setTables] = useState(initialData.tables);
   const [parties, setParties] = useState(initialData.parties);
   const [seats, setSeats] = useState(initialData.seats);
   const [buckets, setBuckets] = useState(initialData.buckets);
   const [areas, setAreas] = useState(initialData.areas);
-  const stateRef = useRef({ room, tables, parties, seats, buckets, areas });
-  stateRef.current = { room, tables, parties, seats, buckets, areas };
+  const stateRef = useRef({ room, tableCapacity, tables, parties, seats, buckets, areas });
+  stateRef.current = { room, tableCapacity, tables, parties, seats, buckets, areas };
 
   const [saveState, setSaveState] = useState<SaveState>({ status: "saved", message: "All changes saved" });
   const queueRef = useRef<SaveOperation[]>([]);
@@ -321,6 +322,7 @@ export function SeatingChartClient({
       }
 
       setRoom(data.room);
+      setTableCapacity(data.tableCapacity);
       setTables(data.tables);
       setParties(data.parties);
       setSeats(data.seats);
@@ -484,7 +486,7 @@ export function SeatingChartClient({
       .filter((table) => table.kind === "sweetheart")
       .reduce((total, table) => total + table.capacity, 0);
     const seatsAvailable = tables.reduce((total, table) => total + table.capacity, 0);
-    const tablesNeeded = Math.max(0, Math.ceil((potential - sweetheartSeats) / ROUND_TABLE_CAPACITY));
+    const tablesNeeded = Math.max(0, Math.ceil((potential - sweetheartSeats) / tableCapacity));
 
     return {
       potential,
@@ -495,7 +497,7 @@ export function SeatingChartClient({
       seatsAvailable,
       tablesNeeded,
     };
-  }, [units, tableIds, tables]);
+  }, [units, tableIds, tables, tableCapacity]);
 
   const searchTokenList = useMemo(() => searchTokens(query), [query]);
   const matchingUnitIds = useMemo(
@@ -675,15 +677,29 @@ export function SeatingChartClient({
     [enqueueSave],
   );
 
+  const changeTableCapacity = useCallback(
+    (capacity: number) => {
+      setTableCapacity(capacity);
+      setTables((current) => current.map((table) => (table.kind === "round" ? { ...table, capacity } : table)));
+      enqueueSave({ key: "table-capacity", run: () => setSeatingTableCapacity(capacity) });
+    },
+    [enqueueSave],
+  );
+
   const addTable = useCallback(() => {
-    const { room: currentRoom, tables: currentTables, areas: currentAreas } = stateRef.current;
+    const {
+      room: currentRoom,
+      tableCapacity: currentCapacity,
+      tables: currentTables,
+      areas: currentAreas,
+    } = stateRef.current;
     const spot = findOpenTableSpot(effectiveRoomSize(currentRoom, currentTables, currentAreas), currentTables);
     const table: SeatingTable = {
       id: createSeatingId(),
       kind: "round",
       number: "",
       name: "",
-      capacity: ROUND_TABLE_CAPACITY,
+      capacity: currentCapacity,
       x: spot.x,
       y: spot.y,
       createdAt: Date.now(),
@@ -1210,8 +1226,8 @@ export function SeatingChartClient({
                 type="button"
                 className="inline-flex h-10 items-center gap-1 rounded-full border border-[#7a1239] bg-[#9f1d52] px-3.5 text-xs font-bold uppercase tracking-[0.1em] text-white shadow-[0_8px_18px_-12px_rgba(74,16,39,0.9)] transition hover:bg-[#bd2867]"
                 onClick={addTable}
-                aria-label="Add a 12-person table"
-                title="Add a 12-person table"
+                aria-label={`Add a ${tableCapacity}-person table`}
+                title={`Add a ${tableCapacity}-person table`}
               >
                 <Plus size={16} aria-hidden="true" />
                 Table
@@ -1311,11 +1327,13 @@ export function SeatingChartClient({
               onOpenBucket={openBucket}
               onOpenUnit={openUnit}
               onOpenTable={openTable}
+              onChangeTableCapacity={changeTableCapacity}
               onResizeRoom={resizeRoom}
               previewCounts={previewCounts}
               room={room}
               seatedNumbersByTable={seatedNumbersByTable}
               summaries={summaries}
+              tableCapacity={tableCapacity}
               zoomRef={zoomRef}
             />
           </section>
