@@ -4,6 +4,8 @@
 
 5:30 – 8:00 pm
 
+Open house style
+
 Heavy appetizers will be served
 
 - [Exchequer Restaurant & Pub](https://maps.app.goo.gl/6FBojqMLP8oPzAmX8)
