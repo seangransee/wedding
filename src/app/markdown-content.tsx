@@ -1,6 +1,8 @@
 import { Fragment, type ReactNode } from "react";
 import { readFileSync } from "fs";
 import path from "path";
+import { slugify } from "@/lib/slug";
+import { FaqAnchorOpener } from "./faq-anchor-opener";
 import { LockedNotice } from "./locked-notice";
 
 type MarkdownNode =
@@ -553,7 +555,8 @@ function renderCollapsibleQuestionNodes(
       renderedNodes.push(
         <details
           key={`question-${index}`}
-          className="group rounded-md border border-[#ffd6e4]/45 bg-[#fff6fa]/8 shadow-[inset_0_1px_0_rgba(255,246,250,0.1)]"
+          id={faqQuestionId(node.text)}
+          className="group scroll-mt-40 rounded-md sm:scroll-mt-28 border border-[#ffd6e4]/45 bg-[#fff6fa]/8 shadow-[inset_0_1px_0_rgba(255,246,250,0.1)]"
         >
           <summary className="grid min-h-16 cursor-pointer list-none grid-cols-[1fr_auto] items-center gap-4 px-4 py-3 text-left text-[1.45rem] font-semibold leading-tight text-[#ffd6e4] transition hover:bg-[#fff6fa]/8 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#ffd6e4] [&::-webkit-details-marker]:hidden sm:px-5 sm:py-4 sm:text-2xl">
             <span>{renderInlineMarkdown(node.text)}</span>
@@ -642,6 +645,11 @@ export function readScheduleDay(fileName: string): ScheduleDay {
   return day;
 }
 
+/** Anchor id for a collapsible FAQ question, e.g. `faq-what-is-the-dress-code`. */
+function faqQuestionId(text: string) {
+  return `faq-${slugify(text.replace(/\[([^\]]+)\]\([^)]*\)/g, "$1"))}`;
+}
+
 export function InlineMarkdown({ text }: { text: string }) {
   return <>{renderInlineMarkdown(text)}</>;
 }
@@ -690,6 +698,7 @@ export function MarkdownContent({
               )
             : null}
         </header>
+        {collapsibleQuestions ? <FaqAnchorOpener /> : null}
         <div className="grid gap-6">
           {renderNodes(
             bodyNodes,
