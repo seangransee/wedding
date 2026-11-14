@@ -10,6 +10,8 @@ import {
   isTableCapacity,
   makeSeatingCsv,
   minimumRoomSize,
+  rectSeatSpots,
+  tableSize,
   partyMatchesSearch,
   partySeats,
   resizeAreaRect,
@@ -32,6 +34,8 @@ function table(overrides: Partial<SeatingTable> & Pick<SeatingTable, "id">): Sea
     capacity: 12,
     x: 146,
     y: 146,
+    width: 220,
+    height: 220,
     createdAt: 0,
     ...overrides,
   };
@@ -423,4 +427,39 @@ test("labels floor-plan chips with full place-card names once a party fills them
     }),
   ]);
   assert.deepEqual(split.map(planChipName), ["Jordan Holloway", "Holloway 2"]);
+});
+
+test("rectangular tables keep their own size and seat count", () => {
+  const rect = table({ id: "r", kind: "rect", capacity: 10, width: 400, height: 120, x: 500, y: 300 });
+
+  assert.deepEqual(tableSize(rect), { width: 400, height: 120 });
+  assert.deepEqual(tableSize({ kind: "rect" }), { width: 320, height: 110 });
+  assert.deepEqual(tableSize({ kind: "round", width: 999, height: 999 }), { width: 220, height: 220 });
+  assert.deepEqual(minimumRoomSize([{ ...rect, x: 1300 }]), { width: 1524, height: 384 });
+  assert.deepEqual(resizeAreaRect({ x: 300, y: 240, width: 400, height: 120 }, "n", 0, 500, { width: 1400, height: 1000 }, 60), {
+    x: 300,
+    y: 300,
+    width: 400,
+    height: 60,
+  });
+
+  const spot = findOpenTableSpot({ width: 1400, height: 1000 }, [], "rect");
+  assert.deepEqual(spot, { x: 196, y: 91, room: { width: 1400, height: 1000 } });
+});
+
+test("seats long tables along their long sides and square tables on all four", () => {
+  const banquet = rectSeatSpots(8, 320, 110);
+  assert.deepEqual(banquet.map((spot) => spot.side), ["top", "top", "top", "top", "bottom", "bottom", "bottom", "bottom"]);
+  assert.deepEqual(banquet.slice(0, 4).map((spot) => spot.along), [0.125, 0.375, 0.625, 0.875]);
+  // Clockwise: the bottom side runs right to left.
+  assert.deepEqual(banquet.slice(4).map((spot) => spot.along), [0.875, 0.625, 0.375, 0.125]);
+
+  const odd = rectSeatSpots(7, 110, 320);
+  assert.deepEqual(odd.map((spot) => spot.side), ["right", "right", "right", "right", "left", "left", "left"]);
+
+  const square = rectSeatSpots(10, 200, 200);
+  assert.equal(square.length, 10);
+  for (const side of ["top", "right", "bottom", "left"] as const) {
+    assert.ok(square.filter((spot) => spot.side === side).length >= 2, `${side} gets seats`);
+  }
 });

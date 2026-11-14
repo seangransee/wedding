@@ -6,14 +6,23 @@
 
 /** Seats at each round table until the couple picks another number in the floor plan. */
 export const DEFAULT_TABLE_CAPACITY = 12;
-/** The range the floor plan's "Seats per table" setting allows. */
+/** The range the floor plan's "Seats per table" setting (round tables only) allows. */
 export const TABLE_CAPACITY_MIN = 2;
 export const TABLE_CAPACITY_MAX = 20;
 export const SWEETHEART_TABLE_CAPACITY = 2;
 
+/** Rectangular tables each keep their own seat count, set in the table's dialog. */
+export const RECT_TABLE_DEFAULT_CAPACITY = 8;
+export const RECT_TABLE_CAPACITY_MIN = 1;
+export const RECT_TABLE_CAPACITY_MAX = 30;
+
 export const ROUND_TABLE_DIAMETER = 220;
 export const SWEETHEART_TABLE_WIDTH = 220;
 export const SWEETHEART_TABLE_HEIGHT = 96;
+/** A new rectangular table's size, and the smallest either side can be dragged to. */
+export const RECT_TABLE_DEFAULT_WIDTH = 320;
+export const RECT_TABLE_DEFAULT_HEIGHT = 110;
+export const RECT_TABLE_MIN_SIZE = 60;
 
 export const ROOM_MIN_WIDTH = 480;
 export const ROOM_MIN_HEIGHT = 360;
@@ -38,7 +47,11 @@ export const AREA_NAME_MAX_LENGTH = 40;
 export const TABLE_NUMBER_MAX_LENGTH = 12;
 export const TABLE_NAME_MAX_LENGTH = 40;
 
-export type SeatingTableKind = "round" | "sweetheart";
+/**
+ * "round" tables all seat the floor plan's "Seats per table"; "rect" tables are
+ * resizable rectangles with their own seat count; "sweetheart" seats the couple.
+ */
+export type SeatingTableKind = "round" | "sweetheart" | "rect";
 /** RSVP state for seating: "none" means the guest has not responded yet. */
 export type SeatingPartyStatus = "yes" | "deciding" | "none" | "no";
 
@@ -57,6 +70,9 @@ export type SeatingTable = {
   capacity: number;
   x: number;
   y: number;
+  /** Size in room units: stored for rectangular tables, fixed by kind for the others. */
+  width: number;
+  height: number;
   /** Epoch milliseconds; tables list in creation order after the sweetheart table. */
   createdAt: number;
 };
@@ -220,24 +236,49 @@ export function partyStatusLabel(status: SeatingPartyStatus) {
   return "No reply";
 }
 
-export function tableSize(kind: SeatingTableKind) {
-  return kind === "sweetheart"
-    ? { width: SWEETHEART_TABLE_WIDTH, height: SWEETHEART_TABLE_HEIGHT }
-    : { width: ROUND_TABLE_DIAMETER, height: ROUND_TABLE_DIAMETER };
+/** The fixed size of a round or sweetheart table (rectangular tables start at this size). */
+export function defaultTableSize(kind: SeatingTableKind) {
+  if (kind === "sweetheart") {
+    return { width: SWEETHEART_TABLE_WIDTH, height: SWEETHEART_TABLE_HEIGHT };
+  }
+  if (kind === "rect") {
+    return { width: RECT_TABLE_DEFAULT_WIDTH, height: RECT_TABLE_DEFAULT_HEIGHT };
+  }
+  return { width: ROUND_TABLE_DIAMETER, height: ROUND_TABLE_DIAMETER };
+}
+
+/** Anything with a table kind, plus its own size when it's a rectangular table. */
+export type TableShape = Pick<SeatingTable, "kind"> & Partial<Pick<SeatingTable, "width" | "height">>;
+
+export function tableSize(table: TableShape) {
+  if (table.kind === "rect" && table.width && table.height) {
+    return { width: table.width, height: table.height };
+  }
+  return defaultTableSize(table.kind);
 }
 
 export function isTableCapacity(value: unknown): value is number {
   return Number.isInteger(value) && (value as number) >= TABLE_CAPACITY_MIN && (value as number) <= TABLE_CAPACITY_MAX;
 }
 
+export function isRectTableCapacity(value: unknown): value is number {
+  return (
+    Number.isInteger(value) && (value as number) >= RECT_TABLE_CAPACITY_MIN && (value as number) <= RECT_TABLE_CAPACITY_MAX
+  );
+}
+
+export function isRectTableSide(value: unknown): value is number {
+  return Number.isInteger(value) && (value as number) >= RECT_TABLE_MIN_SIZE && (value as number) <= ROOM_MAX_SIZE;
+}
+
 /** Keeps a table center inside the room so the whole table stays visible. */
 export function clampTableCenter(
-  kind: SeatingTableKind,
+  table: TableShape,
   x: number,
   y: number,
   room: SeatingRoom,
 ) {
-  const { width, height } = tableSize(kind);
+  const { width, height } = tableSize(table);
 
   return {
     x: Math.round(clamp(x, width / 2, Math.max(width / 2, room.width - width / 2))),
@@ -247,14 +288,14 @@ export function clampTableCenter(
 
 /** Smallest room that still contains every table and area, so resizing never hides one. */
 export function minimumRoomSize(
-  tables: readonly Pick<SeatingTable, "kind" | "x" | "y">[],
+  tables: readonly (TableShape & Pick<SeatingTable, "x" | "y">)[],
   areas: readonly Pick<SeatingArea, "x" | "y" | "width" | "height">[] = [],
 ) {
   let width = ROOM_MIN_WIDTH;
   let height = ROOM_MIN_HEIGHT;
 
   for (const table of tables) {
-    const size = tableSize(table.kind);
+    const size = tableSize(table);
     width = Math.max(width, Math.ceil(table.x + size.width / 2 + ROOM_WALL_MARGIN));
     height = Math.max(height, Math.ceil(table.y + size.height / 2 + ROOM_WALL_MARGIN));
   }
@@ -330,26 +371,33 @@ export type AreaResizeEdge = "n" | "s" | "e" | "w" | "ne" | "nw" | "se" | "sw";
 
 /**
  * Resizes an area by dragging one edge or corner by (dx, dy) room units. The
- * opposite edges stay put, and the area never shrinks below AREA_MIN_SIZE or
- * leaves the room.
+ * opposite edges stay put, and the area never shrinks below `minSize`
+ * (AREA_MIN_SIZE by default) or leaves the room.
  */
-export function resizeAreaRect(start: AreaRect, edge: AreaResizeEdge, dx: number, dy: number, room: SeatingRoom): AreaRect {
+export function resizeAreaRect(
+  start: AreaRect,
+  edge: AreaResizeEdge,
+  dx: number,
+  dy: number,
+  room: SeatingRoom,
+  minSize = AREA_MIN_SIZE,
+): AreaRect {
   let left = start.x;
   let top = start.y;
   let right = start.x + start.width;
   let bottom = start.y + start.height;
 
   if (edge.includes("w")) {
-    left = clamp(left + dx, 0, right - AREA_MIN_SIZE);
+    left = clamp(left + dx, 0, right - minSize);
   }
   if (edge.includes("e")) {
-    right = clamp(right + dx, left + AREA_MIN_SIZE, Math.max(left + AREA_MIN_SIZE, room.width));
+    right = clamp(right + dx, left + minSize, Math.max(left + minSize, room.width));
   }
   if (edge.includes("n")) {
-    top = clamp(top + dy, 0, bottom - AREA_MIN_SIZE);
+    top = clamp(top + dy, 0, bottom - minSize);
   }
   if (edge.includes("s")) {
-    bottom = clamp(bottom + dy, top + AREA_MIN_SIZE, Math.max(top + AREA_MIN_SIZE, room.height));
+    bottom = clamp(bottom + dy, top + minSize, Math.max(top + minSize, room.height));
   }
 
   const x = Math.round(left);
@@ -365,7 +413,7 @@ export function resizeAreaRect(start: AreaRect, edge: AreaResizeEdge, dx: number
 export function findOpenAreaSpot(
   room: SeatingRoom,
   areas: readonly AreaRect[],
-  tables: readonly Pick<SeatingTable, "kind" | "x" | "y">[] = [],
+  tables: readonly (TableShape & Pick<SeatingTable, "x" | "y">)[] = [],
 ) {
   const width = Math.min(AREA_DEFAULT_WIDTH, room.width);
   const height = Math.min(AREA_DEFAULT_HEIGHT, room.height);
@@ -450,7 +498,7 @@ export function tableFullTitle(table: Pick<SeatingTable, "kind" | "number" | "na
  * "10"), then unnumbered tables in the order they were added.
  */
 export function compareSeatingTables(a: SeatingTable, b: SeatingTable) {
-  if (a.kind !== b.kind) {
+  if ((a.kind === "sweetheart") !== (b.kind === "sweetheart")) {
     return a.kind === "sweetheart" ? -1 : 1;
   }
 
@@ -682,8 +730,8 @@ export function currentSeats(
 
 type Rect = { left: number; top: number; right: number; bottom: number };
 
-function tableRect(table: Pick<SeatingTable, "kind" | "x" | "y">): Rect {
-  const { width, height } = tableSize(table.kind);
+function tableRect(table: TableShape & Pick<SeatingTable, "x" | "y">): Rect {
+  const { width, height } = tableSize(table);
 
   return {
     left: table.x - width / 2,
@@ -706,24 +754,27 @@ const NEW_TABLE_MARGIN = 36;
 const NEW_TABLE_GAP = 48;
 
 /**
- * Where a new round table should go: the first grid slot (left to right, top to
- * bottom) that doesn't overlap an existing table. When the room is full the
- * table goes in a new row below everything and the room grows to fit it.
+ * Where a new table should go (round unless `kind` says otherwise): the first
+ * grid slot (left to right, top to bottom) that doesn't overlap an existing
+ * table. When the room is full the table goes in a new row below everything
+ * and the room grows to fit it.
  */
 export function findOpenTableSpot(
   room: SeatingRoom,
-  tables: readonly Pick<SeatingTable, "kind" | "x" | "y">[],
+  tables: readonly (TableShape & Pick<SeatingTable, "x" | "y">)[],
+  kind: SeatingTableKind = "round",
 ) {
-  const radius = ROUND_TABLE_DIAMETER / 2;
-  const step = ROUND_TABLE_DIAMETER + NEW_TABLE_GAP;
+  const size = defaultTableSize(kind);
+  const halfWidth = size.width / 2;
+  const halfHeight = size.height / 2;
   const occupied = tables.map(tableRect);
   const fits = (x: number, y: number) => {
-    const candidate = tableRect({ kind: "round", x, y });
+    const candidate = tableRect({ kind, x, y });
     return !occupied.some((rect) => rectsOverlap(candidate, rect, NEW_TABLE_GAP / 2));
   };
 
-  for (let y = NEW_TABLE_MARGIN + radius; y + radius + ROOM_WALL_MARGIN <= room.height; y += step) {
-    for (let x = NEW_TABLE_MARGIN + radius; x + radius + ROOM_WALL_MARGIN <= room.width; x += step) {
+  for (let y = NEW_TABLE_MARGIN + halfHeight; y + halfHeight + ROOM_WALL_MARGIN <= room.height; y += size.height + NEW_TABLE_GAP) {
+    for (let x = NEW_TABLE_MARGIN + halfWidth; x + halfWidth + ROOM_WALL_MARGIN <= room.width; x += size.width + NEW_TABLE_GAP) {
       if (fits(x, y)) {
         return { x, y, room };
       }
@@ -731,11 +782,52 @@ export function findOpenTableSpot(
   }
 
   const contentBottom = occupied.reduce((bottom, rect) => Math.max(bottom, rect.bottom), 0);
-  const x = NEW_TABLE_MARGIN + radius;
-  const y = Math.round(contentBottom + NEW_TABLE_GAP + radius);
-  const height = clamp(Math.max(room.height, y + radius + NEW_TABLE_MARGIN), ROOM_MIN_HEIGHT, ROOM_MAX_SIZE);
+  const x = NEW_TABLE_MARGIN + halfWidth;
+  const y = Math.round(contentBottom + NEW_TABLE_GAP + halfHeight);
+  const height = clamp(Math.max(room.height, y + halfHeight + NEW_TABLE_MARGIN), ROOM_MIN_HEIGHT, ROOM_MAX_SIZE);
 
-  return { x, y: Math.min(y, height - radius - ROOM_WALL_MARGIN), room: { width: room.width, height } };
+  return { x, y: Math.min(y, height - halfHeight - ROOM_WALL_MARGIN), room: { width: room.width, height } };
+}
+
+/** One seat around a rectangular table: its side, and how far along it (0..1, left to right or top to bottom). */
+export type RectSeatSpot = { side: "top" | "right" | "bottom" | "left"; along: number };
+
+/**
+ * Where each seat (in seat-number order, clockwise from the top-left) goes
+ * around a rectangular table. Long, narrow tables seat people along their two
+ * long sides only, like banquet tables; squarer tables seat all four sides in
+ * proportion to each side's length.
+ */
+export function rectSeatSpots(capacity: number, width: number, height: number): RectSeatSpot[] {
+  const sides = ["top", "right", "bottom", "left"] as const;
+  const lengths = [width, height, width, height];
+  const long = Math.max(width, height);
+  const short = Math.min(width, height);
+  let counts: number[];
+
+  if (long >= short * 1.5 || capacity <= 2) {
+    const first = Math.ceil(capacity / 2);
+    const second = capacity - first;
+    counts = width >= height ? [first, 0, second, 0] : [0, first, 0, second];
+  } else {
+    const perimeter = 2 * (width + height);
+    const shares = lengths.map((length) => (capacity * length) / perimeter);
+    counts = shares.map(Math.floor);
+    const order = shares
+      .map((share, index) => ({ index, remainder: share - Math.floor(share) }))
+      .sort((a, b) => b.remainder - a.remainder || a.index - b.index);
+    for (let left = capacity - counts.reduce((sum, count) => sum + count, 0), i = 0; left > 0; left -= 1, i += 1) {
+      counts[order[i % order.length].index] += 1;
+    }
+  }
+
+  return sides.flatMap((side, sideIndex) =>
+    Array.from({ length: counts[sideIndex] }, (_, index) => {
+      const along = (index + 0.5) / counts[sideIndex];
+      // Clockwise: the bottom runs right to left and the left side bottom to top.
+      return { side, along: side === "bottom" || side === "left" ? 1 - along : along };
+    }),
+  );
 }
 
 export type FullnessTone = "empty" | "filling" | "full" | "over";

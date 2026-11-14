@@ -16,6 +16,8 @@ import {
   splitSeatingParty,
   updateSeatingAreaName,
   updateSeatingAreaRect,
+  updateSeatingRectTable,
+  updateSeatingRectTableCapacity,
   updateSeatingRoomSize,
   updateSeatingTableCapacity,
   updateSeatingTableLabel,
@@ -25,6 +27,8 @@ import {
   AREA_MIN_SIZE,
   BUCKET_COORD_MAX,
   BUCKET_COORD_MIN,
+  isRectTableCapacity,
+  isRectTableSide,
   isTableCapacity,
   isUuid,
   normalizeAreaName,
@@ -138,19 +142,33 @@ function labelText(value: unknown) {
   return typeof value === "string" ? value : null;
 }
 
+/** Adds a round table, or with `rect`, a rectangular table with its own seats and size. */
 export async function addSeatingTable(input: {
   id: string;
   number: string;
   name: string;
   x: number;
   y: number;
+  rect?: { capacity: number; width: number; height: number };
 }): Promise<SeatingActionResult> {
   await requireAdmin();
 
   const number = labelText(input?.number);
   const name = labelText(input?.name);
+  const rect = input?.rect;
 
   if (!isUuid(input?.id) || number === null || name === null || !isCoordinate(input.x) || !isCoordinate(input.y)) {
+    return fail("That new table was invalid.");
+  }
+
+  if (
+    rect !== undefined &&
+    (typeof rect !== "object" ||
+      rect === null ||
+      !isRectTableCapacity(rect.capacity) ||
+      !isRectTableSide(rect.width) ||
+      !isRectTableSide(rect.height))
+  ) {
     return fail("That new table was invalid.");
   }
 
@@ -160,8 +178,46 @@ export async function addSeatingTable(input: {
     name: normalizeTableName(name),
     x: input.x,
     y: input.y,
+    rect: rect ? { capacity: rect.capacity, width: rect.width, height: rect.height } : undefined,
   });
   return ok("Table added.");
+}
+
+/** Moves and/or resizes a rectangular table (x/y is its center). */
+export async function updateSeatingRectTableShape(
+  tableId: string,
+  rect: { x: number; y: number; width: number; height: number },
+): Promise<SeatingActionResult> {
+  await requireAdmin();
+
+  if (
+    !isUuid(tableId) ||
+    typeof rect !== "object" ||
+    rect === null ||
+    !isCoordinate(rect.x) ||
+    !isCoordinate(rect.y) ||
+    !isRectTableSide(rect.width) ||
+    !isRectTableSide(rect.height)
+  ) {
+    return fail("That table size was invalid.");
+  }
+
+  const saved = await updateSeatingRectTable(tableId, rect.x, rect.y, rect.width, rect.height);
+
+  return saved ? ok("Table resized.") : fail(`That table no longer exists. ${RELOAD_HINT}`);
+}
+
+/** Sets how many people one rectangular table seats. */
+export async function setSeatingRectTableCapacity(tableId: string, capacity: number): Promise<SeatingActionResult> {
+  await requireAdmin();
+
+  if (!isUuid(tableId) || !isRectTableCapacity(capacity)) {
+    return fail("That number of seats was invalid.");
+  }
+
+  const saved = await updateSeatingRectTableCapacity(tableId, capacity);
+
+  return saved ? ok("Seats saved.") : fail(`That table no longer exists. ${RELOAD_HINT}`);
 }
 
 /** Adds a named bucket, or (bubble: true) a little unnamed bubble dropped on the floor. */
@@ -311,11 +367,11 @@ export async function setSeatingTableCapacity(capacity: number): Promise<Seating
   await requireAdmin();
 
   if (!isTableCapacity(capacity)) {
-    return fail("That number of seats per table was invalid.");
+    return fail("That number of seats per round table was invalid.");
   }
 
   await updateSeatingTableCapacity(capacity);
-  return ok("Seats per table updated.");
+  return ok("Seats per round table updated.");
 }
 
 function isAreaRect(value: unknown): value is { x: number; y: number; width: number; height: number } {

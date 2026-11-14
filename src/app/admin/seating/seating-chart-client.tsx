@@ -31,6 +31,7 @@ import {
   RotateCcw,
   Square,
   TriangleAlert,
+  RectangleHorizontal,
 } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -45,7 +46,9 @@ import {
   estimatedBucketHeight,
   findOpenAreaSpot,
   findOpenBucketSpot,
+  defaultTableSize,
   findOpenTableSpot,
+  RECT_TABLE_DEFAULT_CAPACITY,
   fullnessStyle,
   isPartyUnconfirmed,
   makeSeatingCsv,
@@ -78,6 +81,8 @@ import {
   moveSeatingTable,
   renameSeatingArea,
   resizeSeatingRoom,
+  updateSeatingRectTableShape,
+  setSeatingRectTableCapacity,
   setSeatingTableCapacity,
   saveTableSeats,
   seatParty,
@@ -481,21 +486,24 @@ export function SeatingChartClient({
       }
     }
 
+    // Rectangular and sweetheart tables keep their own seat counts, so the
+    // estimate only adds round tables (at the current seats per table) for the rest.
     const roundTables = tables.filter((table) => table.kind === "round");
-    const sweetheartSeats = tables
-      .filter((table) => table.kind === "sweetheart")
+    const rectTables = tables.filter((table) => table.kind === "rect");
+    const fixedSeats = tables
+      .filter((table) => table.kind !== "round")
       .reduce((total, table) => total + table.capacity, 0);
     const seatsAvailable = tables.reduce((total, table) => total + table.capacity, 0);
-    const tablesNeeded = Math.max(0, Math.ceil((potential - sweetheartSeats) / tableCapacity));
+    const roundTablesNeeded = Math.max(0, Math.ceil((potential - fixedSeats) / tableCapacity));
 
     return {
       potential,
       unconfirmed,
       seated,
       notSeated: potential - seated,
-      roundTableCount: roundTables.length,
+      tableCount: roundTables.length + rectTables.length,
       seatsAvailable,
-      tablesNeeded,
+      tablesNeeded: rectTables.length + roundTablesNeeded,
     };
   }, [units, tableIds, tables, tableCapacity]);
 
@@ -686,22 +694,26 @@ export function SeatingChartClient({
     [enqueueSave],
   );
 
-  const addTable = useCallback(() => {
+  /** Adds a round table (seating the current seats per table) or a resizable rectangular one. */
+  const addTable = useCallback((kind: "round" | "rect" = "round") => {
     const {
       room: currentRoom,
       tableCapacity: currentCapacity,
       tables: currentTables,
       areas: currentAreas,
     } = stateRef.current;
-    const spot = findOpenTableSpot(effectiveRoomSize(currentRoom, currentTables, currentAreas), currentTables);
+    const spot = findOpenTableSpot(effectiveRoomSize(currentRoom, currentTables, currentAreas), currentTables, kind);
+    const size = defaultTableSize(kind);
     const table: SeatingTable = {
       id: createSeatingId(),
-      kind: "round",
+      kind,
       number: "",
       name: "",
-      capacity: currentCapacity,
+      capacity: kind === "rect" ? RECT_TABLE_DEFAULT_CAPACITY : currentCapacity,
       x: spot.x,
       y: spot.y,
+      width: size.width,
+      height: size.height,
       createdAt: Date.now(),
     };
 
@@ -712,12 +724,37 @@ export function SeatingChartClient({
     setTables((current) => [...current, table]);
     enqueueSave({
       key: `add:${table.id}`,
-      run: () => addSeatingTable({ id: table.id, number: "", name: "", x: table.x, y: table.y }),
+      run: () =>
+        addSeatingTable({
+          id: table.id,
+          number: "",
+          name: "",
+          x: table.x,
+          y: table.y,
+          rect: kind === "rect" ? { capacity: table.capacity, width: table.width, height: table.height } : undefined,
+        }),
     });
     setDialog({ type: "table", tableId: table.id, focusLabel: true });
     flashTable(table.id);
     window.requestAnimationFrame(() => planRef.current?.revealTable(table.id));
   }, [enqueueSave, flashTable, resizeRoom]);
+
+  /** Moves and/or resizes a rectangular table (x/y is its center). */
+  const updateRectTable = useCallback(
+    (tableId: string, rect: Pick<SeatingTable, "x" | "y" | "width" | "height">) => {
+      setTables((current) => current.map((table) => (table.id === tableId ? { ...table, ...rect } : table)));
+      enqueueSave({ key: `move:${tableId}`, run: () => updateSeatingRectTableShape(tableId, rect) });
+    },
+    [enqueueSave],
+  );
+
+  const changeRectTableCapacity = useCallback(
+    (tableId: string, capacity: number) => {
+      setTables((current) => current.map((table) => (table.id === tableId ? { ...table, capacity } : table)));
+      enqueueSave({ key: `capacity:${tableId}`, run: () => setSeatingRectTableCapacity(tableId, capacity) });
+    },
+    [enqueueSave],
+  );
 
   const labelTable = useCallback(
     (tableId: string, number: string, name: string) => {
@@ -1065,14 +1102,20 @@ export function SeatingChartClient({
       if (table && (event.delta.x !== 0 || event.delta.y !== 0)) {
         const zoom = zoomRef.current || 1;
         const next = clampTableCenter(
-          table.kind,
+          table,
           table.x + event.delta.x / zoom,
           table.y + event.delta.y / zoom,
           effectiveRoomSize(stateRef.current.room, stateRef.current.tables, stateRef.current.areas),
         );
 
         if (next.x !== table.x || next.y !== table.y) {
-          moveTable(table.id, next.x, next.y);
+          // A rectangular table's save carries its size too, so a move that
+          // coalesces with a pending resize (same queue key) keeps both.
+          if (table.kind === "rect") {
+            updateRectTable(table.id, { x: next.x, y: next.y, width: table.width, height: table.height });
+          } else {
+            moveTable(table.id, next.x, next.y);
+          }
         }
       }
     }
@@ -1181,7 +1224,7 @@ export function SeatingChartClient({
 
             <SeatingStats className="mx-2 hidden lg:flex" totals={totals} />
 
-            <div className="ml-auto flex shrink-0 items-center gap-1.5">
+            <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-1.5">
               <SaveIndicator onRetry={() => void pumpQueue()} state={saveState} />
               <button
                 type="button"
@@ -1224,10 +1267,20 @@ export function SeatingChartClient({
               </button>
               <button
                 type="button"
-                className="inline-flex h-10 items-center gap-1 rounded-full border border-[#7a1239] bg-[#9f1d52] px-3.5 text-xs font-bold uppercase tracking-[0.1em] text-white shadow-[0_8px_18px_-12px_rgba(74,16,39,0.9)] transition hover:bg-[#bd2867]"
-                onClick={addTable}
-                aria-label={`Add a ${tableCapacity}-person table`}
-                title={`Add a ${tableCapacity}-person table`}
+                className="inline-flex h-10 items-center gap-1 rounded-full border border-[#7a1239] bg-[#fff8fb] px-3 text-xs font-bold uppercase tracking-[0.1em] text-[#7a1239] transition hover:bg-[#ffe0ec]"
+                onClick={() => addTable("rect")}
+                aria-label="Add a rectangular table"
+                title="Add a rectangular table: drag its edges to resize it, and set its seats in its dialog"
+              >
+                <RectangleHorizontal size={15} aria-hidden="true" />
+                <span className="hidden sm:inline">Rect</span>
+              </button>
+              <button
+                type="button"
+                className="inline-flex h-10 items-center gap-1 rounded-full border border-[#7a1239] bg-[#9f1d52] px-3 sm:px-3.5 text-xs font-bold uppercase tracking-[0.1em] text-white shadow-[0_8px_18px_-12px_rgba(74,16,39,0.9)] transition hover:bg-[#bd2867]"
+                onClick={() => addTable("round")}
+                aria-label={`Add a ${tableCapacity}-person round table`}
+                title={`Add a ${tableCapacity}-person round table`}
               >
                 <Plus size={16} aria-hidden="true" />
                 Table
@@ -1316,6 +1369,7 @@ export function SeatingChartClient({
               draggingAreaId={activeDrag?.type === "area" ? activeDrag.areaId : null}
               onOpenArea={openArea}
               onUpdateArea={updateArea}
+              onUpdateRectTable={updateRectTable}
               bucketSummaries={planBucketSummaries}
               draggingBucketId={activeDrag?.type === "bucket" ? activeDrag.bucketId : null}
               draggingUnitId={draggingUnit?.id ?? null}
@@ -1408,6 +1462,7 @@ export function SeatingChartClient({
             )
           }
           onAssignUnit={assignUnit}
+          onChangeCapacity={(capacity) => changeRectTableCapacity(dialogTable.table.id, capacity)}
           onClose={() => setDialog(null)}
           onDelete={() => deleteTable(dialogTable.table.id)}
           onLabel={(number, name) => labelTable(dialogTable.table.id, number, name)}
@@ -1434,12 +1489,12 @@ function SeatingStats({
     unconfirmed: number;
     seated: number;
     notSeated: number;
-    roundTableCount: number;
+    tableCount: number;
     seatsAvailable: number;
     tablesNeeded: number;
   };
 }) {
-  const shortOnTables = totals.roundTableCount < totals.tablesNeeded;
+  const shortOnTables = totals.tableCount < totals.tablesNeeded;
 
   return (
     <div
@@ -1464,7 +1519,7 @@ function SeatingStats({
         </span>
       ) : null}
       <span className={clsx("whitespace-nowrap", shortOnTables && "font-semibold text-[#b45309]")}>
-        <strong className="tabular-nums">{totals.roundTableCount}</strong> tables
+        <strong className="tabular-nums">{totals.tableCount}</strong> tables
         {shortOnTables ? ` (need ~${totals.tablesNeeded})` : compact ? "" : ` · ${totals.seatsAvailable} seats`}
       </span>
     </div>

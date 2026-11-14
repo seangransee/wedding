@@ -4,6 +4,7 @@ import type { MailingAddress } from "./mailing-address";
 import {
   DEFAULT_ROOM,
   DEFAULT_TABLE_CAPACITY,
+  defaultTableSize,
   type SeatingArea,
   type SeatingAttendee,
   type SeatingBucket,
@@ -1087,6 +1088,8 @@ type SeatingTableRow = {
   capacity: number;
   x: number;
   y: number;
+  width: number | null;
+  height: number | null;
   bubble: boolean;
   created_at_ms: number;
 };
@@ -1134,6 +1137,8 @@ function toSeatingBucket(row: SeatingTableRow): SeatingBucket {
 }
 
 function toSeatingTable(row: SeatingTableRow & { kind: SeatingTableKind }): SeatingTable {
+  const size = defaultTableSize(row.kind);
+
   return {
     id: row.id,
     kind: row.kind,
@@ -1142,6 +1147,8 @@ function toSeatingTable(row: SeatingTableRow & { kind: SeatingTableKind }): Seat
     capacity: row.capacity,
     x: row.x,
     y: row.y,
+    width: row.kind === "rect" && row.width ? row.width : size.width,
+    height: row.kind === "rect" && row.height ? row.height : size.height,
     createdAt: Number(row.created_at_ms),
   };
 }
@@ -1227,6 +1234,8 @@ export async function getSeatingChart(): Promise<SeatingChartData> {
          capacity,
          x,
          y,
+         width,
+         height,
          bubble,
          (extract(epoch FROM created_at) * 1000)::float8 AS created_at_ms
        FROM wedding_seating_tables
@@ -1477,14 +1486,29 @@ export async function setSeatingPersonAssignment(guestId: number, position: numb
   return rows.length > 0;
 }
 
-/** Idempotent: retrying with the same client-generated id is a no-op. */
+/**
+ * Idempotent: retrying with the same client-generated id is a no-op. Round
+ * tables take the layout's seats per table; rectangular tables (`rect`) take
+ * their own capacity and size.
+ */
 export async function createSeatingTable(input: {
   id: string;
   number: string;
   name: string;
   x: number;
   y: number;
+  rect?: { capacity: number; width: number; height: number };
 }) {
+  if (input.rect) {
+    await sql().query(
+      `INSERT INTO wedding_seating_tables (id, kind, number, name, capacity, x, y, width, height)
+       VALUES ($1::uuid, 'rect', $2, $3, $4, $5, $6, $7, $8)
+       ON CONFLICT (id) DO NOTHING`,
+      [input.id, input.number, input.name, input.rect.capacity, input.x, input.y, input.rect.width, input.rect.height],
+    );
+    return;
+  }
+
   await sql().query(
     `INSERT INTO wedding_seating_tables (id, kind, number, name, capacity, x, y)
      VALUES (
@@ -1537,6 +1561,42 @@ export async function updateSeatingTablePosition(id: string, x: number, y: numbe
      WHERE id = $1::uuid
      RETURNING id`,
     [id, x, y],
+  );
+
+  return rows.length > 0;
+}
+
+/** Moves and resizes a rectangular table (x/y is its center). */
+export async function updateSeatingRectTable(id: string, x: number, y: number, width: number, height: number) {
+  const rows = await sql().query<{ id: string }>(
+    `UPDATE wedding_seating_tables
+     SET x = $2,
+         y = $3,
+         width = $4,
+         height = $5,
+         updated_at = now()
+     WHERE id = $1::uuid
+       AND kind = 'rect'
+     RETURNING id`,
+    [id, x, y, width, height],
+  );
+
+  return rows.length > 0;
+}
+
+/**
+ * Sets one rectangular table's seats. Exact seats past a lowered capacity are
+ * kept but ignored, like round tables.
+ */
+export async function updateSeatingRectTableCapacity(id: string, capacity: number) {
+  const rows = await sql().query<{ id: string }>(
+    `UPDATE wedding_seating_tables
+     SET capacity = $2,
+         updated_at = now()
+     WHERE id = $1::uuid
+       AND kind = 'rect'
+     RETURNING id`,
+    [id, capacity],
   );
 
   return rows.length > 0;
@@ -1615,7 +1675,7 @@ export async function replaceSeatingTableSeats(
   };
 }
 
-/** Deletes a round table or bucket (its people become unseated); the sweetheart table stays. */
+/** Deletes a round or rectangular table or a bucket (its people become unseated); the sweetheart table stays. */
 export async function deleteSeatingTableById(id: string) {
   const rows = await sql().query<{ kind: SeatingTableKind | null; deleted: boolean }>(
     `WITH target AS (
@@ -1626,7 +1686,7 @@ export async function deleteSeatingTableById(id: string) {
      deleted AS (
        DELETE FROM wedding_seating_tables
        WHERE id = $1::uuid
-         AND kind IN ('round', 'bucket')
+         AND kind IN ('round', 'rect', 'bucket')
        RETURNING id
      )
      SELECT

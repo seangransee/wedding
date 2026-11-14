@@ -2,7 +2,22 @@
 
 import * as Dialog from "@radix-ui/react-dialog";
 import clsx from "clsx";
-import { ArrowRight, Check, Heart, Inbox, Merge, Plus, Search, Split, Square, Trash2, UserMinus, Wand2, X } from "lucide-react";
+import {
+  ArrowRight,
+  Check,
+  Heart,
+  Inbox,
+  Merge,
+  Minus,
+  Plus,
+  Search,
+  Split,
+  Square,
+  Trash2,
+  UserMinus,
+  Wand2,
+  X,
+} from "lucide-react";
 import { useRef, useState, type ReactNode } from "react";
 import {
   AREA_NAME_MAX_LENGTH,
@@ -15,6 +30,9 @@ import {
   partyStatusLabel,
   personKey,
   personLabel,
+  RECT_TABLE_CAPACITY_MAX,
+  RECT_TABLE_CAPACITY_MIN,
+  rectSeatSpots,
   searchTokens,
   shortPersonLabel,
   TABLE_NAME_MAX_LENGTH as BUCKET_NAME_MAX_LENGTH,
@@ -27,6 +45,7 @@ import {
   type SeatingArea,
   type SeatingMealType,
   type SeatingSeat,
+  type SeatingTable,
   type SeatingUnit,
 } from "@/lib/seating";
 import {
@@ -472,6 +491,7 @@ export function TableDialog({
   autoFocusLabel,
   duplicateNumber,
   onAssignUnit,
+  onChangeCapacity,
   onClose,
   onDelete,
   onLabel,
@@ -484,6 +504,8 @@ export function TableDialog({
   autoFocusLabel: boolean;
   duplicateNumber: (number: string) => boolean;
   onAssignUnit: (unitId: string, tableId: string | null) => void;
+  /** Rectangular tables only: how many people this table seats. */
+  onChangeCapacity: (capacity: number) => void;
   onClose: () => void;
   onDelete: () => void;
   onLabel: (number: string, name: string) => void;
@@ -589,6 +611,39 @@ export function TableDialog({
         {isDuplicate ? (
           <p className="col-span-2 -mt-1 text-sm font-semibold text-[#b45309]">Another table is also number {number.trim()}.</p>
         ) : null}
+        {table.kind === "rect" ? (
+          <div className="col-span-2 flex flex-wrap items-center gap-x-3 gap-y-1">
+            <span
+              className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.12em] text-[#8f5070]"
+              role="group"
+              aria-label="Seats at this table"
+            >
+              Seats
+              <button
+                type="button"
+                aria-label={`Seat ${table.capacity - 1} at this table`}
+                className="grid size-10 place-items-center rounded-full border border-[#df7fa3] bg-white text-[#7a1239] transition hover:bg-[#ffe0ec] disabled:cursor-not-allowed disabled:opacity-35 disabled:hover:bg-white"
+                disabled={table.capacity <= RECT_TABLE_CAPACITY_MIN}
+                onClick={() => onChangeCapacity(table.capacity - 1)}
+              >
+                <Minus size={16} aria-hidden="true" />
+              </button>
+              <span className="min-w-7 text-center text-xl font-bold normal-case tracking-normal tabular-nums text-[#4a1027]" aria-live="polite">
+                {table.capacity}
+              </span>
+              <button
+                type="button"
+                aria-label={`Seat ${table.capacity + 1} at this table`}
+                className="grid size-10 place-items-center rounded-full border border-[#df7fa3] bg-white text-[#7a1239] transition hover:bg-[#ffe0ec] disabled:cursor-not-allowed disabled:opacity-35 disabled:hover:bg-white"
+                disabled={table.capacity >= RECT_TABLE_CAPACITY_MAX}
+                onClick={() => onChangeCapacity(table.capacity + 1)}
+              >
+                <Plus size={16} aria-hidden="true" />
+              </button>
+            </span>
+            <span className="text-xs text-[#8f5070]">Drag the table&apos;s edges or corners on the floor plan to resize it.</span>
+          </div>
+        ) : null}
         <button type="submit" className="sr-only">
           Save and close
         </button>
@@ -693,12 +748,10 @@ export function TableDialog({
 
       {people.length > 0 ? (
         <SeatPicker
-          capacity={table.capacity}
-          kind={table.kind}
           onSetSeats={onSetSeats}
+          table={table}
           people={people}
           seats={seats}
-          tableId={table.id}
         />
       ) : null}
 
@@ -748,32 +801,63 @@ export function TableDialog({
   );
 }
 
-function seatPosition(seatNumber: number, capacity: number, kind: "round" | "sweetheart") {
-  if (kind === "sweetheart") {
+type PickerTable = Pick<SeatingTable, "id" | "kind" | "capacity" | "width" | "height">;
+
+/** A rectangular table's body in the seat picker, as percentages of the picker box. */
+const RECT_PICKER_BODY = { left: 17, right: 83, top: 24, bottom: 76 };
+
+/** Each seat button's center and width, as percentages of the seat picker box. */
+function seatLayout(table: PickerTable) {
+  if (table.kind === "sweetheart") {
     // Side by side behind the table, facing the room.
-    return { left: seatNumber === 1 ? 32 : 68, top: 24 };
+    return Array.from({ length: table.capacity }, (_, index) => ({ left: index === 0 ? 32 : 68, top: 24, width: 30 }));
   }
 
-  const angle = ((seatNumber - 1) / capacity) * Math.PI * 2 - Math.PI / 2;
-  return { left: 50 + Math.cos(angle) * 41, top: 50 + Math.sin(angle) * 41 };
+  if (table.kind === "rect") {
+    const spots = rectSeatSpots(table.capacity, table.width, table.height);
+    const perSide = new Map<string, number>();
+    for (const spot of spots) {
+      perSide.set(spot.side, (perSide.get(spot.side) ?? 0) + 1);
+    }
+    const body = RECT_PICKER_BODY;
+
+    return spots.map((spot) => {
+      if (spot.side === "top" || spot.side === "bottom") {
+        const span = body.right - body.left;
+        return {
+          left: body.left + spot.along * span,
+          top: spot.side === "top" ? body.top / 2 : (100 + body.bottom) / 2,
+          width: Math.min(19, (span + 8) / (perSide.get(spot.side) ?? 1) - 1.5),
+        };
+      }
+      return {
+        left: spot.side === "left" ? body.left / 2 : (100 + body.right) / 2,
+        top: body.top + spot.along * (body.bottom - body.top),
+        width: Math.min(16, body.left - 1),
+      };
+    });
+  }
+
+  return Array.from({ length: table.capacity }, (_, index) => {
+    const angle = (index / table.capacity) * Math.PI * 2 - Math.PI / 2;
+    return { left: 50 + Math.cos(angle) * 41, top: 50 + Math.sin(angle) * 41, width: 19 };
+  });
 }
 
 /** Optional exact seats: tap a person then a seat (or a seat then a person). */
 function SeatPicker({
-  capacity,
-  kind,
   onSetSeats,
   people,
   seats,
-  tableId,
+  table,
 }: {
-  capacity: number;
-  kind: "round" | "sweetheart";
   onSetSeats: (seats: SeatingSeat[]) => void;
   people: SeatPerson[];
   seats: SeatingSeat[];
-  tableId: string;
+  table: PickerTable;
 }) {
+  const { capacity, kind, id: tableId } = table;
+  const layout = seatLayout(table);
   const [selection, setSelection] = useState<SeatSelection>(null);
   const peopleByKey = new Map(people.map((person) => [person.key, person]));
   const occupantBySeat = new Map<number, SeatPerson>();
@@ -930,8 +1014,16 @@ function SeatPicker({
       <div
         className={clsx(
           "relative mx-auto w-full max-w-[22rem]",
-          kind === "sweetheart" ? "aspect-[2/1]" : "aspect-square",
+          kind === "sweetheart" ? "aspect-[2/1]" : kind === "round" && "aspect-square",
         )}
+        style={
+          kind === "rect"
+            ? {
+                // Roughly the table's own shape, kept tall enough for a row of seats on each side.
+                aspectRatio: String(Math.min(2.2, Math.max(0.8, (table.width / table.height) * 0.7 + 0.3))),
+              }
+            : undefined
+        }
       >
         <div
           aria-hidden="true"
@@ -939,12 +1031,24 @@ function SeatPicker({
             "absolute border-2 border-[#efb5c9] bg-[#fff1f7]",
             kind === "sweetheart"
               ? "left-[18%] right-[18%] top-[52%] h-[30%] rounded-2xl"
-              : "left-[28%] top-[28%] size-[44%] rounded-full",
+              : kind === "rect"
+                ? "rounded-lg"
+                : "left-[28%] top-[28%] size-[44%] rounded-full",
           )}
+          style={
+            kind === "rect"
+              ? {
+                  left: `${RECT_PICKER_BODY.left}%`,
+                  right: `${100 - RECT_PICKER_BODY.right}%`,
+                  top: `${RECT_PICKER_BODY.top}%`,
+                  bottom: `${100 - RECT_PICKER_BODY.bottom}%`,
+                }
+              : undefined
+          }
         />
         {seatNumbers.map((seatNumber) => {
           const occupant = occupantBySeat.get(seatNumber);
-          const position = seatPosition(seatNumber, capacity, kind);
+          const position = layout[seatNumber - 1];
           const selected =
             (selection?.kind === "seat" && selection.seatNumber === seatNumber) ||
             (selection?.kind === "person" && occupant?.key === selection.key);
@@ -956,7 +1060,7 @@ function SeatPicker({
               aria-label={`Seat ${seatNumber}${occupant ? `: ${occupant.label}` : ", empty"}`}
               className={clsx(
                 "absolute flex -translate-x-1/2 -translate-y-1/2 flex-col items-center justify-center rounded-xl border-[1.5px] px-1 py-0.5 text-center leading-tight transition",
-                kind === "sweetheart" ? "min-h-14 w-[30%]" : "min-h-11 w-[19%]",
+                kind === "sweetheart" ? "min-h-14" : "min-h-11",
                 occupant
                   ? occupant.unconfirmed
                     ? "border-dashed border-[#d97706] bg-[#fffbeb] text-[#8a3b06]"
@@ -966,7 +1070,7 @@ function SeatPicker({
                 selection && !selected && "hover:border-[#be185d] hover:bg-[#ffeaf2]",
               )}
               onClick={() => handleSeatClick(seatNumber)}
-              style={{ left: `${position.left}%`, top: `${position.top}%` }}
+              style={{ left: `${position.left}%`, top: `${position.top}%`, width: `${position.width}%` }}
             >
               <span className="text-[0.62rem] font-bold uppercase tracking-[0.08em] opacity-70">{seatNumber}</span>
               <span

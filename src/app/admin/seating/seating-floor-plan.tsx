@@ -17,6 +17,7 @@ import {
   type RefObject,
 } from "react";
 import {
+  AREA_MIN_SIZE,
   areaTitle,
   BUCKET_WIDTH,
   bucketTitle,
@@ -30,6 +31,8 @@ import {
   minimumRoomSize,
   planChipName,
   planChipNames,
+  RECT_TABLE_MIN_SIZE,
+  rectSeatSpots,
   resizeAreaRect,
   ROOM_MAX_SIZE,
   TABLE_CAPACITY_MAX,
@@ -112,6 +115,8 @@ type FloorPlanProps = {
   onOpenUnit: (unitId: string) => void;
   onOpenTable: (tableId: string) => void;
   onResizeRoom: (room: SeatingRoom) => void;
+  /** Moves and/or resizes a rectangular table (x/y is its center). */
+  onUpdateRectTable: (tableId: string, rect: { x: number; y: number; width: number; height: number }) => void;
   /** Seats per round table, shown and changed from the legend. */
   tableCapacity: number;
   onChangeTableCapacity: (capacity: number) => void;
@@ -171,6 +176,7 @@ export function FloorPlan({
   onOpenUnit,
   onOpenTable,
   onResizeRoom,
+  onUpdateRectTable,
   onChangeTableCapacity,
   previewCounts,
   ref,
@@ -428,7 +434,7 @@ export function FloorPlan({
         const bucket = bucketSummaries.find((summary) => summary.bucket.id === tableId)?.bucket;
         const area = areas.find((candidate) => candidate.id === tableId);
         const place = table
-          ? { x: table.x, y: table.y, radius: tableSize(table.kind).width / 2 }
+          ? { x: table.x, y: table.y, radius: Math.max(table.width, table.height) / 2 }
           : area
             ? { x: area.x + area.width / 2, y: area.y + area.height / 2, radius: Math.max(area.width, area.height) / 2 }
           : bucket
@@ -662,7 +668,7 @@ export function FloorPlan({
   }
 
   const detail = zoom >= DETAIL_ZOOM;
-  const hasRoundTables = summaries.some((summary) => summary.table.kind === "round");
+  const hasTables = summaries.some((summary) => summary.table.kind !== "sweetheart");
   const isResizing = liveRoom !== null;
   const handleThickness = 18;
 
@@ -698,14 +704,15 @@ export function FloorPlan({
               transform: `translate(${origin.left}px, ${origin.top}px) scale(${zoom})`,
             }}
           >
-            {!hasRoundTables ? (
+            {!hasTables ? (
               <div
                 className="pointer-events-none absolute inset-x-0 bottom-[12%] flex justify-center"
                 style={{ fontSize: Math.max(18, 13 / zoom) }}
               >
                 <p className="max-w-[80%] text-center font-semibold leading-snug text-[#a04670]">
                   No tables yet. Use <span className="whitespace-nowrap">“+ Table”</span> to add {tableCapacity}-person
-                  tables, then drag them where they go.
+                  round tables or <span className="whitespace-nowrap">“Rect”</span> for rectangular ones, then drag them
+                  where they go.
                 </p>
               </div>
             ) : null}
@@ -733,6 +740,7 @@ export function FloorPlan({
                 matchingUnitIds={matchingUnitIds}
                 onOpenUnit={onOpenUnit}
                 onOpenTable={onOpenTable}
+                onUpdateRectTable={onUpdateRectTable}
                 previewCount={previewCounts.get(summary.table.id)}
                 roomHeight={effectiveRoom.height}
                 roomWidth={effectiveRoom.width}
@@ -937,13 +945,13 @@ function FullnessLegend({
       <span
         className="pointer-events-auto flex items-center gap-1"
         role="group"
-        aria-label="Seats per table"
-        title="Seats at every round table. The sweetheart table always seats 2."
+        aria-label="Seats per round table"
+        title="Seats at every round table. Rectangular tables keep their own seats (set in each table's dialog), and the sweetheart table always seats 2."
       >
-        <span>Seats per table</span>
+        <span>Seats per round table</span>
         <button
           type="button"
-          aria-label={`Seat ${capacity - 1} per table`}
+          aria-label={`Seat ${capacity - 1} per round table`}
           className={stepButtonClass}
           disabled={capacity <= TABLE_CAPACITY_MIN}
           onClick={() => onChangeCapacity(capacity - 1)}
@@ -955,7 +963,7 @@ function FullnessLegend({
         </span>
         <button
           type="button"
-          aria-label={`Seat ${capacity + 1} per table`}
+          aria-label={`Seat ${capacity + 1} per round table`}
           className={stepButtonClass}
           disabled={capacity >= TABLE_CAPACITY_MAX}
           onClick={() => onChangeCapacity(capacity + 1)}
@@ -976,6 +984,7 @@ type PlanTableProps = {
   matchingUnitIds: ReadonlySet<string> | null;
   onOpenUnit: (unitId: string) => void;
   onOpenTable: (tableId: string) => void;
+  onUpdateRectTable: (tableId: string, rect: { x: number; y: number; width: number; height: number }) => void;
   previewCount: number | undefined;
   roomHeight: number;
   roomWidth: number;
@@ -1015,6 +1024,7 @@ const PlanTable = memo(function PlanTable({
   matchingUnitIds,
   onOpenUnit,
   onOpenTable,
+  onUpdateRectTable,
   previewCount,
   roomHeight,
   roomWidth,
@@ -1024,7 +1034,25 @@ const PlanTable = memo(function PlanTable({
 }: PlanTableProps) {
   const { table, units: parties } = summary;
   const round = table.kind === "round";
-  const size = tableSize(table.kind);
+  const sweetheart = table.kind === "sweetheart";
+  const resizable = table.kind === "rect";
+  const baseSize = tableSize(table);
+  const resize = useRectResize({
+    minSize: RECT_TABLE_MIN_SIZE,
+    onCommit: (next) =>
+      onUpdateRectTable(table.id, {
+        x: Math.round(next.x + next.width / 2),
+        y: Math.round(next.y + next.height / 2),
+        width: next.width,
+        height: next.height,
+      }),
+    rect: { x: table.x - baseSize.width / 2, y: table.y - baseSize.height / 2, ...baseSize },
+    room: { width: roomWidth, height: roomHeight },
+    zoom,
+  });
+  // While an edge is being dragged the table follows the pointer before it saves.
+  const box = resize.liveRect ?? { x: table.x - baseSize.width / 2, y: table.y - baseSize.height / 2, ...baseSize };
+  const size = { width: box.width, height: box.height };
   const count = previewCount ?? summary.count;
   const style = previewCount === undefined ? summary.style : fullnessStyle(previewCount, table.capacity);
   const drag = useDraggable({
@@ -1047,9 +1075,9 @@ const PlanTable = memo(function PlanTable({
 
   let translateX = 0;
   let translateY = 0;
-  if (drag.transform) {
+  if (drag.transform && !resize.liveRect) {
     const next = clampTableCenter(
-      table.kind,
+      table,
       table.x + drag.transform.x / zoom,
       table.y + drag.transform.y / zoom,
       { width: roomWidth, height: roomHeight },
@@ -1065,7 +1093,7 @@ const PlanTable = memo(function PlanTable({
 
   // Text stays readable at any zoom: grow it in room units as the room shrinks.
   // Unnamed round tables show just their headcount until a number or name is typed.
-  const label = table.number || table.name || (round ? "" : "Sweetheart table");
+  const label = table.number || table.name || (sweetheart ? "Sweetheart table" : "");
   const labelIsNumber = Boolean(table.number);
   const showName = detail && labelIsNumber && Boolean(table.name);
   const numberFont = detail
@@ -1079,7 +1107,7 @@ const PlanTable = memo(function PlanTable({
     ? detail && labelIsNumber
       ? numberFont * 1.05 + (showName ? nameFont * 1.2 : 0) + 6
       : (label ? labelFont * 1.15 : 0) + countFont * 1.25 + 6
-    : Math.max(nameFont, countFont) * 1.35 + 8;
+    : Math.max(sweetheart ? nameFont : labelFont, countFont) * 1.35 + 8;
   // Party names use the higher-x-height serif so they stay legible when small,
   // and shrink as people are added so every name at the table shows in full.
   const maxChipFont = Math.max(12, 10 / zoom);
@@ -1134,18 +1162,28 @@ const PlanTable = memo(function PlanTable({
 
   return (
     <div
+      className={clsx("seating-table-wrap absolute", (isMoving || resize.liveRect) && "z-30")}
+      style={{
+        left: box.x,
+        top: box.y,
+        width: size.width,
+        height: size.height,
+        transform: `translate3d(${translateX}px, ${translateY}px, 0)`,
+      }}
+    >
+    <div
       ref={setNodeRef}
       {...drag.attributes}
       {...drag.listeners}
       aria-label={`${tableFullTitle(table)}: ${summary.count} of ${table.capacity} seats filled${
         summary.unconfirmed ? `, ${summary.unconfirmed} unconfirmed` : ""
-      }. Drag to move; press Enter to edit.`}
+      }. Drag to move;${resizable ? " drag an edge or corner to resize;" : ""} press Enter to edit.`}
       className={clsx(
-        "seating-table absolute flex select-none flex-col items-center justify-center overflow-hidden text-center outline-none",
-        round ? "rounded-full" : "rounded-[22px]",
+        "seating-table absolute inset-0 flex select-none flex-col items-center justify-center overflow-hidden text-center outline-none",
+        round ? "rounded-full" : sweetheart ? "rounded-[22px]" : "rounded-[10px]",
         style.tone === "empty" && "border-dashed",
         style.tone === "over" && "seating-over-stripes",
-        isMoving ? "z-30 cursor-grabbing" : "cursor-grab",
+        isMoving ? "cursor-grabbing" : "cursor-grab",
         dimmed && !isMoving && "opacity-30",
         "transition-[opacity,box-shadow] duration-150 focus-visible:ring-4 focus-visible:ring-[#be185d]/50",
       )}
@@ -1158,22 +1196,27 @@ const PlanTable = memo(function PlanTable({
         }
       }}
       style={{
-        left: table.x - size.width / 2,
-        top: table.y - size.height / 2,
-        width: size.width,
-        height: size.height,
         borderWidth,
         borderStyle: style.tone === "empty" ? "dashed" : "solid",
         borderColor: style.border,
         backgroundColor: style.background,
         color: style.text,
         boxShadow: [ring, shadow].filter(Boolean).join(", "),
-        transform: `translate3d(${translateX}px, ${translateY}px, 0)`,
         padding: round ? size.width * 0.05 : `${8}px ${14}px`,
       }}
     >
       {round && detail && seatedNumbers && seatedNumbers.size > 0 ? (
         <SeatDots borderWidth={borderWidth} capacity={table.capacity} diameter={size.width} seated={seatedNumbers} zoom={zoom} />
+      ) : null}
+      {resizable && detail && seatedNumbers && seatedNumbers.size > 0 ? (
+        <RectSeatDots
+          borderWidth={borderWidth}
+          capacity={table.capacity}
+          height={size.height}
+          seated={seatedNumbers}
+          width={size.width}
+          zoom={zoom}
+        />
       ) : null}
       {round ? (
         detail && labelIsNumber ? (
@@ -1206,6 +1249,23 @@ const PlanTable = memo(function PlanTable({
             <span className="leading-[1.25]">{countLabel}</span>
           </>
         )
+      ) : resizable ? (
+        <span className="flex max-w-full items-baseline justify-center gap-[0.35em] leading-[1.25]">
+          {label ? (
+            <span
+              className={clsx("truncate", labelIsNumber ? "font-bold tabular-nums" : "font-semibold")}
+              style={{ fontSize: labelFont }}
+            >
+              {label}
+            </span>
+          ) : null}
+          {showName ? (
+            <span className="truncate font-semibold italic opacity-85" style={{ fontSize: nameFont }}>
+              {table.name}
+            </span>
+          ) : null}
+          {countLabel}
+        </span>
       ) : (
         <span className="flex max-w-full items-center justify-center gap-[0.3em] leading-[1.25]">
           <Heart aria-hidden="true" className="shrink-0 fill-current" size={nameFont} />
@@ -1246,6 +1306,18 @@ const PlanTable = memo(function PlanTable({
           ))}
         </span>
       ) : null}
+    </div>
+    {resizable ? (
+      <ResizeHandles
+        cornerClassName="seating-table-corner"
+        handleClassName="seating-table-handle"
+        onEnd={resize.end}
+        onMove={resize.move}
+        onStart={resize.start}
+        zoom={zoom}
+      />
+    ) : null}
+    {resize.liveRect ? <ResizeSizeBadge height={size.height} tone="pink" width={size.width} zoom={zoom} /> : null}
     </div>
   );
 });
@@ -1530,6 +1602,188 @@ type AreaResizeSession = {
 };
 
 /**
+ * Edge-and-corner resizing for a rectangle drawn in room units (areas and
+ * rectangular tables). `rect` is the top-left rect; `liveRect` follows the
+ * pointer while dragging, and `onCommit` gets the final rect if it changed.
+ */
+function useRectResize({
+  minSize,
+  onCommit,
+  rect,
+  room,
+  zoom,
+}: {
+  minSize: number;
+  onCommit: (rect: AreaRect) => void;
+  rect: AreaRect;
+  room: SeatingRoom;
+  zoom: number;
+}) {
+  const [liveRect, setLiveRect] = useState<AreaRect | null>(null);
+  const sessionRef = useRef<AreaResizeSession | null>(null);
+
+  function resized(session: AreaResizeSession, clientX: number, clientY: number) {
+    return resizeAreaRect(
+      session.start,
+      session.edge,
+      (clientX - session.startClientX) / zoom,
+      (clientY - session.startClientY) / zoom,
+      room,
+      minSize,
+    );
+  }
+
+  function start(edge: AreaResizeEdge, event: React.PointerEvent<HTMLDivElement>) {
+    if (event.pointerType === "mouse" && event.button !== 0) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    capturePointer(event.currentTarget, event.pointerId);
+    const startRect = { x: rect.x, y: rect.y, width: rect.width, height: rect.height };
+    sessionRef.current = {
+      edge,
+      pointerId: event.pointerId,
+      startClientX: event.clientX,
+      startClientY: event.clientY,
+      start: startRect,
+    };
+    setLiveRect(startRect);
+  }
+
+  function move(event: React.PointerEvent<HTMLDivElement>) {
+    const session = sessionRef.current;
+
+    if (!session || session.pointerId !== event.pointerId) {
+      return;
+    }
+
+    const next = resized(session, event.clientX, event.clientY);
+    setLiveRect((current) =>
+      current && current.x === next.x && current.y === next.y && current.width === next.width && current.height === next.height
+        ? current
+        : next,
+    );
+  }
+
+  function end(event: React.PointerEvent<HTMLDivElement>) {
+    const session = sessionRef.current;
+
+    if (!session || session.pointerId !== event.pointerId) {
+      return;
+    }
+
+    sessionRef.current = null;
+    const next = resized(session, event.clientX, event.clientY);
+    setLiveRect(null);
+
+    if (
+      next.x !== session.start.x ||
+      next.y !== session.start.y ||
+      next.width !== session.start.width ||
+      next.height !== session.start.height
+    ) {
+      onCommit(next);
+    }
+  }
+
+  return { liveRect, start, move, end };
+}
+
+/** Invisible grab strips on every edge plus a small square mark on each corner. */
+function ResizeHandles({
+  cornerClassName,
+  handleClassName,
+  onEnd,
+  onMove,
+  onStart,
+  zoom,
+}: {
+  cornerClassName: string;
+  handleClassName: string;
+  onEnd: (event: React.PointerEvent<HTMLDivElement>) => void;
+  onMove: (event: React.PointerEvent<HTMLDivElement>) => void;
+  onStart: (edge: AreaResizeEdge, event: React.PointerEvent<HTMLDivElement>) => void;
+  zoom: number;
+}) {
+  const edgeHit = Math.max(10, 16 / zoom);
+  const cornerHit = Math.max(16, 26 / zoom);
+  const cornerMark = Math.max(8, 10 / zoom);
+
+  return AREA_RESIZE_EDGES.map((edge) => {
+    const corner = edge.length === 2;
+    const hit = corner ? cornerHit : edgeHit;
+    const style: React.CSSProperties = { cursor: AREA_RESIZE_CURSORS[edge] };
+
+    if (corner) {
+      style.width = hit;
+      style.height = hit;
+      style[edge.includes("w") ? "left" : "right"] = -hit / 2;
+      style[edge.includes("n") ? "top" : "bottom"] = -hit / 2;
+    } else if (edge === "n" || edge === "s") {
+      style.left = cornerHit / 2;
+      style.right = cornerHit / 2;
+      style.height = hit;
+      style[edge === "n" ? "top" : "bottom"] = -hit / 2;
+    } else {
+      style.top = cornerHit / 2;
+      style.bottom = cornerHit / 2;
+      style.width = hit;
+      style[edge === "w" ? "left" : "right"] = -hit / 2;
+    }
+
+    return (
+      <div
+        key={edge}
+        aria-hidden="true"
+        className={clsx(handleClassName, "absolute grid place-items-center")}
+        data-no-pan
+        onPointerCancel={onEnd}
+        onPointerDown={(event) => onStart(edge, event)}
+        onPointerMove={onMove}
+        onPointerUp={onEnd}
+        style={style}
+      >
+        {corner ? (
+          <span
+            className={clsx(cornerClassName, "block rounded-[2px]")}
+            style={{ width: cornerMark, height: cornerMark, borderWidth: Math.max(1.5, 1.2 / zoom) }}
+          />
+        ) : null}
+      </div>
+    );
+  });
+}
+
+/** "320 × 110" under a rectangle while it's being resized. */
+function ResizeSizeBadge({
+  height,
+  tone,
+  width,
+  zoom,
+}: {
+  height: number;
+  tone: "green" | "pink";
+  width: number;
+  zoom: number;
+}) {
+  const sizeFont = Math.max(11, 10 / zoom);
+
+  return (
+    <span
+      className={clsx(
+        "pointer-events-none absolute left-1/2 top-full -translate-x-1/2 whitespace-nowrap rounded-md px-[0.5em] py-[0.2em] font-bold tabular-nums text-white shadow-lg",
+        tone === "green" ? "bg-[#1f3d26]" : "bg-[#7a1239]",
+      )}
+      style={{ fontSize: sizeFont, marginTop: sizeFont * 0.6 }}
+    >
+      {width} × {height}
+    </span>
+  );
+}
+
+/**
  * A named rectangle on the floor (stage, dance floor). Drag the middle to
  * move it, drag any edge or corner to resize it, and tap it to rename or
  * delete. It draws beneath the tables and isn't a drop target, so people
@@ -1558,72 +1812,19 @@ const PlanArea = memo(function PlanArea({
     id: `move-area-${area.id}`,
     data: { type: "area", areaId: area.id } satisfies AreaDragData,
   });
-  const [liveRect, setLiveRect] = useState<AreaRect | null>(null);
-  const resizeRef = useRef<AreaResizeSession | null>(null);
   const room = { width: roomWidth, height: roomHeight };
+  const resize = useRectResize({
+    minSize: AREA_MIN_SIZE,
+    onCommit: (next) => onUpdateArea(area.id, next),
+    rect: area,
+    room,
+    zoom,
+  });
+  const liveRect = resize.liveRect;
 
   let rect: AreaRect = liveRect ?? area;
   if (drag.transform && !liveRect) {
     rect = clampAreaRect({ ...area, x: area.x + drag.transform.x / zoom, y: area.y + drag.transform.y / zoom }, room);
-  }
-
-  function resizedRect(session: AreaResizeSession, clientX: number, clientY: number) {
-    return resizeAreaRect(
-      session.start,
-      session.edge,
-      (clientX - session.startClientX) / zoom,
-      (clientY - session.startClientY) / zoom,
-      room,
-    );
-  }
-
-  function handleResizeStart(edge: AreaResizeEdge, event: React.PointerEvent<HTMLDivElement>) {
-    if (event.pointerType === "mouse" && event.button !== 0) {
-      return;
-    }
-
-    event.preventDefault();
-    event.stopPropagation();
-    capturePointer(event.currentTarget, event.pointerId);
-    const start = { x: area.x, y: area.y, width: area.width, height: area.height };
-    resizeRef.current = { edge, pointerId: event.pointerId, startClientX: event.clientX, startClientY: event.clientY, start };
-    setLiveRect(start);
-  }
-
-  function handleResizeMove(event: React.PointerEvent<HTMLDivElement>) {
-    const session = resizeRef.current;
-
-    if (!session || session.pointerId !== event.pointerId) {
-      return;
-    }
-
-    const next = resizedRect(session, event.clientX, event.clientY);
-    setLiveRect((current) =>
-      current && current.x === next.x && current.y === next.y && current.width === next.width && current.height === next.height
-        ? current
-        : next,
-    );
-  }
-
-  function handleResizeEnd(event: React.PointerEvent<HTMLDivElement>) {
-    const session = resizeRef.current;
-
-    if (!session || session.pointerId !== event.pointerId) {
-      return;
-    }
-
-    resizeRef.current = null;
-    const next = resizedRect(session, event.clientX, event.clientY);
-    setLiveRect(null);
-
-    if (
-      next.x !== area.x ||
-      next.y !== area.y ||
-      next.width !== area.width ||
-      next.height !== area.height
-    ) {
-      onUpdateArea(area.id, next);
-    }
   }
 
   const resizing = liveRect !== null;
@@ -1635,10 +1836,6 @@ const PlanArea = memo(function PlanArea({
     rect.height * 0.32,
     (rect.width * 0.86) / Math.max(4, title.length * 0.78),
   );
-  const sizeFont = Math.max(11, 10 / zoom);
-  const edgeHit = Math.max(10, 16 / zoom);
-  const cornerHit = Math.max(16, 26 / zoom);
-  const cornerMark = Math.max(8, 10 / zoom);
   const ring = highlighted ? `0 0 0 ${Math.max(5, 4 / zoom)}px rgba(236, 72, 153, 0.45)` : undefined;
   const shadow = isMoving
     ? `0 ${18 / zoom}px ${40 / zoom}px -${10 / zoom}px rgba(31, 61, 38, 0.45)`
@@ -1683,61 +1880,68 @@ const PlanArea = memo(function PlanArea({
         </span>
       </div>
 
-      {AREA_RESIZE_EDGES.map((edge) => {
-        const corner = edge.length === 2;
-        const hit = corner ? cornerHit : edgeHit;
-        const style: React.CSSProperties = { cursor: AREA_RESIZE_CURSORS[edge] };
+      <ResizeHandles
+        cornerClassName="seating-area-corner"
+        handleClassName="seating-area-handle"
+        onEnd={resize.end}
+        onMove={resize.move}
+        onStart={resize.start}
+        zoom={zoom}
+      />
 
-        if (corner) {
-          style.width = hit;
-          style.height = hit;
-          style[edge.includes("w") ? "left" : "right"] = -hit / 2;
-          style[edge.includes("n") ? "top" : "bottom"] = -hit / 2;
-        } else if (edge === "n" || edge === "s") {
-          style.left = cornerHit / 2;
-          style.right = cornerHit / 2;
-          style.height = hit;
-          style[edge === "n" ? "top" : "bottom"] = -hit / 2;
-        } else {
-          style.top = cornerHit / 2;
-          style.bottom = cornerHit / 2;
-          style.width = hit;
-          style[edge === "w" ? "left" : "right"] = -hit / 2;
-        }
-
-        return (
-          <div
-            key={edge}
-            aria-hidden="true"
-            className="seating-area-handle absolute grid place-items-center"
-            data-no-pan
-            onPointerCancel={handleResizeEnd}
-            onPointerDown={(event) => handleResizeStart(edge, event)}
-            onPointerMove={handleResizeMove}
-            onPointerUp={handleResizeEnd}
-            style={style}
-          >
-            {corner ? (
-              <span
-                className="seating-area-corner block rounded-[2px]"
-                style={{ width: cornerMark, height: cornerMark, borderWidth: Math.max(1.5, 1.2 / zoom) }}
-              />
-            ) : null}
-          </div>
-        );
-      })}
-
-      {resizing ? (
-        <span
-          className="pointer-events-none absolute left-1/2 top-full -translate-x-1/2 whitespace-nowrap rounded-md bg-[#1f3d26] px-[0.5em] py-[0.2em] font-bold tabular-nums text-white shadow-lg"
-          style={{ fontSize: sizeFont, marginTop: sizeFont * 0.6 }}
-        >
-          {rect.width} × {rect.height}
-        </span>
-      ) : null}
+      {resizing ? <ResizeSizeBadge height={rect.height} tone="green" width={rect.width} zoom={zoom} /> : null}
     </div>
   );
 });
+
+/** Small marks along a rectangular table's sides showing which exact seats are taken. */
+function RectSeatDots({
+  borderWidth,
+  capacity,
+  height,
+  seated,
+  width,
+  zoom,
+}: {
+  borderWidth: number;
+  capacity: number;
+  height: number;
+  seated: ReadonlySet<number>;
+  width: number;
+  zoom: number;
+}) {
+  const dot = Math.max(4.5, 3.2 / zoom);
+  const inset = dot + Math.max(3, 2 / zoom);
+  const innerWidth = width - 2 * borderWidth;
+  const innerHeight = height - 2 * borderWidth;
+
+  return (
+    <span aria-hidden="true" className="pointer-events-none absolute inset-0">
+      {rectSeatSpots(capacity, width, height).map((spot, index) => {
+        const taken = seated.has(index + 1);
+        const horizontal = spot.side === "top" || spot.side === "bottom";
+        const centerX = horizontal ? spot.along * innerWidth : spot.side === "left" ? inset : innerWidth - inset;
+        const centerY = horizontal ? (spot.side === "top" ? inset : innerHeight - inset) : spot.along * innerHeight;
+
+        return (
+          <span
+            key={index}
+            className="absolute rounded-full"
+            style={{
+              left: centerX - dot,
+              top: centerY - dot,
+              width: dot * 2,
+              height: dot * 2,
+              backgroundColor: taken ? "currentColor" : "transparent",
+              border: `${Math.max(1.5, 1 / zoom)}px solid currentColor`,
+              opacity: taken ? 0.75 : 0.35,
+            }}
+          />
+        );
+      })}
+    </span>
+  );
+}
 
 /** Small marks around the rim showing which exact seats are taken (only once any are). */
 function SeatDots({
