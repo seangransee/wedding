@@ -580,8 +580,8 @@ const deepGreen = "3, 27, 18";
 export async function generateAttendingOgImage(guestName: string) {
   const [fonts, backgroundImage] = await Promise.all([loadOgFonts(), invitationBackgroundData]);
 
-  const nameLines = wrapName(guestName, 46, 2);
-  const nameFontSize = nameLines.length > 1 ? 32 : 38;
+  const nameLines = wrapName(guestName, 38, 2);
+  const nameFontSize = nameLines.length > 1 ? 42 : 58;
 
   return new ImageResponse(
     (
