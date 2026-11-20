@@ -75,13 +75,19 @@ function ScheduleEventCard({ event }: { event: ScheduleEventWithCalendar }) {
   );
 }
 
+// Shown under the ceremony's dress code line for invitations with the admin's Giard flag.
+const GIARD_EVENT_TITLE = "Ceremony & Reception";
+const GIARD_DETAIL = "BYO Giard";
+
 export function ScheduleSection({
   showFridayWelcome,
   showRehearsal,
+  showGiard = false,
   calendarWebsiteUrl,
 }: {
   showFridayWelcome: boolean;
   showRehearsal: boolean;
+  showGiard?: boolean;
   calendarWebsiteUrl: string;
 }) {
   const websiteUrl = calendarWebsiteUrl;
@@ -95,7 +101,16 @@ export function ScheduleSection({
         : []),
     ],
     [{ fileName: "schedule.md", calendarHref: getWeddingCalendarUrl({ websiteUrl }) }],
-  ]);
+  ]).map((day) =>
+    showGiard
+      ? {
+          ...day,
+          events: day.events.map((event) =>
+            event.title === GIARD_EVENT_TITLE ? { ...event, details: [...event.details, GIARD_DETAIL] } : event,
+          ),
+        }
+      : day,
+  );
 
   return (
     <section

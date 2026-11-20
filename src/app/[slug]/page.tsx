@@ -93,6 +93,7 @@ export default async function GuestPage({ params }: PageProps) {
       showHotelBlocks
       showFridayWelcome={data.guest.friDin}
       showRehearsal={data.guest.reh}
+      showGiard={data.guest.giard}
       scheduleFirst={data.rsvp?.status === "no" || (data.rsvp?.status === "yes" && rsvpDetailsComplete)}
       panel={
         <RsvpForm

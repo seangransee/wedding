@@ -56,7 +56,9 @@ ALTER TABLE wedding_seating_tables
   DROP CONSTRAINT IF EXISTS wedding_seating_tables_kind_check;
 ALTER TABLE wedding_seating_tables
   ADD CONSTRAINT wedding_seating_tables_kind_check
-  CHECK (kind IN ('round', 'sweetheart', 'bucket'));
+  -- 'rect' (migration 021) is listed too so reruns don't fail once rectangular
+  -- tables exist.
+  CHECK (kind IN ('round', 'sweetheart', 'rect', 'bucket'));
 
 ALTER TABLE wedding_seating_tables
   DROP CONSTRAINT IF EXISTS wedding_seating_tables_x_check;

@@ -40,6 +40,7 @@ export type Guest = {
   fuckYes: boolean;
   friDin: boolean;
   reh: boolean;
+  giard: boolean;
   sortOrder: number;
   createdAt: string;
   updatedAt: string;
@@ -112,6 +113,7 @@ type GuestRow = {
   fuck_yes: boolean;
   fri_din: boolean;
   reh: boolean;
+  giard: boolean;
   sort_order: number;
   created_at: string;
   updated_at: string;
@@ -246,6 +248,7 @@ function toGuest(row: GuestRow): Guest {
     fuckYes: row.fuck_yes,
     friDin: row.fri_din,
     reh: row.reh,
+    giard: row.giard,
     sortOrder: row.sort_order,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -438,7 +441,7 @@ export async function guestSlugExists(slug: string) {
 
 export async function getGuestBySlug(slug: string) {
   const rows = (await sql().query(
-    `SELECT id, name, notes, phone_number, email_address, slug, guest_count, invite_sent, fuck_yes, fri_din, reh, sort_order, created_at, updated_at
+    `SELECT id, name, notes, phone_number, email_address, slug, guest_count, invite_sent, fuck_yes, fri_din, reh, giard, sort_order, created_at, updated_at
      FROM wedding_guests
      WHERE slug = $1`,
     [slug],
@@ -466,7 +469,7 @@ export async function createGuest(input: {
        $6,
        COALESCE((SELECT max(sort_order) + 1 FROM wedding_guests), 1)
      )
-     RETURNING id, name, notes, phone_number, email_address, slug, guest_count, invite_sent, fuck_yes, fri_din, reh, sort_order, created_at, updated_at`,
+     RETURNING id, name, notes, phone_number, email_address, slug, guest_count, invite_sent, fuck_yes, fri_din, reh, giard, sort_order, created_at, updated_at`,
     [input.name, input.notes, input.phoneNumber, input.emailAddress, input.slug, input.guestCount],
   )) as GuestRow[];
 
@@ -580,6 +583,19 @@ export async function updateGuestReh(id: number, reh: boolean) {
      WHERE id = $1
      RETURNING slug`,
     [id, reh],
+  )) as Array<{ slug: string }>;
+
+  return rows[0] ?? null;
+}
+
+export async function updateGuestGiard(id: number, giard: boolean) {
+  const rows = (await sql().query(
+    `UPDATE wedding_guests
+     SET giard = $2,
+         updated_at = now()
+     WHERE id = $1
+     RETURNING slug`,
+    [id, giard],
   )) as Array<{ slug: string }>;
 
   return rows[0] ?? null;
@@ -720,6 +736,7 @@ export async function listGuestsWithRsvps(): Promise<GuestWithRsvp[]> {
        g.fuck_yes,
        g.fri_din,
        g.reh,
+       g.giard,
        g.sort_order,
        g.created_at,
        g.updated_at,

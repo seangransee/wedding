@@ -20,6 +20,7 @@ import {
   updateGuestNotes,
   updateGuestPhoneNumber,
   updateGuestReh,
+  updateGuestGiard,
   updateGuestSlug,
 } from "@/lib/db";
 import { isValidSlug, slugify } from "@/lib/slug";
@@ -259,6 +260,30 @@ export async function setReh(
   revalidatePath("/admin");
   revalidatePath(`/${updated.slug}`);
   return { ok: true, message: reh ? "Rehearsal on (Friday dinner too)." : "Rehearsal off." };
+}
+
+export async function setGiard(
+  _previousState: AdminActionState,
+  formData: FormData,
+): Promise<AdminActionState> {
+  await requireAdmin();
+
+  const guestId = Number(formData.get("guestId"));
+  const giard = String(formData.get("giard") ?? "") === "true";
+
+  if (!Number.isInteger(guestId) || guestId < 1) {
+    return { ok: false, message: "Guest id is invalid." };
+  }
+
+  const updated = await updateGuestGiard(guestId, giard);
+
+  if (!updated) {
+    return { ok: false, message: "Guest was not found." };
+  }
+
+  revalidatePath("/admin");
+  revalidatePath(`/${updated.slug}`);
+  return { ok: true, message: giard ? "Giard on." : "Giard off." };
 }
 
 export async function editGuestName(

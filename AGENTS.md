@@ -62,7 +62,7 @@ Use npm for scripts and dependency installs. `package-lock.json` is the lockfile
 
 Core tables:
 
-- `wedding_guests` - one row per invitation link. Important columns are `name`, `slug`, `notes`, `phone_number`, `email_address`, `guest_count`, `invite_sent`, `fuck_yes`, `fri_din` (Friday welcome dinner), `reh` (wedding rehearsal), and `sort_order`. Everyone invited to the rehearsal is invited to Friday dinner: `updateGuestReh` turns `fri_din` on with `reh`, and `updateGuestFriDin` turns `reh` off with `fri_din`.
+- `wedding_guests` - one row per invitation link. Important columns are `name`, `slug`, `notes`, `phone_number`, `email_address`, `guest_count`, `invite_sent`, `fuck_yes`, `fri_din` (Friday welcome dinner), `reh` (wedding rehearsal), `giard` (adds a "BYO Giard" detail line under Black Tie Optional on the Ceremony & Reception schedule card; the text lives in `src/app/schedule-section.tsx`), and `sort_order`. Everyone invited to the rehearsal is invited to Friday dinner: `updateGuestReh` turns `fri_din` on with `reh`, and `updateGuestFriDin` turns `reh` off with `fri_din`.
 - `wedding_rsvps` - one current RSVP per guest, keyed by `guest_id`; also stores the invitation's optional mailing address in `mailing_address_line1`, `_line2`, `_city`, `_region`, `_postal_code`, and `_country` (empty strings when unset).
 - `wedding_rsvp_attendees` - per-person current RSVP details, keyed by RSVP and 1-based `position`; stores place-card name, optional meal type, and optional dietary/allergy notes.
 - `wedding_rsvp_audit_events` and `wedding_rsvp_audit_attendees` - append-only RSVP edit history (including the mailing address at each save), with soft deletion for deleted guests' audit rows.
@@ -153,6 +153,7 @@ Be careful changing validation: database constraints, server action validation, 
 - `/admin` uses `react-data-grid` with all rows rendered and a responsive width calculation.
 - A search bar above the grid filters guests client-side. It splits the query into whitespace tokens and keeps a guest when every token appears in its name or any RSVP place-card (attendee full) name, so "Sean" and "Lexi" both match the "Sean and Lexi" invitation. Filtering only changes which rows render; cell edits still save by guest id, and drag-to-reorder is disabled while a search is active.
 - Editable columns are Name, URL, Notes, Phone, Email, and Max. URL is locked when `invite_sent` is true. The read-only Mailing address column shows the guest-entered RSVP address.
+- The Giard checkbox column (`setGiard`) is hidden until someone presses `g` five times in a row (within 2 seconds between presses) while no text field is focused; doing it again hides it. It is not sortable, filterable, or in the CSV.
 - The Fri Din and Rehearsal checkbox columns toggle `fri_din`/`reh` (see the Data Model note on how they stay consistent). Friday dinner and Rehearsal buttons next to the search bar filter the grid to just those guests (click again to clear); they combine with search and also disable drag-to-reorder.
 - Sorting is URL-driven with `?sort=...&dir=...`. Default sort uses `sort_order`.
 - Drag-to-reorder is available only in default sort; it saves the full ordered guest id list through `reorderGuestRows`.

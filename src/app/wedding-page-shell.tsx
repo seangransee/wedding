@@ -18,6 +18,7 @@ type WeddingPageShellProps = {
   showHotelBlocks?: boolean;
   showFridayWelcome?: boolean;
   showRehearsal?: boolean;
+  showGiard?: boolean;
   scheduleFirst?: boolean;
 };
 
@@ -89,6 +90,7 @@ export async function WeddingPageShell({
   showHotelBlocks = false,
   showFridayWelcome = false,
   showRehearsal = false,
+  showGiard = false,
   scheduleFirst = false,
 }: WeddingPageShellProps) {
   const photos = await getWeddingPhotos();
@@ -108,6 +110,7 @@ export async function WeddingPageShell({
           <ScheduleSection
             showFridayWelcome={showFridayWelcome}
             showRehearsal={showRehearsal}
+            showGiard={showGiard}
             calendarWebsiteUrl={calendarWebsiteUrl}
           />
         }

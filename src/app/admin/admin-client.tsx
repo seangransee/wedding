@@ -33,6 +33,7 @@ import {
   setFuckYes,
   setInviteSent,
   setReh,
+  setGiard,
   type AdminActionState,
 } from "./actions";
 
@@ -818,7 +819,7 @@ function GuestFlagToggle({
 }: {
   guestId: number;
   value: boolean;
-  field: "friDin" | "reh";
+  field: "friDin" | "reh" | "giard";
   label: string;
   action: (state: AdminActionState, formData: FormData) => Promise<AdminActionState>;
 }) {
@@ -1128,6 +1129,59 @@ function RehCell({ row }: RenderCellProps<GuestWithRsvp>) {
   return <GuestFlagToggle guestId={row.id} value={row.reh} field="reh" label="Rehearsal" action={setReh} />;
 }
 
+function GiardCell({ row }: RenderCellProps<GuestWithRsvp>) {
+  return <GuestFlagToggle guestId={row.id} value={row.giard} field="giard" label="Giard" action={setGiard} />;
+}
+
+const GIARD_COLUMN_WIDTH = 70;
+const GIARD_KEY_PRESSES = 5;
+const GIARD_KEY_WINDOW_MS = 2000;
+
+// The Giard column stays hidden until someone presses "g" five times in a row
+// (outside any text field); doing it again hides it.
+function useGiardColumnToggle() {
+  const [showGiard, setShowGiard] = useState(false);
+
+  useEffect(() => {
+    let count = 0;
+    let lastPressAt = 0;
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.metaKey || event.ctrlKey || event.altKey || event.repeat) {
+        return;
+      }
+
+      const target = event.target as HTMLElement | null;
+      if (
+        target &&
+        (target.isContentEditable || target.closest("input, textarea, select, [contenteditable='true']"))
+      ) {
+        count = 0;
+        return;
+      }
+
+      if (event.key.toLowerCase() !== "g") {
+        count = 0;
+        return;
+      }
+
+      const now = Date.now();
+      count = now - lastPressAt <= GIARD_KEY_WINDOW_MS ? count + 1 : 1;
+      lastPressAt = now;
+
+      if (count >= GIARD_KEY_PRESSES) {
+        count = 0;
+        setShowGiard((current) => !current);
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
+  return showGiard;
+}
+
 function makeFormData(values: Record<string, string | number | boolean>) {
   const formData = new FormData();
 
@@ -1320,7 +1374,11 @@ export function GuestTable({
     }
   }, [isDefaultSort]);
 
-  const columnWidths = useMemo(() => getExpandedColumnWidths(gridWidth), [gridWidth]);
+  const showGiard = useGiardColumnToggle();
+  const columnWidths = useMemo(
+    () => getExpandedColumnWidths(showGiard ? gridWidth - GIARD_COLUMN_WIDTH : gridWidth),
+    [gridWidth, showGiard],
+  );
 
   const columns = useMemo<Column<GuestWithRsvp>[]>(() => [
     {
@@ -1466,6 +1524,16 @@ export function GuestTable({
       resizable: true,
       renderCell: RehCell,
     },
+    ...(showGiard
+      ? [{
+          key: "giard",
+          name: "Giard",
+          width: GIARD_COLUMN_WIDTH,
+          minWidth: 64,
+          resizable: true,
+          renderCell: GiardCell,
+        } satisfies Column<GuestWithRsvp>]
+      : []),
     {
       key: "notes",
       name: "Notes",
@@ -1529,7 +1597,7 @@ export function GuestTable({
       resizable: true,
       renderCell: FuckYesCell,
     },
-  ], [canReorder, columnWidths, draggedGuestId, handleDefaultSort, handleRowDrop, isDefaultSort, isSaving]);
+  ], [canReorder, columnWidths, draggedGuestId, handleDefaultSort, handleRowDrop, isDefaultSort, isSaving, showGiard]);
 
   function handleRowsChange(
     nextVisibleRows: GuestWithRsvp[],
