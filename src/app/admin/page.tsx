@@ -6,6 +6,7 @@ import {
   listRsvpAuditEvents,
   type RsvpAttendeeDetails,
 } from "@/lib/db";
+import { formatMailingAddress } from "@/lib/mailing-address";
 import {
   AddGuestForm,
   AdminCsvExportButton,
@@ -401,7 +402,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
             </span>
           </div>
           <div className="max-h-[28rem] overflow-auto bg-[#fff8fb]">
-            <table className="w-full min-w-[68rem] border-collapse text-left text-xs">
+            <table className="w-full min-w-[84rem] border-collapse text-left text-xs">
               <thead className="sticky top-0 z-10 bg-[#eca8c0] text-[0.65rem] uppercase tracking-[0.08em] text-[#651735]">
                 <tr>
                   <th className="w-52 border-r border-b border-[#df7fa3] px-2 py-1.5 font-semibold">Timestamp</th>
@@ -411,13 +412,14 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                   <th className="w-16 border-r border-b border-[#df7fa3] px-2 py-1.5 text-right font-semibold">
                     Count
                   </th>
-                  <th className="border-b border-[#df7fa3] px-2 py-1.5 font-semibold">Place cards / meals</th>
+                  <th className="border-r border-b border-[#df7fa3] px-2 py-1.5 font-semibold">Place cards / meals</th>
+                  <th className="w-72 border-b border-[#df7fa3] px-2 py-1.5 font-semibold">Mailing address</th>
                 </tr>
               </thead>
               <tbody>
                 {auditEvents.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="border-b border-[#efb5c9] px-2 py-6 text-center text-sm text-[#8f5070]">
+                    <td colSpan={7} className="border-b border-[#efb5c9] px-2 py-6 text-center text-sm text-[#8f5070]">
                       No RSVP edits have been saved yet.
                     </td>
                   </tr>
@@ -446,8 +448,11 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                       <td className="border-r border-b border-[#efb5c9] px-2 py-1 text-right font-mono tabular-nums">
                         {event.attendingCount ?? ""}
                       </td>
-                      <td className="border-b border-[#efb5c9] px-2 py-1 text-[#4a1027]">
+                      <td className="border-r border-b border-[#efb5c9] px-2 py-1 text-[#4a1027]">
                         {attendeeDetailsSummary(event.attendeeDetails)}
+                      </td>
+                      <td className="border-b border-[#efb5c9] px-2 py-1 text-[#4a1027]">
+                        {formatMailingAddress(event.mailingAddress)}
                       </td>
                     </tr>
                   ))
