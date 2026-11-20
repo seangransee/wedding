@@ -179,11 +179,19 @@ const ADMIN_LOGIN_MAX_FAILED_ATTEMPTS = 5;
 const ADMIN_LOGIN_WINDOW_MINUTES = 15;
 const ADMIN_LOGIN_LOCKOUT_MINUTES = 15;
 
+type SqlStatement = {
+  text: string;
+  values?: unknown[];
+};
+
 type SqlClient = {
   query<T extends QueryResultRow = QueryResultRow>(
     queryText: string,
     values?: unknown[],
   ): Promise<T[]>;
+  // Runs the statements in order in one READ COMMITTED transaction, so each
+  // statement sees rows committed before it starts (e.g. after a lock wait).
+  transaction(statements: SqlStatement[]): Promise<QueryResultRow[][]>;
 };
 
 let sqlClient: SqlClient | null = null;
@@ -212,6 +220,23 @@ function createSqlClient(connectionString: string): SqlClient {
         const result = await pgPool!.query<T>(queryText, values);
         return result.rows;
       },
+      async transaction(statements: SqlStatement[]) {
+        const client = await pgPool!.connect();
+        try {
+          await client.query("BEGIN ISOLATION LEVEL READ COMMITTED");
+          const results: QueryResultRow[][] = [];
+          for (const statement of statements) {
+            results.push((await client.query(statement.text, statement.values)).rows);
+          }
+          await client.query("COMMIT");
+          return results;
+        } catch (error) {
+          await client.query("ROLLBACK").catch(() => undefined);
+          throw error;
+        } finally {
+          client.release();
+        }
+      },
     };
   }
 
@@ -220,6 +245,12 @@ function createSqlClient(connectionString: string): SqlClient {
   return {
     query<T extends QueryResultRow = QueryResultRow>(queryText: string, values?: unknown[]) {
       return neonClient.query(queryText, values) as Promise<T[]>;
+    },
+    transaction(statements: SqlStatement[]) {
+      return neonClient.transaction(
+        (txn) => statements.map((statement) => txn.query(statement.text, statement.values)),
+        { isolationLevel: "ReadCommitted" },
+      ) as Promise<QueryResultRow[][]>;
     },
   };
 }
@@ -970,8 +1001,17 @@ export async function saveRsvp(input: {
   const attendeeMealTypes = input.attendeeDetails.map((attendee) => attendee.mealType);
   const attendeeDietaryNotes = input.attendeeDetails.map((attendee) => attendee.dietaryNotes);
 
-  await sql().query(
-    `WITH upserted AS (
+  // Overlapping autosaves for one invitation are common, so the save locks the
+  // guest row first. The save statement then runs with a fresh snapshot and its
+  // "is this the same as the latest history event?" check sees every earlier
+  // save for this guest.
+  await sql().transaction([
+    {
+      text: "SELECT id FROM wedding_guests WHERE id = $1 FOR NO KEY UPDATE",
+      values: [input.guestId],
+    },
+    {
+      text: `WITH upserted AS (
        INSERT INTO wedding_rsvps (
          guest_id,
          status,
@@ -1032,6 +1072,56 @@ export async function saveRsvp(input: {
        CROSS JOIN input_attendees
        RETURNING 1
      ),
+     latest_audit AS (
+       SELECT audit.*
+       FROM wedding_rsvp_audit_events audit
+       WHERE audit.guest_id = $1
+       ORDER BY audit.created_at DESC, audit.id DESC
+       LIMIT 1
+     ),
+     -- One row when this save would write a history event identical to the
+     -- latest one except for its timestamp. Then no event is written. Every
+     -- audit event and audit attendee column (other than ids and timestamps)
+     -- must be compared here, matching migration 023's backfill.
+     unchanged_audit AS (
+       SELECT 1
+       FROM latest_audit latest
+       JOIN wedding_guests guest ON guest.id = $1
+       WHERE latest.event_type = 'rsvp'
+         AND latest.soft_deleted_at IS NULL
+         AND latest.guest_name_previous IS NULL
+         AND latest.guest_name = guest.name
+         AND latest.guest_slug = guest.slug
+         AND latest.guest_name_current = guest.name
+         AND latest.status = $2
+         AND latest.attending_count IS NOT DISTINCT FROM $3
+         AND latest.mailing_address_line1 = $7
+         AND latest.mailing_address_line2 = $8
+         AND latest.mailing_address_city = $9
+         AND latest.mailing_address_region = $10
+         AND latest.mailing_address_postal_code = $11
+         AND latest.mailing_address_country = $12
+         AND (
+           SELECT COALESCE(
+             jsonb_agg(
+               jsonb_build_array(attendee.position, attendee.full_name, attendee.meal_type, attendee.dietary_notes)
+               ORDER BY attendee.position
+             ),
+             '[]'::jsonb
+           )
+           FROM wedding_rsvp_audit_attendees attendee
+           WHERE attendee.audit_event_id = latest.id
+         ) = (
+           SELECT COALESCE(
+             jsonb_agg(
+               jsonb_build_array(attendee.position, attendee.full_name, attendee.meal_type, attendee.dietary_notes)
+               ORDER BY attendee.position
+             ),
+             '[]'::jsonb
+           )
+           FROM input_attendees attendee
+         )
+     ),
      audit_event AS (
        INSERT INTO wedding_rsvp_audit_events (
          event_type,
@@ -1051,6 +1141,7 @@ export async function saveRsvp(input: {
        SELECT 'rsvp', guest.id, guest.name, guest.slug, guest.name, $2, $3, $7, $8, $9, $10, $11, $12
        FROM wedding_guests guest
        WHERE guest.id = $1
+         AND NOT EXISTS (SELECT 1 FROM unchanged_audit)
        RETURNING id
      ),
      inserted_audit_attendees AS (
@@ -1073,22 +1164,24 @@ export async function saveRsvp(input: {
      )
      SELECT
        (SELECT count(*) FROM inserted_attendees) AS attendee_rows,
+       (SELECT count(*) FROM audit_event) AS audit_event_rows,
        (SELECT count(*) FROM inserted_audit_attendees) AS audit_attendee_rows`,
-    [
-      input.guestId,
-      input.status,
-      input.attendingCount,
-      attendeeNames,
-      attendeeMealTypes,
-      attendeeDietaryNotes,
-      input.mailingAddress.line1,
-      input.mailingAddress.line2,
-      input.mailingAddress.city,
-      input.mailingAddress.region,
-      input.mailingAddress.postalCode,
-      input.mailingAddress.country,
-    ],
-  );
+      values: [
+        input.guestId,
+        input.status,
+        input.attendingCount,
+        attendeeNames,
+        attendeeMealTypes,
+        attendeeDietaryNotes,
+        input.mailingAddress.line1,
+        input.mailingAddress.line2,
+        input.mailingAddress.city,
+        input.mailingAddress.region,
+        input.mailingAddress.postalCode,
+        input.mailingAddress.country,
+      ],
+    },
+  ]);
 }
 
 type SeatingLayoutRow = {
