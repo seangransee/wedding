@@ -78,6 +78,7 @@ body {
 }
 
 .guest-invitation-page {
+  --guest-reading-font: var(--font-geist-mono), "Libre Baskerville", Georgia, serif;
   --guest-content-fade-distance: 6rem;
   isolation: isolate;
 }
@@ -122,19 +123,23 @@ body {
 }
 
 .guest-panel-surface {
-  background: linear-gradient(
-    180deg,
-    rgba(3, 27, 18, 0.9) 0%,
-    rgba(3, 27, 18, 0.82) 100%
-  );
+  background: #031b12;
   box-shadow: 0 1.5rem 4rem -2.25rem rgba(0, 0, 0, 0.82),
     inset 0 0 0 1px rgba(255, 246, 250, 0.1);
-  text-shadow: 0 0.1rem 0.2rem rgba(3, 27, 18, 0.95);
-  backdrop-filter: blur(0.4rem);
+  text-shadow: none;
 }
 
 .registry-action {
+  font-family: var(--guest-reading-font);
+  font-size: 16px;
+  line-height: 1.5;
   text-shadow: none;
+}
+
+.registry-payment-detail {
+  font-family: var(--guest-reading-font);
+  font-size: 20px;
+  overflow-wrap: anywhere;
 }
 
 /* Every Schedule event has its own calendar button, so RSVP'd guests skip the hero link. */
@@ -172,9 +177,10 @@ body {
 /* Dates ("December 12, 2026") always stay on one line. */
 .schedule-day-date {
   margin-top: 0.35rem;
-  font-size: 0.95rem;
-  font-weight: 600;
-  letter-spacing: 0.28em;
+  font-family: var(--guest-reading-font);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
   line-height: 1.4;
   text-transform: uppercase;
   white-space: nowrap;
@@ -182,7 +188,8 @@ body {
 
 .schedule-day-intro {
   text-align: center;
-  font-size: 1.15rem;
+  font-family: var(--guest-reading-font);
+  font-size: 18px;
   line-height: 1.6;
 }
 
@@ -205,11 +212,10 @@ body {
 
 .schedule-event-time {
   color: var(--blush-pink);
-  font-size: 0.85rem;
-  font-weight: 600;
-  letter-spacing: 0.22em;
+  font-family: var(--guest-reading-font);
+  font-size: 14px;
+  font-weight: 700;
   line-height: 1.5;
-  text-transform: uppercase;
 }
 
 .schedule-event-title {
@@ -228,7 +234,8 @@ body {
   gap: 0.7rem;
   margin-top: 0.45rem;
   color: var(--blush-pink);
-  font-size: 1.3rem;
+  font-family: var(--guest-reading-font);
+  font-size: 16px;
   font-style: italic;
   line-height: 1.35;
 }
@@ -253,9 +260,10 @@ body {
 .schedule-event-venue {
   display: grid;
   margin-top: 0.7rem;
-  font-size: 1.15rem;
+  font-family: var(--guest-reading-font);
+  font-size: 16px;
   font-style: normal;
-  line-height: 1.45;
+  line-height: 1.65;
 }
 
 .schedule-event-venue-name {
@@ -278,16 +286,15 @@ body {
   border-radius: 999px;
   background: rgba(255, 246, 250, 0.06);
   padding: 0.25rem 0.9rem;
-  font-size: 0.75rem;
-  font-weight: 600;
-  letter-spacing: 0.2em;
+  font-family: var(--guest-reading-font);
+  font-size: 13px;
+  font-weight: 700;
   line-height: 1.5;
-  text-transform: uppercase;
 }
 
 .schedule-event-calendar {
   display: inline-flex;
-  min-height: 2.75rem;
+  min-height: 44px;
   align-items: center;
   gap: 0.45rem;
   margin-top: 0.75rem;
@@ -296,11 +303,10 @@ body {
   border-radius: 999px;
   padding: 0.4rem 1rem 0.4rem 0.85rem;
   color: rgba(255, 214, 228, 0.88);
-  font-size: 0.72rem;
-  font-weight: 600;
-  letter-spacing: 0.18em;
+  font-family: var(--guest-reading-font);
+  font-size: 14px;
+  font-weight: 700;
   line-height: 1;
-  text-transform: uppercase;
   transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
 }
 
@@ -469,34 +475,108 @@ body {
   text-shadow: 0 1px 0 rgba(3, 27, 18, 0.9), 0 0 0.8rem color-mix(in srgb, var(--blush-pink) 72%, transparent);
 }
 
-/* Long-form story copy needs a sturdier face and its own size above the compact page scale. */
-#our-story > article {
-  background: #031b12;
-  text-shadow: none;
-  backdrop-filter: none;
-}
-
-#our-story p {
+/* Shared reading copy keeps the story's type scale, independent of the compact page root. */
+.guest-invitation-page .guest-prose {
   inline-size: 100%;
   max-inline-size: min(60ch, 720px);
   margin-inline: auto;
-  font-family: var(--font-geist-mono), "Libre Baskerville", Georgia, serif;
+  overflow-wrap: anywhere;
+  font-family: var(--guest-reading-font);
   font-size: 18px;
   line-height: 1.8;
 }
 
-#our-story a {
+.guest-prose a {
   text-decoration-style: solid;
 }
 
-#our-story a:focus-visible {
+.guest-prose a:focus-visible {
   outline: 2px solid var(--blush-pink);
   outline-offset: 4px;
 }
 
+.guest-invitation-page .markdown-subheading {
+  font-family: var(--guest-reading-font);
+  font-size: 14px;
+  line-height: 1.6;
+  letter-spacing: 0.08em;
+}
+
+.guest-invitation-page .faq-question {
+  font-family: var(--guest-reading-font);
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.hotel-name {
+  font-size: 26px;
+  line-height: 1.25;
+}
+
+.hotel-detail {
+  font-family: var(--guest-reading-font);
+  font-size: 16px;
+  font-weight: 400;
+}
+
+.guest-invitation-page .hotel-booking-link {
+  font-family: var(--guest-reading-font);
+  font-size: 17px;
+  line-height: 1.5;
+}
+
+.rsvp-form {
+  font-family: var(--guest-reading-font);
+}
+
+.rsvp-form h2 {
+  font-family: var(--font-geist-sans), "Cormorant Garamond", Georgia, serif;
+}
+
+.rsvp-form :is(.text-base, input, textarea) {
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+.rsvp-form .text-lg {
+  font-size: 18px;
+  line-height: 1.5;
+}
+
+.rsvp-form .text-sm {
+  font-size: 13px;
+}
+
+.rsvp-form .text-xs {
+  font-size: 12px;
+  letter-spacing: 0.06em;
+}
+
+.rsvp-form button {
+  min-block-size: 44px;
+}
+
 @media (min-width: 640px) {
-  #our-story p {
+  .guest-invitation-page .guest-prose {
     font-size: 20px;
+  }
+
+  .guest-invitation-page .faq-question {
+    font-size: 20px;
+  }
+
+  .guest-invitation-page .markdown-subheading {
+    font-size: 16px;
+  }
+
+  .hotel-name {
+    font-size: 30px;
+  }
+
+  .hotel-detail,
+  .schedule-event-venue {
+    font-size: 18px;
   }
 }
 

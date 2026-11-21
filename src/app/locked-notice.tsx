@@ -16,7 +16,7 @@ export function LockedNotice({
       <h2 className="mt-4 text-4xl font-semibold leading-tight text-[#ffd6e4] sm:text-6xl">
         {title}
       </h2>
-      <p className="mt-3 text-lg leading-[1.85] text-[#ffd6e4] sm:text-xl">
+      <p className="guest-prose mt-3 text-lg leading-[1.85] text-[#ffd6e4] sm:text-xl">
         {children}
       </p>
     </div>
