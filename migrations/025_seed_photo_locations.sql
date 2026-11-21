@@ -1,5 +1,5 @@
 -- Initial captions from source-file GPS and Google Photos originals/trip photos.
--- The two photos without a reliable location are intentionally left unlabelled.
+-- The train and Unionville pub locations were supplied by Sean.
 -- US captions use full state names; country_code remains US for the flag.
 -- NULL means untouched. Admin saves write strings, including intentional clears,
 -- so rerunning this seed never overwrites an edited or cleared caption.
@@ -150,7 +150,9 @@ FROM (VALUES
   ('a6c17d71bd9f28ecf64d08462c901144.jpeg', 'CN', 'Suzhou, China'),
   ('4871d94e08fe53961a372bbf0141bee1.jpeg', 'CN', 'Suzhou, China'),
   ('89da58e5207b242159dc5b8f25f67ed9.jpeg', 'CN', 'Suzhou, China'),
-  ('BB7471EC-7EA4-4F7E-ADB1-10033290C8E8.jpeg', 'TH', 'Chanthaburi, Thailand')
+  ('BB7471EC-7EA4-4F7E-ADB1-10033290C8E8.jpeg', 'TH', 'Chanthaburi, Thailand'),
+  ('IMG_4803.jpeg', 'PL', 'Poland'),
+  ('ECBE21B0-FD23-4339-B949-82E0C9E81269.jpeg', 'US', 'Unionville, Indiana')
 ) AS seed(filename, country_code, location_text)
 WHERE photo.filename = seed.filename
   AND photo.country_code IS NULL AND photo.location_text IS NULL;
