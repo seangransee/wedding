@@ -33,7 +33,9 @@ export function LabelChip({
   style,
   className,
   compact = false,
+  assignment,
 }: {
+  assignment?: "assigned" | "unassigned";
   compact?: boolean;
   label: SeatingLabel;
   onOpen: (id: string) => void;
@@ -58,9 +60,11 @@ export function LabelChip({
       title={label.value}
       className={clsx(
         "seating-chip flex min-w-0 cursor-grab items-center gap-1.5 rounded-lg border px-2 py-1 text-left font-semibold leading-tight shadow-sm",
-        label.kind === "name"
-          ? "border-[#83aa93] bg-[#edf6ee] text-[#24513e]"
-          : "border-[#d79ab4] bg-[#fff1f7] text-[#7a1239]",
+        assignment === "unassigned"
+          ? "border-dashed border-[#d97706] bg-[#fffbeb] text-[#8a3b06]"
+          : assignment === "assigned" || label.kind === "name"
+            ? "border-[#83aa93] bg-[#edf6ee] text-[#24513e]"
+            : "border-[#d79ab4] bg-[#fff1f7] text-[#7a1239]",
         compact && "gap-1 rounded px-1 py-0.5",
         isDragging && "opacity-30",
         className,
@@ -137,6 +141,7 @@ export function LabelList({
     data: { type: "label-list", kind, area: "list" } satisfies DropData,
   });
   const items = labels.filter((label) => label.kind === kind);
+  const assignedCount = items.filter((label) => label.tableId !== null).length;
   const addForm = (
     <form
       onSubmit={(event) => {
@@ -207,6 +212,10 @@ export function LabelList({
       ) : (
         addForm
       )}
+      {items.length > 0 ? <div className="mb-3 flex flex-wrap items-center gap-3 text-xs" aria-label="Label assignment colors">
+        <span className="inline-flex items-center gap-1.5 font-semibold text-[#24513e]"><span aria-hidden="true" className="size-3 rounded-full border border-[#83aa93] bg-[#edf6ee]" />Assigned {assignedCount}</span>
+        <span className="inline-flex items-center gap-1.5 font-semibold text-[#8a3b06]"><span aria-hidden="true" className="size-3 rounded-full border border-dashed border-[#d97706] bg-[#fffbeb]" />Unassigned {items.length - assignedCount}</span>
+      </div> : null}
       <div className={clsx("grid gap-2", compact && "grid-cols-2")}>
         {items.map((label) => {
           const table = tables.find((table) => table.id === label.tableId);
@@ -214,6 +223,7 @@ export function LabelList({
             <div key={label.id} className="min-w-0">
               <LabelChip
                 context={compact ? "tray" : "list"}
+                assignment={table ? "assigned" : "unassigned"}
                 label={label}
                 onOpen={onOpen}
                 isDragging={draggingLabelId === label.id}
@@ -223,7 +233,7 @@ export function LabelList({
                 {table
                   ? "Assigned to a table"
                   : label.x !== null
-                    ? "On the floor"
+                    ? "Unassigned · on the floor"
                     : "Unassigned"}
               </p>
             </div>
