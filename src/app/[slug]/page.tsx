@@ -84,6 +84,7 @@ export default async function GuestPage({ params }: PageProps) {
   const rsvpDetailsComplete = attendeeDetails.every(
     (attendee) => attendee.fullName.trim() !== "" && attendee.mealType !== null,
   );
+  const hasCompletedRsvp = data.rsvp?.status === "yes" && rsvpDetailsComplete;
 
   return (
     <WeddingPageShell
@@ -94,7 +95,8 @@ export default async function GuestPage({ params }: PageProps) {
       showFridayWelcome={data.guest.friDin}
       showRehearsal={data.guest.reh}
       showGiard={data.guest.giard}
-      scheduleFirst={data.rsvp?.status === "no" || (data.rsvp?.status === "yes" && rsvpDetailsComplete)}
+      scheduleFirst={data.rsvp?.status === "no" || hasCompletedRsvp}
+      hasCompletedRsvp={hasCompletedRsvp}
       panel={
         <RsvpForm
           slug={slug}

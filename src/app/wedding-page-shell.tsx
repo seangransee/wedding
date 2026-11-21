@@ -20,6 +20,7 @@ type WeddingPageShellProps = {
   showRehearsal?: boolean;
   showGiard?: boolean;
   scheduleFirst?: boolean;
+  hasCompletedRsvp?: boolean;
 };
 
 const defaultPanelClassName =
@@ -92,6 +93,7 @@ export async function WeddingPageShell({
   showRehearsal = false,
   showGiard = false,
   scheduleFirst = false,
+  hasCompletedRsvp = false,
 }: WeddingPageShellProps) {
   const photos = await getWeddingPhotos();
 
@@ -100,6 +102,7 @@ export async function WeddingPageShell({
       <DoubleHappinessFrame />
       <WeddingPageLayout
         scheduleFirst={scheduleFirst}
+        hasCompletedRsvp={hasCompletedRsvp}
         hasPhotos={photos.length > 0}
         panelId={panelId}
         panelNavLabel={panelNavLabel}

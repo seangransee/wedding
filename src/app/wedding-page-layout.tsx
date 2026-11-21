@@ -5,6 +5,7 @@ import { WEDDING_DETAILS } from "./wedding-details";
 
 type WeddingPageLayoutProps = {
   scheduleFirst: boolean;
+  hasCompletedRsvp: boolean;
   hasPhotos: boolean;
   panelId: string;
   panelNavLabel: string;
@@ -26,21 +27,30 @@ function PageNav({
   panelId,
   panelNavLabel,
   scheduleFirst,
+  hasCompletedRsvp,
 }: {
   hasPhotos: boolean;
   panelId: string;
   panelNavLabel: string;
   scheduleFirst: boolean;
+  hasCompletedRsvp: boolean;
 }) {
   const panelItem = { href: `#${panelId}`, label: panelNavLabel };
   const scheduleItem = { href: "#schedule", label: "Schedule" };
+  const hotelsItem = { href: "#hotel-blocks", label: "Hotels" };
+  const leadingItems = hasCompletedRsvp
+    ? [scheduleItem]
+    : scheduleFirst
+      ? [scheduleItem, panelItem]
+      : [panelItem, scheduleItem];
   const navItems = [
-    ...(scheduleFirst ? [scheduleItem, panelItem] : [panelItem, scheduleItem]),
+    ...leadingItems,
     { href: "#registry", label: "Gifts" },
-    { href: "#hotel-blocks", label: "Hotels" },
+    ...(hasCompletedRsvp ? [] : [hotelsItem]),
     { href: "#faqs", label: "FAQs" },
     { href: "#our-story", label: "Our Story" },
     ...(hasPhotos ? [{ href: "#photos", label: "Sexi Adventures" }] : []),
+    ...(hasCompletedRsvp ? [hotelsItem, panelItem] : []),
   ];
 
   return (
@@ -73,6 +83,7 @@ function PageNav({
 
 export function WeddingPageLayout({
   scheduleFirst,
+  hasCompletedRsvp,
   hasPhotos,
   panelId,
   panelNavLabel,
@@ -89,6 +100,7 @@ export function WeddingPageLayout({
   // Freeze the order chosen when the page first loads, so an RSVP save that
   // refreshes the route does not move the form out from under the guest.
   const [isScheduleFirst] = useState(scheduleFirst);
+  const [isRsvpComplete] = useState(hasCompletedRsvp);
   const layoutRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -154,6 +166,7 @@ export function WeddingPageLayout({
         panelId={panelId}
         panelNavLabel={panelNavLabel}
         scheduleFirst={isScheduleFirst}
+        hasCompletedRsvp={isRsvpComplete}
       />
 
       <section
@@ -169,12 +182,20 @@ export function WeddingPageLayout({
       </section>
 
       <div className="pb-16">
-        <div className={followingBlockClassName}>{isScheduleFirst ? panelBlock : schedule}</div>
+        {isRsvpComplete ? null : (
+          <div className={followingBlockClassName}>{isScheduleFirst ? panelBlock : schedule}</div>
+        )}
         {gifts}
-        {hotels}
+        {isRsvpComplete ? null : hotels}
         {faqs}
         {ourStory}
         {photos}
+        {isRsvpComplete ? (
+          <>
+            {hotels}
+            <div className={followingBlockClassName}>{panelBlock}</div>
+          </>
+        ) : null}
       </div>
     </div>
   );
