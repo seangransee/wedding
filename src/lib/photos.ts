@@ -13,6 +13,8 @@ export type PhotoSource = {
 
 export type WeddingPhoto = {
   filename: string;
+  countryCode: string;
+  locationText: string;
   src: string;
   srcSet: PhotoSource[];
   width: number;
@@ -66,7 +68,7 @@ function getPrimarySource(sources: PhotoSource[]) {
   return sources.at(-1) ?? null;
 }
 
-function toWeddingPhoto(entry: PhotoManifestEntry, alt: string) {
+function toWeddingPhoto(entry: PhotoManifestEntry, alt: string, metadata?: WeddingPhotoRecord) {
   const thumbnail = getPrimarySource(entry.thumbnail);
   const lightbox = getPrimarySource(entry.lightbox) ?? thumbnail;
 
@@ -76,6 +78,8 @@ function toWeddingPhoto(entry: PhotoManifestEntry, alt: string) {
 
   return {
     filename: entry.filename,
+    countryCode: metadata?.countryCode ?? "",
+    locationText: metadata?.locationText ?? "",
     src: thumbnail.src,
     srcSet: entry.thumbnail,
     width: entry.width,
@@ -105,7 +109,7 @@ export async function getWeddingPhotos(): Promise<WeddingPhoto[]> {
         return null;
       }
 
-      const photo = toWeddingPhoto(entry, `Wedding photo ${index + 1}`);
+      const photo = toWeddingPhoto(entry, `Wedding photo ${index + 1}`, metadataByFilename.get(entry.filename));
 
       return photo ? { ...photo, originalIndex: index } : null;
     })
@@ -113,6 +117,8 @@ export async function getWeddingPhotos(): Promise<WeddingPhoto[]> {
 
   return sortPhotoEntries(photos, metadataByFilename).map((photo, index) => ({
     filename: photo.filename,
+    countryCode: photo.countryCode,
+    locationText: photo.locationText,
     src: photo.src,
     srcSet: photo.srcSet,
     width: photo.width,
@@ -132,7 +138,7 @@ export async function getAdminWeddingPhotos(): Promise<AdminWeddingPhoto[]> {
   const photos = manifestEntries
     .map((entry, index) => {
       const metadata = metadataByFilename.get(entry.filename);
-      const photo = toWeddingPhoto(entry, `Wedding photo ${index + 1}`);
+      const photo = toWeddingPhoto(entry, `Wedding photo ${index + 1}`, metadata);
 
       if (!photo) {
         return null;
@@ -149,6 +155,8 @@ export async function getAdminWeddingPhotos(): Promise<AdminWeddingPhoto[]> {
 
   return sortPhotoEntries(photos, metadataByFilename).map((photo, index) => ({
     filename: photo.filename,
+    countryCode: photo.countryCode,
+    locationText: photo.locationText,
     src: photo.src,
     srcSet: photo.srcSet,
     width: photo.width,

@@ -7,6 +7,7 @@ import {
 import "react-data-grid/lib/styles.css";
 import "react-photo-album/rows.css";
 import "yet-another-react-lightbox/styles.css";
+import "yet-another-react-lightbox/plugins/captions.css";
 import "./globals.css";
 
 const primarySerif = Cormorant_Garamond({

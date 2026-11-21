@@ -510,9 +510,12 @@ body {
 }
 
 .wedding-photo-button {
+  display: flex;
+  flex-direction: column;
+  align-self: stretch;
   overflow: hidden;
   inline-size: 100%;
-  block-size: 100%;
+  block-size: auto;
   border: 1px solid rgba(255, 214, 228, 0.46);
   border-radius: 0.45rem;
   background: rgba(255, 246, 250, 0.06);
@@ -525,6 +528,44 @@ body {
 .wedding-photo-button:focus-visible {
   outline: 2px solid var(--blush-pink);
   outline-offset: 3px;
+}
+
+.wedding-photo-caption {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  inline-size: 100%;
+  flex: 1 0 auto;
+  min-block-size: 2.75rem;
+  padding: 0.6rem 0.7rem;
+  border-top: 1px solid rgba(255, 214, 228, 0.16);
+  background: #031b12;
+  color: #ffd6e4;
+  font-size: 0.95rem;
+  font-weight: 400;
+  line-height: 1.25;
+  text-align: left;
+  text-shadow: none;
+}
+
+.wedding-photo-flag {
+  flex: 0 0 auto;
+  font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
+  font-size: 1.15rem;
+  line-height: 1;
+}
+
+.wedding-photo-location {
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 639px) {
+  .wedding-photo-caption {
+    gap: 0.4rem;
+    padding: 0.55rem;
+    font-size: 0.9rem;
+  }
 }
 
 .wedding-photo-lazy-frame {
@@ -579,6 +620,13 @@ body {
   --yarl__button_color: #ffd6e4;
   --yarl__button_color_active: #fff6fa;
   --yarl__button_filter: drop-shadow(0 0.2rem 0.4rem rgba(0, 0, 0, 0.85));
+}
+
+.wedding-photo-lightbox .yarl__slide_description {
+  color: #ffd6e4;
+  font-family: var(--font-geist-sans), Georgia, serif;
+  font-size: 1.15rem;
+  line-height: 1.4;
 }
 
 @keyframes weddingPhotoPlaceholder {

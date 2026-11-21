@@ -95,6 +95,8 @@ export type GuestPageData = {
 
 export type WeddingPhotoRecord = {
   filename: string;
+  countryCode: string;
+  locationText: string;
   sortOrder: number;
   hiddenAt: string | null;
   createdAt: string;
@@ -168,6 +170,8 @@ type RsvpAuditEventRow = MailingAddressRow & {
 
 type WeddingPhotoRecordRow = {
   filename: string;
+  country_code: string | null;
+  location_text: string | null;
   sort_order: number;
   hidden_at: string | null;
   created_at: string;
@@ -331,6 +335,8 @@ function parseAttendeeDetails(value: string | null): RsvpAttendeeDetails[] {
 function toWeddingPhotoRecord(row: WeddingPhotoRecordRow): WeddingPhotoRecord {
   return {
     filename: row.filename,
+    countryCode: row.country_code ?? "",
+    locationText: row.location_text ?? "",
     sortOrder: row.sort_order,
     hiddenAt: row.hidden_at,
     createdAt: row.created_at,
@@ -351,7 +357,7 @@ export async function listWeddingPhotoRecords(
 
   try {
     const rows = (await sql().query(
-      `SELECT filename, sort_order, hidden_at, created_at, updated_at
+      `SELECT filename, country_code, location_text, sort_order, hidden_at, created_at, updated_at
        FROM wedding_photos
        WHERE filename = ANY($1::text[])
        ORDER BY sort_order ASC, filename ASC`,
@@ -456,6 +462,22 @@ export async function updateWeddingPhotoHidden(filename: string, hidden: boolean
      WHERE filename = $1
      RETURNING filename`,
     [filename, hidden],
+  )) as Array<{ filename: string }>;
+
+  return rows.length > 0;
+}
+
+export async function updateWeddingPhotoLocation(
+  filename: string,
+  countryCode: string,
+  locationText: string,
+) {
+  const rows = (await sql().query(
+    `UPDATE wedding_photos
+     SET country_code = $2, location_text = $3, updated_at = now()
+     WHERE filename = $1
+     RETURNING filename`,
+    [filename, countryCode, locationText],
   )) as Array<{ filename: string }>;
 
   return rows.length > 0;

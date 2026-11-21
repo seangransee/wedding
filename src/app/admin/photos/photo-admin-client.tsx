@@ -23,6 +23,7 @@ import { ArrowDown, ArrowUp, Eye, EyeOff, GripVertical } from "lucide-react";
 import { useMemo, useRef, useState, useTransition } from "react";
 import type { AdminWeddingPhoto } from "@/lib/photos";
 import { reorderPhotoRows, setPhotoHidden } from "./actions";
+import { PhotoLocationEditor } from "./photo-location-editor";
 
 type PhotoAdminClientProps = {
   photos: AdminWeddingPhoto[];
@@ -69,7 +70,7 @@ function SortablePhotoCard({
     <article
       ref={setNodeRef}
       className={clsx(
-        "grid gap-1.5 border bg-[#fff8fb] p-1.5 shadow-[0_14px_28px_-24px_rgba(143,36,72,0.85)] sm:gap-2 sm:p-2",
+        "grid content-start gap-1.5 border bg-[#fff8fb] p-1.5 shadow-[0_14px_28px_-24px_rgba(143,36,72,0.85)] sm:gap-2 sm:p-2",
         isDragging ? "relative z-20 border-[#be185d] opacity-90" : "border-[#df7fa3]",
         isHidden && "bg-[#f7d8e4] opacity-70",
       )}
@@ -140,13 +141,14 @@ function SortablePhotoCard({
           </button>
         </div>
       </div>
+      <PhotoLocationEditor photo={photo} />
     </article>
   );
 }
 
 export function PhotoAdminClient({ photos }: PhotoAdminClientProps) {
   const [orderedPhotos, setOrderedPhotos] = useState(photos);
-  const [message, setMessage] = useState("Drag photos or use the arrow buttons. Changes autosave.");
+  const [message, setMessage] = useState("Drag photos or use the arrow buttons. Edit the country and location below each photo. Changes autosave.");
   const [isOrderSaving, setIsOrderSaving] = useState(false);
   const [pendingFilename, setPendingFilename] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();

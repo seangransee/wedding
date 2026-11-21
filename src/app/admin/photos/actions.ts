@@ -6,7 +6,9 @@ import { ADMIN_COOKIE_NAME, ADMIN_PASSWORD } from "@/lib/cookies";
 import {
   reorderWeddingPhotos,
   updateWeddingPhotoHidden,
+  updateWeddingPhotoLocation,
 } from "@/lib/db";
+import { validatePhotoLocation } from "@/lib/photo-locations";
 import {
   getCurrentWeddingPhotoFilenames,
   isKnownWeddingPhotoFilename,
@@ -39,7 +41,29 @@ function sameFilenameSet(first: string[], second: string[]) {
 
 function revalidatePhotoViews() {
   revalidatePath("/");
+  revalidatePath("/[slug]", "page");
   revalidatePath("/admin/photos");
+}
+
+export async function setPhotoLocation(
+  filename: string,
+  countryCode: string,
+  locationText: string,
+): Promise<AdminActionState> {
+  await requireAdmin();
+
+  if (typeof filename !== "string" || !isKnownWeddingPhotoFilename(filename)) {
+    return { ok: false, message: "Photo filename is invalid." };
+  }
+
+  const error = validatePhotoLocation(countryCode, locationText);
+  if (error) return { ok: false, message: error };
+
+  const updated = await updateWeddingPhotoLocation(filename, countryCode, locationText.trim());
+  if (!updated) return { ok: false, message: "Photo was not found. Refresh and try again." };
+
+  revalidatePhotoViews();
+  return { ok: true, message: "Photo location saved." };
 }
 
 export async function reorderPhotoRows(filenames: string[]): Promise<AdminActionState> {

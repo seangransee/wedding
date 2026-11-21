@@ -4,6 +4,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { RowsPhotoAlbum } from "react-photo-album";
 import Lightbox from "yet-another-react-lightbox";
+import Captions from "yet-another-react-lightbox/plugins/captions";
+import { photoCountryFlag, photoCountryName } from "@/lib/photo-locations";
+import { PhotoLocationCaption } from "./photo-location-caption";
 import type { PhotoSource, WeddingPhoto } from "@/lib/photos";
 import type { ComponentPropsWithoutRef } from "react";
 
@@ -120,6 +123,8 @@ function LazyGalleryImage({
 function getLightboxSlides(photos: WeddingPhoto[]) {
   return photos.map((photo) => ({
     alt: photo.alt,
+    description: [photoCountryFlag(photo.countryCode), photo.locationText || photoCountryName(photo.countryCode)]
+      .filter(Boolean).join(" "),
     height: photo.height,
     src: photo.lightboxSrc,
     srcSet: photo.lightboxSrcSet,
@@ -153,6 +158,9 @@ export function PhotoGallery({ photos }: PhotoGalleryProps) {
         }}
         onClick={({ index: photoIndex }) => setIndex(photoIndex)}
         render={{
+          extras: (_, { photo }) => (
+            <PhotoLocationCaption countryCode={photo.countryCode} locationText={photo.locationText} />
+          ),
           image: (props, { photo }) => (
             <LazyGalleryImage
               {...props}
@@ -164,7 +172,7 @@ export function PhotoGallery({ photos }: PhotoGalleryProps) {
         }}
         componentsProps={{
           button: ({ photo }) => ({
-            "aria-label": photo.alt,
+            "aria-label": `${photo.alt}${photo.locationText ? `: ${photo.locationText}` : ""}`,
             className: "wedding-photo-button",
             type: "button",
           }),
@@ -176,6 +184,8 @@ export function PhotoGallery({ photos }: PhotoGalleryProps) {
         }}
       />
       <Lightbox
+        plugins={[Captions]}
+        captions={{ descriptionTextAlign: "center", descriptionMaxLines: 3 }}
         open={index >= 0}
         close={() => setIndex(-1)}
         index={index}
