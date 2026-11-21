@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { WEDDING_DETAILS } from "./wedding-details";
 
 type WeddingPageLayoutProps = {
@@ -89,6 +89,53 @@ export function WeddingPageLayout({
   // Freeze the order chosen when the page first loads, so an RSVP save that
   // refreshes the route does not move the form out from under the guest.
   const [isScheduleFirst] = useState(scheduleFirst);
+  const layoutRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const layout = layoutRef.current;
+    const nav = layout?.querySelector<HTMLElement>(".guest-page-nav");
+    if (!layout || !nav) return;
+    const surfaces = Array.from(
+      layout.querySelectorAll<HTMLElement>(".guest-panel-surface, .guest-hero-copy"),
+    ).filter((surface) => !surface.parentElement?.closest(".guest-panel-surface, .guest-hero-copy"));
+    // Mask each glass panel itself so its backdrop blur still sees the photo.
+    surfaces.forEach((surface) => surface.classList.add("guest-content-fade"));
+
+    let frame = 0;
+    const updateFade = () => {
+      frame = 0;
+      const navBottom = nav.getBoundingClientRect().bottom;
+      const positions = surfaces.map((surface) => navBottom - surface.getBoundingClientRect().top);
+      const anchorOffset = nav.offsetHeight + parseFloat(getComputedStyle(nav).top);
+      surfaces.forEach((surface, index) => {
+        surface.style.setProperty("--guest-content-fade-top", `${positions[index]}px`);
+      });
+      layout.style.setProperty(
+        "--guest-anchor-offset",
+        `calc(${anchorOffset}px + var(--guest-content-fade-distance) + 1rem)`,
+      );
+    };
+    const requestUpdate = () => {
+      if (!frame) frame = requestAnimationFrame(updateFade);
+    };
+    const observer = new ResizeObserver(requestUpdate);
+    observer.observe(nav);
+    window.addEventListener("scroll", requestUpdate, { passive: true });
+    window.addEventListener("resize", requestUpdate);
+    updateFade();
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("scroll", requestUpdate);
+      window.removeEventListener("resize", requestUpdate);
+      cancelAnimationFrame(frame);
+      surfaces.forEach((surface) => {
+        surface.classList.remove("guest-content-fade");
+        surface.style.removeProperty("--guest-content-fade-top");
+      });
+      layout.style.removeProperty("--guest-anchor-offset");
+    };
+  }, []);
 
   const panelBlock = (
     <div id={panelId} className={`${panelClassName} scroll-mt-40 sm:scroll-mt-28`}>
@@ -97,7 +144,11 @@ export function WeddingPageLayout({
   );
 
   return (
-    <div className="contents" data-schedule-first={isScheduleFirst ? "true" : "false"}>
+    <div
+      ref={layoutRef}
+      className="contents"
+      data-schedule-first={isScheduleFirst ? "true" : "false"}
+    >
       <PageNav
         hasPhotos={hasPhotos}
         panelId={panelId}

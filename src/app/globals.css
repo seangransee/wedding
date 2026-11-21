@@ -78,6 +78,7 @@ body {
 }
 
 .guest-invitation-page {
+  --guest-content-fade-distance: 6rem;
   isolation: isolate;
 }
 
@@ -408,20 +409,23 @@ body {
     inset 0 0 0 1px rgba(255, 246, 250, 0.1);
 }
 
+/* Fade the scrolling content into the photo before it reaches the sticky nav. */
+.guest-content-fade {
+  --guest-content-fade-top: 0px;
+  mask-image: linear-gradient(
+    to bottom,
+    transparent var(--guest-content-fade-top),
+    #000 calc(var(--guest-content-fade-top) + var(--guest-content-fade-distance))
+  );
+}
+
+[data-schedule-first] [id] {
+  scroll-margin-top: var(--guest-anchor-offset, 14rem);
+}
+
 @media (min-width: 640px) {
   .guest-page-nav {
     max-width: min(calc(100vw - 6.75rem), 46rem);
-  }
-}
-
-/* RSVP'd guests' nav also carries the brand mark, so anchor jumps need more clearance. */
-[data-schedule-first="true"] [id] {
-  scroll-margin-top: 11.5rem;
-}
-
-@media (min-width: 640px) {
-  [data-schedule-first="true"] [id] {
-    scroll-margin-top: 9rem;
   }
 }
 
