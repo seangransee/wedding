@@ -46,13 +46,17 @@ You can RSVP directly on this website. If you experience any issues, please emai
 
 Please note any allergies or dietary needs in the comments field when you RSVP, or email us at lexiandseanwedding@gmail.com. We will pass all requirements along to our caterer to ensure everyone is accommodated safely.
 
-## Children at the Wedding
+## Guest List
 
 ### Are children invited?
 
 We love all the little ones in our lives — truly! However, due to our venue's strict capacity limits, we are only able to accommodate the guests listed on your invite link. If you need help finding childcare resources in the Chicago area, please don't hesitate to reach out and we will do our best to help.
 
 Please note that this applies to all guests, including infants and toddlers. We so appreciate your understanding and can't wait to celebrate with you!
+
+### Can I bring a plus-one?
+
+Due to our venue capacity, we are only able to host invited guests. If your invitation is addressed to you and a guest, you are welcome to bring one additional person. If you have questions about your specific invitation, please reach out to us directly at lexiandseanwedding@gmail.com.
 
 ## Gifts & Registry
 
@@ -69,12 +73,6 @@ We kindly ask that gifts be shipped directly to us rather than brought to the ve
 ### Is this an unplugged ceremony?
 
 Yes! We are asking guests to please put phones and cameras away during the ceremony so you can be fully present with us in the moment. Our incredible photographers and videographers will capture everything beautifully. Feel free to snap all the photos you want at the cocktail hour and reception — we love seeing your perspective on the night!
-
-## Plus-Ones & Guest List
-
-### Can I bring a plus-one?
-
-Due to our venue capacity, we are only able to host invited guests. If your invitation is addressed to you and a guest, you are welcome to bring one additional person. If you have questions about your specific invitation, please reach out to us directly at lexiandseanwedding@gmail.com.
 
 ## Still Have Questions?
 
