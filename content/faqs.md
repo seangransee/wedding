@@ -4,7 +4,7 @@
 
 ### When and where is the wedding?
 
-Our wedding is on Saturday, December 12, 2026, at The Blackstone Chicago, located at 636 S Michigan Ave, Chicago, IL 60605. The ceremony and reception will both take place at the venue. Timing details are coming soon — check back for updates!
+Our wedding is on Saturday, December 12, 2026, at [The Blackstone Chicago](https://maps.app.goo.gl/UKgUKENz1W4efCC7A), located at 636 S Michigan Ave, Chicago, IL 60605. The ceremony and reception will both take place at the venue. Timing details are coming soon — check back for updates!
 
 ### What is the best way to get to the venue?
 
