@@ -6,9 +6,9 @@ On June 2nd, 2017, we met at North Avenue Beach during an adult rec league volle
 
 We quickly became really good friends, hitting up fun concerts like Taylor Swift's Reputation Tour, various Rod Tuffcurls and the Bench Press concerts, Colin Jost’s stand-up tour, and generally making the most of Chicago. Until a trip to Russia changed everything. The rest, as they say, is history. An extremely chaotic, adventure-filled history.
 
-When COVID hit, we moved in together and nothing says "I love you" quite like sharing 850 square feet during a global pandemic and coming out the other side still actually liking each other. Then in January 2021, we got the baby, Nala, who has been running the household ever since and absolutely knows it.
+When COVID hit, we moved in together and nothing says "I love you" quite like sharing 850 square feet during a global pandemic and coming out the other side still actually liking each other. Then in January 2021, we got the baby, [Nala](https://www.instagram.com/nala_the_shiht/), who has been running the household ever since and absolutely knows it.
 
-In June 2023, we decided to pack up our Chicago lives and just... go. Like, go go. Over the next three years, we hopped across the globe with Nala in tow — Montréal, Bulgaria, Italy (basically all of Italy), Prague, Romania, Paris, Germany's Christmas markets, Thailand, Malaysia, Vietnam, Japan, South Korea, Laos, Indonesia, India, Taiwan, Hong Kong... and that's not even all of it.
+In June 2023, we decided to pack up our Chicago lives and just... go. Like, go go. Over the next three years, we [hopped across the globe](https://seangransee.com/travel) with Nala in tow — Montréal, Bulgaria, Italy (basically all of Italy), Prague, Romania, Paris, Germany's Christmas markets, Thailand, Malaysia, Vietnam, Japan, South Korea, Laos, Indonesia, India, Taiwan, Hong Kong... and that's not even all of it.
 
 We spent three months putting down roots in Mexico City, exploring the food scene and the neighborhoods at our own pace. Then came Bangkok, where we spent a year and a half calling Southeast Asia home, using it as our base to explore the region while building a little life of our own.
 
@@ -18,6 +18,6 @@ Along the way, we were lucky enough to be welcomed into some truly unforgettable
 
 And now, here we are, in San Francisco 🌉 planning this wedding you're about to attend.
 
-Nine years of friendship, love, and adventure — plus one very spoiled baby (hi, Nala 🐾) — and it's all led to this. We're getting married in Chicago, where it all began, and we couldn't be more excited to celebrate with the people who mean the most to us.
+Almost ten years of friendship, love, and adventure — plus one very spoiled baby (hi, Nala 🐾) — and it's all led to this. We're getting married in Chicago, where it all began, and we couldn't be more excited to celebrate with the people who mean the most to us.
 
 Thanks for being here and being a part of our story. Now let's party. 🥂

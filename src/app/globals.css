@@ -465,6 +465,37 @@ body {
   text-shadow: 0 1px 0 rgba(3, 27, 18, 0.9), 0 0 0.8rem color-mix(in srgb, var(--blush-pink) 72%, transparent);
 }
 
+/* Long-form story copy needs a sturdier face and its own size above the compact page scale. */
+#our-story > article {
+  background: #031b12;
+  text-shadow: none;
+  backdrop-filter: none;
+}
+
+#our-story p {
+  inline-size: 100%;
+  max-inline-size: min(60ch, 720px);
+  margin-inline: auto;
+  font-family: var(--font-geist-mono), "Libre Baskerville", Georgia, serif;
+  font-size: 18px;
+  line-height: 1.8;
+}
+
+#our-story a {
+  text-decoration-style: solid;
+}
+
+#our-story a:focus-visible {
+  outline: 2px solid var(--blush-pink);
+  outline-offset: 4px;
+}
+
+@media (min-width: 640px) {
+  #our-story p {
+    font-size: 20px;
+  }
+}
+
 .guest-story-emoji {
   display: inline-block;
   color: var(--blush-pink);
