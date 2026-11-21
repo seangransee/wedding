@@ -267,7 +267,7 @@ function renderSplitHeadingText(text: string) {
 
   return (
     <span className="grid gap-1">
-      <span className="hotel-name text-[1.45rem] font-semibold uppercase leading-tight tracking-normal text-[#ffd6e4] sm:text-2xl">
+      <span className="text-[1.45rem] font-semibold uppercase leading-tight tracking-normal text-[#ffd6e4] sm:text-2xl">
         {linkedName ? (
           <a
             href={linkedName.url}
@@ -282,7 +282,7 @@ function renderSplitHeadingText(text: string) {
         )}
       </span>
       {detail ? (
-        <span className="hotel-detail text-lg font-semibold normal-case leading-[1.55] tracking-normal text-[#ffd6e4] sm:text-xl">
+        <span className="text-lg font-semibold normal-case leading-[1.55] tracking-normal text-[#ffd6e4] sm:text-xl">
           {detail.toLowerCase()}
         </span>
       ) : null}
@@ -446,11 +446,11 @@ function renderNodes(
           return (
             <h3
               key={index}
-              className={`markdown-subheading ${
+              className={
                 emphasizeHeadings
                   ? "border-y border-[#ffd6e4]/55 bg-[#031b12]/55 px-3 py-3 text-center text-sm font-bold uppercase tracking-[0.28em] text-[#ffd6e4] shadow-[inset_0_1px_0_rgba(255,246,250,0.12)] first:mt-0 sm:px-5 sm:py-4 sm:text-base sm:tracking-[0.34em]"
                   : "border-t border-[#ffd6e4]/40 pt-7 text-base font-semibold uppercase tracking-[0.18em] text-[#ffd6e4] first:border-t-0 first:pt-0 sm:pt-8 sm:text-lg sm:tracking-[0.22em]"
-              }`}
+              }
             >
               {renderInlineMarkdown(node.text, inlineOptions)}
             </h3>
@@ -474,7 +474,7 @@ function renderNodes(
 
       case "paragraph":
         return (
-          <p key={index} className="guest-prose text-lg leading-[1.85] text-[#ffd6e4] sm:text-xl">
+          <p key={index} className="text-lg leading-[1.85] text-[#ffd6e4] sm:text-xl">
             {renderInlineMarkdown(node.text, inlineOptions)}
           </p>
         );
@@ -483,7 +483,7 @@ function renderNodes(
         return (
           <ul
             key={index}
-            className="guest-prose grid gap-2 pl-5 text-lg leading-[1.8] text-[#ffd6e4] sm:text-xl"
+            className="grid gap-2 pl-5 text-lg leading-[1.8] text-[#ffd6e4] sm:text-xl"
           >
             {node.items.map((item) => (
               <li key={item} className="list-disc">
@@ -558,7 +558,7 @@ function renderCollapsibleQuestionNodes(
           id={faqQuestionId(node.text)}
           className="group scroll-mt-40 rounded-md sm:scroll-mt-28 border border-[#ffd6e4]/45 bg-[#fff6fa]/8 shadow-[inset_0_1px_0_rgba(255,246,250,0.1)]"
         >
-          <summary className="faq-question grid min-h-16 cursor-pointer list-none grid-cols-[1fr_auto] items-center gap-4 px-4 py-3 text-left text-[1.45rem] font-semibold leading-tight text-[#ffd6e4] transition hover:bg-[#fff6fa]/8 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#ffd6e4] [&::-webkit-details-marker]:hidden sm:px-5 sm:py-4 sm:text-2xl">
+          <summary className="grid min-h-16 cursor-pointer list-none grid-cols-[1fr_auto] items-center gap-4 px-4 py-3 text-left text-[1.45rem] font-semibold leading-tight text-[#ffd6e4] transition hover:bg-[#fff6fa]/8 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#ffd6e4] [&::-webkit-details-marker]:hidden sm:px-5 sm:py-4 sm:text-2xl">
             <span>{renderInlineMarkdown(node.text)}</span>
             <span
               aria-hidden="true"

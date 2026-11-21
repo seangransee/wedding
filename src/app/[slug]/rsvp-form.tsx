@@ -471,7 +471,7 @@ export function RsvpForm({
   const saveButtonIsPrimary = saveIndicator.tone === "pending" || saveIndicator.tone === "error";
 
   return (
-    <form ref={formRef} onSubmit={(event) => event.preventDefault()} className="rsvp-form grid gap-5 sm:gap-6 [&_input]:scroll-mb-32 [&_textarea]:scroll-mb-32">
+    <form ref={formRef} onSubmit={(event) => event.preventDefault()} className="grid gap-5 sm:gap-6 [&_input]:scroll-mb-32 [&_textarea]:scroll-mb-32">
       <input type="hidden" name="slug" value={slug} />
       <input type="hidden" name="status" value={status} />
       <input type="hidden" name="attendingCount" value={effectiveAttendingCount ?? ""} />
