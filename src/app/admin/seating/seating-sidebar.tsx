@@ -288,6 +288,7 @@ export function SeatingSidebar({
 
         {visibleSummaries.map((summary) => {
           const { table } = summary;
+          const tableLabels = labelsAtTable(labels, table.id);
           const previewCount = previewCounts.get(table.id);
           const badgeSummary =
             previewCount === undefined
@@ -322,6 +323,10 @@ export function SeatingSidebar({
                   </button>
                 </>
               }
+              headingLabels={tableLabels.length ? <>
+                {tableLabels.map((label) => <LabelChip key={label.id} label={label} context="table-list" onOpen={onOpenLabel} isDragging={draggingLabelId === label.id} className="min-h-9 text-sm" />)}
+                <LabelWarning labels={tableLabels} />
+              </> : undefined}
               badge={<FullnessBadge className="text-xs" summary={badgeSummary} />}
               collapsed={!searching && collapsedIds.has(table.id)}
               drop={{ type: "table", tableId: table.id, area: "list", shape: "rect" }}
@@ -333,7 +338,6 @@ export function SeatingSidebar({
               onToggle={() => onToggleSection(table.id)}
               subtitle={
                 [
-                  table.number && table.name ? table.name : null,
                   summary.style.label,
                   summary.unconfirmed ? `${summary.unconfirmed} unconfirmed` : null,
                 ]
@@ -342,8 +346,6 @@ export function SeatingSidebar({
               }
               title={tableTitle(table)}
             >
-              <LabelWarning labels={labelsAtTable(labels, table.id)} />
-              {labelsAtTable(labels, table.id).map((label) => <LabelChip key={label.id} label={label} context="table-list" onOpen={onOpenLabel} isDragging={draggingLabelId === label.id} className="min-h-9 text-sm" />)}
               {parties.length === 0 ? (
                 <p className="px-1 py-2 text-sm text-[#8f5070]">
                   {draggingUnitId !== null ? "Drop here to seat at this table." : "Drag parties here."}
@@ -375,6 +377,7 @@ function SidebarSection({
   collapsed,
   drop,
   dropId,
+  headingLabels,
   icon,
   isDropTarget,
   muted = false,
@@ -389,6 +392,7 @@ function SidebarSection({
   collapsed: boolean;
   drop: DropData;
   dropId: string;
+  headingLabels?: ReactNode;
   icon?: ReactNode;
   isDropTarget: boolean;
   muted?: boolean;
@@ -413,7 +417,8 @@ function SidebarSection({
         <button
           type="button"
           aria-expanded={!collapsed}
-          className="flex min-h-12 min-w-0 flex-1 items-center gap-1.5 rounded-lg px-1.5 py-1.5 text-left transition hover:bg-[#ffeaf2]"
+          aria-label={headingLabels ? `${collapsed ? "Expand" : "Collapse"} ${title}` : undefined}
+          className={clsx("flex min-h-12 min-w-0 items-center gap-1.5 rounded-lg px-1.5 py-1.5 text-left transition hover:bg-[#ffeaf2]", headingLabels ? "shrink-0" : "flex-1")}
           onClick={onToggle}
         >
           <ChevronDown
@@ -422,7 +427,7 @@ function SidebarSection({
             size={17}
           />
           {icon}
-          <span className="min-w-0 flex-1">
+          {headingLabels ? null : <span className="min-w-0 flex-1">
             <span
               className={clsx(
                 "block truncate text-[1.05rem] font-semibold leading-tight",
@@ -434,9 +439,16 @@ function SidebarSection({
             {subtitle ? (
               <span className="block truncate text-xs leading-tight text-[#8f5070]">{subtitle}</span>
             ) : null}
-          </span>
-          {badge}
+          </span>}
+          {headingLabels ? null : badge}
         </button>
+        {headingLabels ? <>
+          <div className="min-w-0 flex-1 py-2">
+            <div className="flex flex-wrap items-center gap-1">{headingLabels}</div>
+            {subtitle ? <p className="mt-1 truncate text-xs text-[#8f5070]">{subtitle}</p> : null}
+          </div>
+          {badge}
+        </> : null}
         {actions}
       </div>
       {collapsed ? null : <div className="grid grid-cols-[minmax(0,1fr)] gap-1.5 px-3 pb-3">{children}</div>}

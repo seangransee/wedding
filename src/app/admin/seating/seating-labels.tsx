@@ -32,7 +32,9 @@ export function LabelChip({
   isDragging,
   style,
   className,
+  compact = false,
 }: {
+  compact?: boolean;
   label: SeatingLabel;
   onOpen: (id: string) => void;
   context: string;
@@ -53,11 +55,13 @@ export function LabelChip({
       {...listeners}
       aria-label={`Table ${label.kind}: ${label.value}. Drag to a table or the floor, or tap for options.`}
       data-no-pan
+      title={label.value}
       className={clsx(
         "seating-chip flex min-w-0 cursor-grab items-center gap-1.5 rounded-lg border px-2 py-1 text-left font-semibold leading-tight shadow-sm",
         label.kind === "name"
           ? "border-[#83aa93] bg-[#edf6ee] text-[#24513e]"
           : "border-[#d79ab4] bg-[#fff1f7] text-[#7a1239]",
+        compact && "gap-1 rounded px-1 py-0.5",
         isDragging && "opacity-30",
         className,
       )}
@@ -69,13 +73,13 @@ export function LabelChip({
       style={style}
     >
       <Icon size="1em" aria-hidden="true" className="shrink-0 opacity-75" />
-      <span className="min-w-0 break-words [overflow-wrap:anywhere]">
+      <span className={compact ? "min-w-0 truncate" : "min-w-0 break-words [overflow-wrap:anywhere]"}>
         {label.value}
       </span>
       <GripVertical
         size="0.85em"
         aria-hidden="true"
-        className="ml-auto shrink-0 opacity-40"
+        className={clsx("ml-auto shrink-0 opacity-40", compact && "hidden")}
       />
     </button>
   );
@@ -217,7 +221,7 @@ export function LabelList({
               />
               <p className="mt-0.5 px-1 text-xs text-[#8f5070]">
                 {table
-                  ? tableFullTitle(table)
+                  ? "Assigned to a table"
                   : label.x !== null
                     ? "On the floor"
                     : "Unassigned"}

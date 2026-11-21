@@ -1123,23 +1123,11 @@ const PlanTable = memo(function PlanTable({
     : 0;
   const dimmed = matchingUnitIds !== null && matchCount === 0;
 
-  // Text stays readable at any zoom: grow it in room units as the room shrinks.
-  // Unnamed round tables show just their headcount until a number or name is assigned.
-  const label = table.number || table.name || (sweetheart ? "Sweetheart table" : "");
-  const labelIsNumber = Boolean(table.number);
-  const showName = detail && labelIsNumber && Boolean(table.name);
-  const numberFont = detail
-    ? Math.max(26, 16 / zoom)
-    : Math.min(Math.max(34, 18 / zoom), round ? 84 : 48);
-  const nameFont = detail ? Math.max(13, 10 / zoom) : Math.min(Math.max(16, 12 / zoom), round ? 44 : 30);
-  const labelFont = labelIsNumber ? numberFont : nameFont;
+  // The draggable labels are the table's only visible name and number.
+  // Keep the interior for headcount and guests at every zoom level.
   const countFont = detail ? Math.max(14, 10.5 / zoom) : Math.min(Math.max(20, 13 / zoom), round ? 52 : 32);
   const borderWidth = Math.max(3, 2 / zoom);
-  const headerHeight = round
-    ? detail && labelIsNumber
-      ? numberFont * 1.05 + (showName ? nameFont * 1.2 : 0) + 6
-      : (label ? labelFont * 1.15 : 0) + countFont * 1.25 + 6
-    : Math.max(sweetheart ? nameFont : labelFont, countFont) * 1.35 + 8;
+  const headerHeight = countFont * 1.35 + 8;
   // Party names use the higher-x-height serif so they stay legible when small,
   // and shrink as people are added so every name at the table shows in full.
   const maxChipFont = Math.max(12, 10 / zoom);
@@ -1250,66 +1238,10 @@ const PlanTable = memo(function PlanTable({
           zoom={zoom}
         />
       ) : null}
-      {round ? (
-        detail && labelIsNumber ? (
-          <>
-            <span className="flex max-w-[86%] items-baseline justify-center gap-[0.3em] leading-[1.05]">
-              <span className="truncate font-bold tabular-nums" style={{ fontSize: numberFont }}>
-                {label}
-              </span>
-              {countLabel}
-            </span>
-            {showName ? (
-              <span
-                className="block max-w-[74%] truncate font-semibold italic leading-[1.2] opacity-85"
-                style={{ fontSize: nameFont }}
-              >
-                {table.name}
-              </span>
-            ) : null}
-          </>
-        ) : (
-          <>
-            {label ? (
-              <span
-                className={clsx("block max-w-[80%] truncate leading-[1.15]", labelIsNumber ? "font-bold tabular-nums" : "font-semibold")}
-                style={{ fontSize: labelFont }}
-              >
-                {label}
-              </span>
-            ) : null}
-            <span className="leading-[1.25]">{countLabel}</span>
-          </>
-        )
-      ) : resizable ? (
-        <span className="flex max-w-full items-baseline justify-center gap-[0.35em] leading-[1.25]">
-          {label ? (
-            <span
-              className={clsx("truncate", labelIsNumber ? "font-bold tabular-nums" : "font-semibold")}
-              style={{ fontSize: labelFont }}
-            >
-              {label}
-            </span>
-          ) : null}
-          {showName ? (
-            <span className="truncate font-semibold italic opacity-85" style={{ fontSize: nameFont }}>
-              {table.name}
-            </span>
-          ) : null}
-          {countLabel}
-        </span>
-      ) : (
-        <span className="flex max-w-full items-center justify-center gap-[0.3em] leading-[1.25]">
-          <Heart aria-hidden="true" className="shrink-0 fill-current" size={nameFont} />
-          {detail ? (
-            <span className="truncate font-semibold" style={{ fontSize: nameFont }}>
-              {table.number ? `${table.number} · ` : ""}
-              {table.name || "Sweetheart table"}
-            </span>
-          ) : null}
-          <span className="ml-[0.2em]">{countLabel}</span>
-        </span>
-      )}
+      <span className="flex max-w-full items-center justify-center gap-[0.3em] leading-[1.25]">
+        {sweetheart ? <Heart aria-hidden="true" className="shrink-0 fill-current" size={countFont} /> : null}
+        {countLabel}
+      </span>
       {detail && parties.length > 0 ? (
         <span className="mt-[3px] flex w-full flex-col items-center" style={{ gap: chipFont * CHIP_LINE_GAP_EM }}>
           {chipLayout.lines.map((line, lineIndex) => (
@@ -1339,11 +1271,11 @@ const PlanTable = memo(function PlanTable({
         </span>
       ) : null}
     </div>
-    {labels.length && detail ? <div className="absolute left-1/2 top-0 z-20 flex -translate-x-1/2 -translate-y-[65%] flex-wrap justify-center gap-1" style={{ width: Math.max(size.width, 180) }} data-no-pan>
-      {labels.map((label) => <LabelChip key={label.id} context="table-plan" label={label} onOpen={onOpenLabel} isDragging={draggingLabelId === label.id}
-        style={{ fontSize: Math.max(12, 10 / zoom), maxWidth: "100%" }} />)}
-      <LabelWarning labels={labels} style={{ fontSize: Math.max(12, 10 / zoom) }} />
-    </div> : labels.length ? <LabelWarning compact labels={labels} className="absolute -top-2 right-0 z-20" style={{ fontSize: 11 / zoom }} /> : null}
+    {labels.length ? <div className="absolute left-1/2 top-0 z-20 flex -translate-x-1/2 -translate-y-[65%] flex-wrap justify-center gap-1" style={{ width: Math.max(size.width, 180) }} data-no-pan>
+      {labels.map((label) => <LabelChip key={label.id} context="table-plan" label={label} onOpen={onOpenLabel} isDragging={draggingLabelId === label.id} compact={!detail}
+        style={{ fontSize: Math.max(12, (detail ? 10 : 8) / zoom), maxWidth: "100%" }} />)}
+      <LabelWarning compact={!detail} labels={labels} style={{ fontSize: Math.max(12, (detail ? 10 : 8) / zoom) }} />
+    </div> : null}
     {resizable ? (
       <ResizeHandles
         cornerClassName="seating-table-corner"
