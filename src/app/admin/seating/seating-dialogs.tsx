@@ -1,6 +1,5 @@
 "use client";
 
-import * as Dialog from "@radix-ui/react-dialog";
 import clsx from "clsx";
 import {
   ArrowRight,
@@ -18,7 +17,7 @@ import {
   Wand2,
   X,
 } from "lucide-react";
-import { useRef, useState, type ReactNode } from "react";
+import { useRef, useState } from "react";
 import {
   AREA_NAME_MAX_LENGTH,
   areaTitle,
@@ -36,8 +35,6 @@ import {
   searchTokens,
   shortPersonLabel,
   TABLE_NAME_MAX_LENGTH as BUCKET_NAME_MAX_LENGTH,
-  TABLE_NAME_MAX_LENGTH,
-  TABLE_NUMBER_MAX_LENGTH,
   tableFullTitle,
   tableTitle,
   unitMatchesSearch,
@@ -57,50 +54,10 @@ import {
   type TableSummary,
 } from "./seating-ui";
 
-function Sheet({
-  children,
-  description,
-  onClose,
-  onOpenAutoFocus,
-  title,
-}: {
-  children: ReactNode;
-  description: ReactNode;
-  onClose: () => void;
-  onOpenAutoFocus?: (event: Event) => void;
-  title: ReactNode;
-}) {
-  return (
-    <Dialog.Root open onOpenChange={(open) => (!open ? onClose() : undefined)}>
-      <Dialog.Portal>
-        <Dialog.Overlay className="seating-dialog-overlay fixed inset-0 z-50 bg-[#4a1027]/40 backdrop-blur-[2px]" />
-        <Dialog.Content
-          className="seating-dialog-content fixed inset-x-0 bottom-0 z-50 flex max-h-[92dvh] flex-col overflow-hidden rounded-t-3xl border border-[#df7fa3] bg-[#fff8fb] text-[#4a1027] shadow-[0_-24px_60px_-30px_rgba(74,16,39,0.8)] outline-none md:inset-x-auto md:bottom-auto md:left-1/2 md:top-1/2 md:max-h-[88dvh] md:w-[min(94vw,36rem)] md:-translate-x-1/2 md:-translate-y-1/2 md:rounded-3xl"
-          onOpenAutoFocus={onOpenAutoFocus}
-        >
-          <div className="mx-auto mt-2 h-1.5 w-12 shrink-0 rounded-full bg-[#efb5c9] md:hidden" aria-hidden="true" />
-          <div className="flex shrink-0 items-start gap-3 border-b border-[#f3cddb] px-5 pb-3 pt-3 md:pt-5">
-            <div className="min-w-0 flex-1">
-              <Dialog.Title className="text-2xl font-semibold leading-tight text-[#4a1027]">{title}</Dialog.Title>
-              <Dialog.Description asChild>
-                <div className="mt-1 text-sm text-[#8f5070]">{description}</div>
-              </Dialog.Description>
-            </div>
-            <Dialog.Close
-              aria-label="Close"
-              className="grid size-10 shrink-0 place-items-center rounded-full border border-[#efb5c9] bg-white text-[#7a1239] transition hover:bg-[#ffe0ec]"
-            >
-              <X size={18} aria-hidden="true" />
-            </Dialog.Close>
-          </div>
-          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] pt-4">
-            {children}
-          </div>
-        </Dialog.Content>
-      </Dialog.Portal>
-    </Dialog.Root>
-  );
-}
+import { labelsAtTable, type SeatingLabel, type LabelPlacement } from "@/lib/seating-labels";
+import { LabelWarning } from "./seating-labels";
+
+import { Sheet } from "./seating-sheet";
 
 function mealLabel(mealType: SeatingMealType | null) {
   if (mealType === "beef") {
@@ -488,27 +445,27 @@ type SeatPerson = {
 type SeatSelection = { kind: "person"; key: string } | { kind: "seat"; seatNumber: number } | null;
 
 export function TableDialog({
-  autoFocusLabel,
-  duplicateNumber,
+  labels,
+  onOpenLabel,
+  onAssignLabel,
   onAssignUnit,
   onChangeCapacity,
   onClose,
   onDelete,
-  onLabel,
   onOpenUnit,
   onSetSeats,
   seats,
   summary,
   unseatedUnits,
 }: {
-  autoFocusLabel: boolean;
-  duplicateNumber: (number: string) => boolean;
+  labels: SeatingLabel[];
+  onOpenLabel: (id: string) => void;
+  onAssignLabel: (id: string, placement: LabelPlacement) => void;
   onAssignUnit: (unitId: string, tableId: string | null) => void;
   /** Rectangular tables only: how many people this table seats. */
   onChangeCapacity: (capacity: number) => void;
   onClose: () => void;
   onDelete: () => void;
-  onLabel: (number: string, name: string) => void;
   onOpenUnit: (unitId: string) => void;
   onSetSeats: (seats: SeatingSeat[]) => void;
   seats: SeatingSeat[];
@@ -516,31 +473,13 @@ export function TableDialog({
   unseatedUnits: SeatingUnit[];
 }) {
   const { table } = summary;
-  const [number, setNumber] = useState(table.number);
-  const [name, setName] = useState(table.name);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [addQuery, setAddQuery] = useState("");
-  const numberInputRef = useRef<HTMLInputElement>(null);
-  const savedLabelRef = useRef({ number: table.number, name: table.name });
   const coming = summary.units.filter((party) => partySeats(party) > 0);
   const declined = summary.units.filter((party) => partySeats(party) === 0);
   const addTokens = searchTokens(addQuery);
   const addCandidates = unseatedUnits.filter((party) => unitMatchesSearch(party, addTokens));
-  const isDuplicate = number.trim() !== "" && duplicateNumber(number.trim());
-
-  function commitLabel() {
-    const next = { number: number.trim(), name: name.trim() };
-
-    if (next.number !== savedLabelRef.current.number || next.name !== savedLabelRef.current.name) {
-      savedLabelRef.current = next;
-      onLabel(next.number, next.name);
-    }
-  }
-
-  function close() {
-    commitLabel();
-    onClose();
-  }
+  const assignedLabels = labelsAtTable(labels, table.id);
 
   const people: SeatPerson[] = coming.flatMap((unit) =>
     unitPositions(unit).map((position) => ({
@@ -562,57 +501,31 @@ export function TableDialog({
           {summary.unconfirmed ? <span>· {summary.unconfirmed} unconfirmed</span> : null}
         </span>
       }
-      onClose={close}
-      onOpenAutoFocus={(event) => {
-        event.preventDefault();
-        if (autoFocusLabel) {
-          numberInputRef.current?.focus();
-        }
-      }}
+      onClose={onClose}
       title={
         <span className="flex items-center gap-2">
           {table.kind === "sweetheart" ? <Heart aria-hidden="true" className="fill-[#be185d] text-[#be185d]" size={20} /> : null}
-          {tableFullTitle({ ...table, number: number.trim(), name: name.trim() })}
+          {tableFullTitle(table)}
         </span>
       }
     >
-      <form
-        className="grid grid-cols-[minmax(0,7rem)_minmax(0,1fr)] gap-3"
-        onSubmit={(event) => {
-          event.preventDefault();
-          close();
-        }}
-      >
-        <label className="grid gap-1 text-xs font-bold uppercase tracking-[0.12em] text-[#8f5070]">
-          Table #
-          <input
-            ref={numberInputRef}
-            className="h-12 w-full min-w-0 rounded-xl border border-[#df7fa3] bg-white px-3 text-xl font-semibold normal-case tracking-normal text-[#4a1027] outline-none transition placeholder:text-[#d3a6bb] focus:border-[#be185d] focus:ring-2 focus:ring-[#be185d]/20"
-            enterKeyHint="next"
-            maxLength={TABLE_NUMBER_MAX_LENGTH}
-            onBlur={commitLabel}
-            onChange={(event) => setNumber(event.target.value)}
-            placeholder="e.g. 7"
-            value={number}
-          />
+      <section className="grid gap-2">
+        <h3 className="text-sm font-semibold">Table names &amp; numbers</h3>
+        <LabelWarning labels={assignedLabels} />
+        {assignedLabels.map((label) => <div key={label.id} className="flex min-h-11 items-center gap-2 rounded-xl border border-[#df7fa3] bg-white pl-3 pr-1">
+          <button type="button" className="min-w-0 flex-1 break-words py-2 text-left font-semibold" onClick={() => onOpenLabel(label.id)}>{label.kind === "number" ? "# " : ""}{label.value}</button>
+          <button type="button" aria-label={`Return ${label.value} to its list`} className="grid size-10 shrink-0 place-items-center rounded-full text-[#a04670] hover:bg-[#ffe0ec]" onClick={() => onAssignLabel(label.id, { tableId: null, x: null, y: null })}><X size={16} /></button>
+        </div>)}
+        {!assignedLabels.length ? <p className="text-sm text-[#8f5070]">Drag names and numbers here from their lists, or choose one below.</p> : null}
+        <label className="grid gap-1 text-sm font-semibold">Add a label
+          <select className="min-h-11 min-w-0 rounded-xl border border-[#df7fa3] bg-white px-3 text-base" value="" onChange={(event) => { if (event.target.value) onAssignLabel(event.target.value, { tableId: table.id, x: null, y: null }); }}>
+            <option value="">Choose a name or number…</option>
+            {labels.filter((label) => label.tableId !== table.id).map((label) => <option key={label.id} value={label.id}>{label.kind === "number" ? "# " : ""}{label.value}{label.tableId ? " (move from another table)" : ""}</option>)}
+          </select>
         </label>
-        <label className="grid gap-1 text-xs font-bold uppercase tracking-[0.12em] text-[#8f5070]">
-          Name (optional)
-          <input
-            className="h-12 w-full min-w-0 rounded-xl border border-[#df7fa3] bg-white px-3 text-lg normal-case tracking-normal text-[#4a1027] outline-none transition placeholder:text-[#d3a6bb] focus:border-[#be185d] focus:ring-2 focus:ring-[#be185d]/20"
-            enterKeyHint="done"
-            maxLength={TABLE_NAME_MAX_LENGTH}
-            onBlur={commitLabel}
-            onChange={(event) => setName(event.target.value)}
-            placeholder={table.kind === "sweetheart" ? "Sweetheart table" : "e.g. College friends"}
-            value={name}
-          />
-        </label>
-        {isDuplicate ? (
-          <p className="col-span-2 -mt-1 text-sm font-semibold text-[#b45309]">Another table is also number {number.trim()}.</p>
-        ) : null}
+        <p className="text-xs text-[#8f5070]">Build your lists in the Names and Numbers tabs. Each table can have one of each; extras show a red warning.</p>
         {table.kind === "rect" ? (
-          <div className="col-span-2 flex flex-wrap items-center gap-x-3 gap-y-1">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
             <span
               className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.12em] text-[#8f5070]"
               role="group"
@@ -644,10 +557,7 @@ export function TableDialog({
             <span className="text-xs text-[#8f5070]">Drag the table&apos;s edges or corners on the floor plan to resize it.</span>
           </div>
         ) : null}
-        <button type="submit" className="sr-only">
-          Save and close
-        </button>
-      </form>
+      </section>
 
       <section className="mt-5">
         <h3 className="mb-2 text-xs font-bold uppercase tracking-[0.12em] text-[#8f5070]">

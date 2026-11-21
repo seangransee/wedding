@@ -3,6 +3,10 @@
 import { cookies } from "next/headers";
 import { ADMIN_COOKIE_NAME, ADMIN_PASSWORD } from "@/lib/cookies";
 import {
+  createSeatingLabels,
+  placeSeatingLabel,
+  renameSeatingLabel,
+  deleteSeatingLabelById,
   createSeatingArea,
   createSeatingBucket,
   createSeatingTable,
@@ -39,6 +43,8 @@ import {
   ROOM_MIN_WIDTH,
   type SeatingChartData,
 } from "@/lib/seating";
+
+import type { SeatingLabel, LabelPlacement } from "@/lib/seating-labels";
 
 // Seating data only shows on /admin/seating, whose client keeps its own state,
 // so these actions skip revalidatePath to avoid re-rendering on every drag.
@@ -455,4 +461,42 @@ export async function deleteSeatingArea(areaId: string): Promise<SeatingActionRe
   // Deleting an already-deleted area is fine (e.g. a retried save).
   await deleteSeatingAreaById(areaId);
   return ok("Area deleted.");
+}
+
+export async function addTableLabels(labels: Pick<SeatingLabel, "id" | "kind" | "value">[]): Promise<SeatingActionResult> {
+  await requireAdmin();
+  if (!Array.isArray(labels) || labels.length < 1 || labels.length > 100 || labels.some((label) =>
+    !isUuid(label?.id) || (label.kind !== "name" && label.kind !== "number") ||
+    typeof label.value !== "string" || !label.value.trim() ||
+    label.value.length > (label.kind === "number" ? 12 : 40)
+  )) return fail("Those table labels were invalid.");
+  await createSeatingLabels(labels.map((label) => ({ ...label, value: label.value.trim() })));
+  return ok("Labels added.");
+}
+
+export async function moveTableLabel(id: string, placement: LabelPlacement): Promise<SeatingActionResult> {
+  await requireAdmin();
+  if (!isUuid(id) || !placement || (placement.tableId !== null && !isUuid(placement.tableId)) ||
+    !((placement.x === null && placement.y === null) ||
+      (placement.tableId === null && isBucketCoordinate(placement.x) && isBucketCoordinate(placement.y)))) {
+    return fail("That label position was invalid.");
+  }
+  const saved = await placeSeatingLabel(id, placement);
+  return saved ? ok("Label moved.") : fail(`That label or table no longer exists. ${RELOAD_HINT}`);
+}
+
+export async function editTableLabel(id: string, value: string): Promise<SeatingActionResult> {
+  await requireAdmin();
+  if (!isUuid(id) || typeof value !== "string" || !value.trim() || value.trim().length > 40) {
+    return fail("That label was invalid.");
+  }
+  const saved = await renameSeatingLabel(id, value.trim());
+  return saved ? ok("Label saved.") : fail(`That label no longer exists or is too long. ${RELOAD_HINT}`);
+}
+
+export async function deleteTableLabel(id: string): Promise<SeatingActionResult> {
+  await requireAdmin();
+  if (!isUuid(id)) return fail("That label was invalid.");
+  await deleteSeatingLabelById(id);
+  return ok("Label deleted.");
 }

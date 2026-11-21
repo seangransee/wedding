@@ -35,9 +35,15 @@ import {
   type TableSummary,
 } from "./seating-ui";
 
+import { labelsAtTable, type SeatingLabel } from "@/lib/seating-labels";
+import { LabelChip, LabelWarning } from "./seating-labels";
+
 export const UNSEATED_SECTION_ID = "unseated";
 
 type SeatingSidebarProps = {
+  labels: SeatingLabel[];
+  draggingLabelId: string | null;
+  onOpenLabel: (id: string) => void;
   bucketSummaries: BucketSummary[];
   className?: string;
   collapsedIds: ReadonlySet<string>;
@@ -70,6 +76,9 @@ function peopleCount(parties: readonly SeatingUnit[]) {
 }
 
 export function SeatingSidebar({
+  labels,
+  draggingLabelId,
+  onOpenLabel,
   bucketSummaries,
   className,
   collapsedIds,
@@ -333,6 +342,8 @@ export function SeatingSidebar({
               }
               title={tableTitle(table)}
             >
+              <LabelWarning labels={labelsAtTable(labels, table.id)} />
+              {labelsAtTable(labels, table.id).map((label) => <LabelChip key={label.id} label={label} context="table-list" onOpen={onOpenLabel} isDragging={draggingLabelId === label.id} className="min-h-9 text-sm" />)}
               {parties.length === 0 ? (
                 <p className="px-1 py-2 text-sm text-[#8f5070]">
                   {draggingUnitId !== null ? "Drop here to seat at this table." : "Drag parties here."}

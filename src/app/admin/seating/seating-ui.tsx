@@ -47,7 +47,9 @@ export type AreaDragData = {
   areaId: string;
 };
 
-export type DragData = PartyDragData | TableDragData | BucketDragData | AreaDragData;
+export type LabelDragData = { type: "label"; labelId: string };
+
+export type DragData = PartyDragData | TableDragData | BucketDragData | AreaDragData | LabelDragData;
 
 /** A bucket plus everyone in it (all still not seated). */
 export type BucketSummary = {
@@ -58,6 +60,7 @@ export type BucketSummary = {
 };
 
 export type DropData =
+  | { type: "label-list"; kind: "name" | "number"; area: "list" }
   | { type: "table"; tableId: string; area: "plan" | "list"; shape: "round" | "rect" }
   | { type: "bucket"; bucketId: string; area: "plan" | "list" }
   | { type: "unseated"; area: "list" }

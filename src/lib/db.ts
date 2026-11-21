@@ -1,3 +1,4 @@
+import { tablesWithLabels, type SeatingLabel, type LabelPlacement } from "./seating-labels";
 import { neon } from "@neondatabase/serverless";
 import { Pool, type QueryResultRow } from "pg";
 import type { MailingAddress } from "./mailing-address";
@@ -1351,7 +1352,7 @@ function SEAT_PERSON_AT_TABLE_SQL(guestId: string, position: string, tableId: st
 }
 
 export async function getSeatingChart(): Promise<SeatingChartData> {
-  const [layoutRows, tableRows, partyRows, seatRows, areaRows] = await Promise.all([
+  const [layoutRows, tableRows, partyRows, seatRows, areaRows, labels] = await Promise.all([
     sql().query<SeatingLayoutRow>(
       `SELECT room_width, room_height, table_capacity
        FROM wedding_seating_layout
@@ -1427,6 +1428,9 @@ export async function getSeatingChart(): Promise<SeatingChartData> {
        ORDER BY seat.table_id, seat.seat_number`,
     ),
     getSeatingAreaRows(),
+    sql().query<SeatingLabel>(`SELECT id::text, kind, value, table_id::text AS "tableId", x, y,
+      (extract(epoch FROM created_at) * 1000)::float8 AS "createdAt"
+      FROM wedding_seating_labels ORDER BY created_at, id`),
   ]);
 
   const layout = layoutRows[0];
@@ -1436,9 +1440,10 @@ export async function getSeatingChart(): Promise<SeatingChartData> {
       ? { width: layout.room_width, height: layout.room_height }
       : { ...DEFAULT_ROOM },
     tableCapacity: layout?.table_capacity ?? DEFAULT_TABLE_CAPACITY,
-    tables: tableRows
+    labels,
+    tables: tablesWithLabels(tableRows
       .filter((row): row is SeatingTableRow & { kind: SeatingTableKind } => row.kind !== "bucket")
-      .map(toSeatingTable),
+      .map(toSeatingTable), labels),
     buckets: tableRows.filter((row) => row.kind === "bucket").map(toSeatingBucket),
     areas: areaRows.map(
       (row): SeatingArea => ({
@@ -1947,4 +1952,39 @@ export async function updateSeatingAreaName(id: string, name: string) {
 
 export async function deleteSeatingAreaById(id: string) {
   await sql().query(`DELETE FROM wedding_seating_areas WHERE id = $1::uuid`, [id]);
+}
+
+/** Retry-safe label creation; labels never replace other labels on a table. */
+export async function createSeatingLabels(labels: Pick<SeatingLabel, "id" | "kind" | "value">[]) {
+  await sql().query(
+    `INSERT INTO wedding_seating_labels (id, kind, value, created_at)
+     SELECT id::uuid, kind, value, now() + ordinal * interval '1 microsecond'
+     FROM unnest($1::text[], $2::text[], $3::text[]) WITH ORDINALITY AS input(id, kind, value, ordinal)
+     ON CONFLICT (id) DO NOTHING`,
+    [labels.map((label) => label.id), labels.map((label) => label.kind), labels.map((label) => label.value)],
+  );
+}
+
+export async function placeSeatingLabel(id: string, placement: LabelPlacement) {
+  const rows = await sql().query<{ id: string }>(
+    `UPDATE wedding_seating_labels SET table_id = $2::uuid, x = $3, y = $4
+     WHERE id = $1::uuid AND ($2::uuid IS NULL OR EXISTS (
+       SELECT 1 FROM wedding_seating_tables WHERE id = $2::uuid AND kind <> 'bucket'
+     )) RETURNING id`,
+    [id, placement.tableId, placement.x, placement.y],
+  );
+  return rows.length > 0;
+}
+
+export async function renameSeatingLabel(id: string, value: string) {
+  const rows = await sql().query<{ id: string }>(
+    `UPDATE wedding_seating_labels SET value = $2 WHERE id = $1::uuid
+     AND length($2) BETWEEN 1 AND CASE WHEN kind = 'number' THEN 12 ELSE 40 END RETURNING id`,
+    [id, value],
+  );
+  return rows.length > 0;
+}
+
+export async function deleteSeatingLabelById(id: string) {
+  await sql().query(`DELETE FROM wedding_seating_labels WHERE id = $1::uuid`, [id]);
 }

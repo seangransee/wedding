@@ -3,6 +3,7 @@
 //
 // Positions and sizes are "room units": 1 unit is 1 CSS pixel at 100% zoom.
 // Table x/y are centers.
+import type { SeatingLabel } from "./seating-labels";
 
 /** Seats at each round table until the couple picks another number in the floor plan. */
 export const DEFAULT_TABLE_CAPACITY = 12;
@@ -188,6 +189,7 @@ export type SeatingSeat = {
 };
 
 export type SeatingChartData = {
+  labels: SeatingLabel[];
   room: SeatingRoom;
   /** Seats at every round table (new ones too); the sweetheart table always seats 2. */
   tableCapacity: number;
@@ -959,7 +961,7 @@ function csvCell(value: number | string | null | undefined) {
  * an exact seat first, by seat), then everyone not seated yet. Declined
  * invitations are left out. Split parties list each person at their own table.
  */
-export function makeSeatingCsv(data: Omit<SeatingChartData, "areas" | "tableCapacity">) {
+export function makeSeatingCsv(data: Omit<SeatingChartData, "areas" | "tableCapacity" | "labels">) {
   const rows: Array<Array<number | string>> = [[
     "Table number",
     "Table name",

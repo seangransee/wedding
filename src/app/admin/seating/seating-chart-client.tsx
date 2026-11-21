@@ -76,6 +76,10 @@ import {
   deleteSeatingArea,
   deleteSeatingTable,
   labelSeatingTable,
+  addTableLabels,
+  moveTableLabel,
+  editTableLabel,
+  deleteTableLabel,
   loadSeatingChart,
   moveSeatingBucket,
   moveSeatingTable,
@@ -107,6 +111,9 @@ import {
   type TableSummary,
 } from "./seating-ui";
 
+import { tablesWithLabels, type SeatingLabel, type SeatingLabelKind, type LabelPlacement } from "@/lib/seating-labels";
+import { LabelChip, LabelDialog, LabelList } from "./seating-labels";
+
 type SaveOperation = {
   /** Consecutive waiting saves with the same key collapse into the latest one. */
   key: string;
@@ -116,8 +123,9 @@ type SaveOperation = {
 type SaveState = { status: "saved" | "saving" | "error"; message: string };
 
 type DialogState =
+  | { type: "label"; labelId: string }
   | { type: "party"; unitId: string }
-  | { type: "table"; tableId: string; focusLabel: boolean }
+  | { type: "table"; tableId: string }
   | { type: "bucket"; bucketId: string; focusName: boolean }
   | { type: "area"; areaId: string; focusName: boolean }
   | null;
@@ -126,7 +134,7 @@ type MobileView = "list" | "plan";
 
 const STATUS_RANK = { yes: 0, deciding: 1, none: 2, no: 3 } as const;
 /** Collision priority (lower wins): buckets draw above tables, then the Not seated list, then the floor. */
-const DROP_PRIORITY = { bucket: 0, table: 1, unseated: 2, room: 3 } as const;
+const DROP_PRIORITY = { bucket: 0, table: 1, unseated: 2, "label-list": 2, room: 3 } as const;
 const REFRESH_INTERVAL_MS = 30_000;
 const STALE_INITIAL_DATA_MS = 15_000;
 
@@ -144,7 +152,7 @@ function isMobileLayout() {
  * their panel (data-seating-clip) don't count, and round tables only count
  * inside their circle.
  */
-const seatingCollisionDetection: CollisionDetection = ({ droppableContainers, pointerCoordinates }) => {
+const seatingCollisionDetection: CollisionDetection = ({ active, droppableContainers, pointerCoordinates }) => {
   if (!pointerCoordinates) {
     return [];
   }
@@ -160,6 +168,9 @@ const seatingCollisionDetection: CollisionDetection = ({ droppableContainers, po
     if (!node || !data || container.disabled) {
       continue;
     }
+
+    const isLabel = active.data.current?.type === "label";
+    if (isLabel ? data.type === "bucket" || data.type === "unseated" : data.type === "label-list") continue;
 
     const rect = node.getBoundingClientRect();
     if (rect.width === 0 || x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) {
@@ -213,8 +224,11 @@ export function SeatingChartClient({
   const [seats, setSeats] = useState(initialData.seats);
   const [buckets, setBuckets] = useState(initialData.buckets);
   const [areas, setAreas] = useState(initialData.areas);
-  const stateRef = useRef({ room, tableCapacity, tables, parties, seats, buckets, areas });
-  stateRef.current = { room, tableCapacity, tables, parties, seats, buckets, areas };
+  const [labels, setLabels] = useState(initialData.labels);
+  const [listTab, setListTab] = useState<"guests" | SeatingLabelKind>("guests");
+  const [labelTray, setLabelTray] = useState<SeatingLabelKind | null>(null);
+  const stateRef = useRef({ room, tableCapacity, tables, parties, seats, buckets, areas, labels });
+  stateRef.current = { room, tableCapacity, tables, parties, seats, buckets, areas, labels };
 
   const [saveState, setSaveState] = useState<SaveState>({ status: "saved", message: "All changes saved" });
   const queueRef = useRef<SaveOperation[]>([]);
@@ -333,6 +347,7 @@ export function SeatingChartClient({
       setSeats(data.seats);
       setBuckets(data.buckets);
       setAreas(data.areas);
+      setLabels(data.labels);
     } catch {
       // Offline or logged out; the next refresh or save will surface it.
     }
@@ -362,7 +377,8 @@ export function SeatingChartClient({
 
   // ---------- Derived data ----------
 
-  const sortedTables = useMemo(() => [...tables].sort(compareSeatingTables), [tables]);
+  const labeledTables = useMemo(() => tablesWithLabels(tables, labels), [tables, labels]);
+  const sortedTables = useMemo(() => [...labeledTables].sort(compareSeatingTables), [labeledTables]);
   const tableIds = useMemo(() => new Set(tables.map((table) => table.id)), [tables]);
   const validSeats = useMemo(() => currentSeats(seats, parties, tables), [seats, parties, tables]);
   // Whole parties plus one unit per person for split parties.
@@ -734,7 +750,7 @@ export function SeatingChartClient({
           rect: kind === "rect" ? { capacity: table.capacity, width: table.width, height: table.height } : undefined,
         }),
     });
-    setDialog({ type: "table", tableId: table.id, focusLabel: true });
+    setDialog({ type: "table", tableId: table.id });
     flashTable(table.id);
     window.requestAnimationFrame(() => planRef.current?.revealTable(table.id));
   }, [enqueueSave, flashTable, resizeRoom]);
@@ -756,13 +772,32 @@ export function SeatingChartClient({
     [enqueueSave],
   );
 
-  const labelTable = useCallback(
-    (tableId: string, number: string, name: string) => {
-      setTables((current) => current.map((table) => (table.id === tableId ? { ...table, number, name } : table)));
-      enqueueSave({ key: `label:${tableId}`, run: () => labelSeatingTable(tableId, number, name) });
-    },
-    [enqueueSave],
-  );
+  const addLabels = useCallback((kind: SeatingLabelKind, values: string[]) => {
+    const added: SeatingLabel[] = values.map((value, index) => ({
+      id: createSeatingId(), kind, value, tableId: null, x: null, y: null, createdAt: Date.now() + index,
+    }));
+    setLabels((current) => [...current, ...added]);
+    enqueueSave({ key: `add-labels:${added[0].id}`, run: () => addTableLabels(added) });
+  }, [enqueueSave]);
+
+  const placeLabel = useCallback((id: string, placement: LabelPlacement) => {
+    setLabels((current) => current.map((label) => label.id === id ? { ...label, ...placement } : label));
+    enqueueSave({ key: `place-label:${id}`, run: () => moveTableLabel(id, placement) });
+    if (placement.tableId) flashTable(placement.tableId);
+  }, [enqueueSave, flashTable]);
+
+  const editLabel = useCallback((id: string, value: string) => {
+    setLabels((current) => current.map((label) => label.id === id ? { ...label, value } : label));
+    enqueueSave({ key: `edit-label:${id}`, run: () => editTableLabel(id, value) });
+  }, [enqueueSave]);
+
+  const deleteLabel = useCallback((id: string) => {
+    setLabels((current) => current.filter((label) => label.id !== id));
+    enqueueSave({ key: `delete-label:${id}`, run: () => deleteTableLabel(id) });
+    setDialog(null);
+  }, [enqueueSave]);
+
+  const openLabel = useCallback((labelId: string) => setDialog({ type: "label", labelId }), []);
 
   const addBucket = useCallback(() => {
     const {
@@ -881,6 +916,7 @@ export function SeatingChartClient({
 
   const deleteTable = useCallback(
     (tableId: string) => {
+      setLabels((current) => current.map((label) => label.tableId === tableId ? { ...label, tableId: null } : label));
       setTables((current) => current.filter((table) => table.id !== tableId));
       setParties((current) =>
         current.map((party) =>
@@ -959,7 +995,7 @@ export function SeatingChartClient({
 
   const openUnit = useCallback((unitId: string) => setDialog({ type: "party", unitId }), []);
   const openTable = useCallback(
-    (tableId: string) => setDialog({ type: "table", tableId, focusLabel: false }),
+    (tableId: string) => setDialog({ type: "table", tableId }),
     [],
   );
   const openBucket = useCallback(
@@ -1007,7 +1043,7 @@ export function SeatingChartClient({
   );
 
   function exportCsv() {
-    const csv = makeSeatingCsv({ room, tables, buckets, parties, seats });
+    const csv = makeSeatingCsv({ room, tables: labeledTables, buckets, parties, seats });
     const blob = new Blob([`\uFEFF${csv}`], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -1052,7 +1088,20 @@ export function SeatingChartClient({
     const drag = event.active.data.current as DragData | undefined;
     const over = event.over?.data.current as DropData | undefined;
 
-    if (drag?.type === "party") {
+    if (drag?.type === "label") {
+      if (over?.type === "table") {
+        placeLabel(drag.labelId, { tableId: over.tableId, x: null, y: null });
+      } else if (over?.type === "label-list") {
+        placeLabel(drag.labelId, { tableId: null, x: null, y: null });
+      } else if (over?.type === "room") {
+        const start = getEventCoordinates(event.activatorEvent);
+        const point = start ? planRef.current?.clientToRoom(start.x + event.delta.x, start.y + event.delta.y) : null;
+        if (point) {
+          const position = clampBucketPosition(point.x - 90, point.y - 22);
+          placeLabel(drag.labelId, { tableId: null, ...position });
+        }
+      }
+    } else if (drag?.type === "party") {
       if (over?.type === "table") {
         assignUnit(drag.unitId, over.tableId);
       } else if (over?.type === "bucket") {
@@ -1143,6 +1192,7 @@ export function SeatingChartClient({
   };
 
   function describeDrag(drag: DragData | undefined) {
+    if (drag?.type === "label") return stateRef.current.labels.find((label) => label.id === drag.labelId)?.value ?? "label";
     if (drag?.type === "party") {
       return seatingUnits(stateRef.current.parties).find((unit) => unit.id === drag.unitId)?.name ?? "party";
     }
@@ -1162,6 +1212,7 @@ export function SeatingChartClient({
   }
 
   function describeDrop(drop: DropData | undefined) {
+    if (drop?.type === "label-list") return "the label list";
     if (drop?.type === "table") {
       const table = stateRef.current.tables.find((candidate) => candidate.id === drop.tableId);
       return table ? tableFullTitle(table) : "a table";
@@ -1170,15 +1221,18 @@ export function SeatingChartClient({
       const bucket = stateRef.current.buckets.find((candidate) => candidate.id === drop.bucketId);
       return bucket ? bucketTitle(bucket) : "a bucket";
     }
-    return drop?.type === "unseated" ? "Not seated" : "the floor, in their own bubble";
+    return drop?.type === "unseated" ? "Not seated" : activeDrag?.type === "label" ? "the floor" : "the floor, in their own bubble";
   }
 
-  const dropTableId = activeDrag?.type === "party" && overDrop?.type === "table" ? overDrop.tableId : null;
+  const dropTableId = (activeDrag?.type === "party" || activeDrag?.type === "label") && overDrop?.type === "table" ? overDrop.tableId : null;
   const dropBucketId = activeDrag?.type === "party" && overDrop?.type === "bucket" ? overDrop.bucketId : null;
   const highlightedTableId = dropTableId ?? dropBucketId ?? hoveredTableId ?? flashTableId;
 
+  const draggingLabel = activeDrag?.type === "label" ? labels.find((label) => label.id === activeDrag.labelId) ?? null : null;
+
   // ---------- Dialog data ----------
 
+  const dialogLabel = dialog?.type === "label" ? labels.find((label) => label.id === dialog.labelId) ?? null : null;
   const dialogUnit = dialog?.type === "party" ? unitById.get(dialog.unitId) ?? null : null;
   const dialogTable = dialog?.type === "table" ? summaryById.get(dialog.tableId) ?? null : null;
   const dialogBucket = dialog?.type === "bucket" ? bucketSummaryById.get(dialog.bucketId) ?? null : null;
@@ -1212,7 +1266,7 @@ export function SeatingChartClient({
             >
               <ArrowLeft size={18} aria-hidden="true" />
             </Link>
-            <div className="min-w-0">
+            <div className="sr-only sm:not-sr-only sm:min-w-0">
               <p
                 className="hidden text-lg leading-none text-[#be185d] sm:block"
                 style={{ fontFamily: "var(--font-brand-script)", fontWeight: 400 }}
@@ -1333,16 +1387,19 @@ export function SeatingChartClient({
         </header>
 
         <div className="flex min-h-0 flex-1 pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]">
-          <SeatingSidebar
-            className={clsx(
-              "w-full border-[#df7fa3] md:w-[21rem] md:shrink-0 md:border-r lg:w-[23rem]",
-              mobileView === "plan" && "max-md:hidden",
-              !sidebarOpen && "md:hidden",
-            )}
+          <div className={clsx("flex min-h-0 w-full flex-col border-[#df7fa3] bg-[#fff8fb] md:w-[21rem] md:shrink-0 md:border-r lg:w-[23rem]", mobileView === "plan" && "max-md:hidden", !sidebarOpen && "md:hidden")}>
+            <div className="flex shrink-0 gap-1 border-b border-[#efb5c9] p-2" role="tablist" aria-label="Seating lists">
+              {(["guests", "name", "number"] as const).map((tab) => <button key={tab} type="button" role="tab" aria-selected={listTab === tab}
+                className={clsx("min-h-10 flex-1 rounded-full px-2 text-sm font-semibold", listTab === tab ? "bg-[#9f1d52] text-white" : "text-[#7a1239] hover:bg-[#ffe0ec]")}
+                onClick={() => setListTab(tab)}>{tab === "guests" ? "Guests" : tab === "name" ? "Names" : "Numbers"}</button>)}
+            </div>
+            {listTab === "guests" ? (
+            <SeatingSidebar
+              className="min-h-0 flex-1"
             collapsedIds={collapsedIds}
             bucketSummaries={bucketSummaries}
             draggingUnitId={draggingUnit?.id ?? null}
-            dropTarget={activeDrag?.type === "party" ? overDrop : null}
+            dropTarget={activeDrag?.type === "party" || activeDrag?.type === "label" ? overDrop : null}
             matchingUnitIds={matchingUnitIds}
             onHoverTable={setHoveredTableId}
             onLocateTable={locateTable}
@@ -1356,14 +1413,31 @@ export function SeatingChartClient({
             query={query}
             seatNumbersByUnit={seatNumbersByUnit}
             summaries={summaries}
+            labels={labels}
+            draggingLabelId={draggingLabel?.id ?? null}
+            onOpenLabel={openLabel}
             unseatedUnits={looseUnits}
           />
+            ) : <LabelList key={listTab} kind={listTab} labels={labels} tables={sortedTables} onAdd={addLabels} onOpen={openLabel} draggingLabelId={draggingLabel?.id ?? null} />}
+          </div>
           <section
             aria-label="Floor plan"
             className={clsx("min-w-0 flex-1 flex-col", mobileView === "list" ? "hidden md:flex" : "flex")}
             data-seating-clip
           >
+            <div className="shrink-0 border-b border-[#efb5c9] bg-[#fff8fb] md:hidden">
+              <div className="flex items-center gap-2 px-3 py-1">
+                <span className="mr-auto text-xs text-[#8f5070]">Drag labels onto the plan</span>
+                {(["name", "number"] as const).map((kind) => <button key={kind} type="button" aria-expanded={labelTray === kind}
+                  className={clsx("min-h-10 rounded-full px-3 text-sm font-semibold", labelTray === kind ? "bg-[#9f1d52] text-white" : "text-[#7a1239]")}
+                  onClick={() => setLabelTray(labelTray === kind ? null : kind)}>{kind === "name" ? "Names" : "Numbers"}</button>)}
+              </div>
+              {labelTray ? <div className="flex max-h-[35dvh] flex-col overflow-hidden"><LabelList key={labelTray} compact kind={labelTray} labels={labels} tables={sortedTables} onAdd={addLabels} onOpen={openLabel} draggingLabelId={draggingLabel?.id ?? null} /></div> : null}
+            </div>
             <FloorPlan
+              labels={labels}
+              draggingLabelId={draggingLabel?.id ?? null}
+              onOpenLabel={openLabel}
               ref={planRef}
               areas={areas}
               draggingAreaId={activeDrag?.type === "area" ? activeDrag.areaId : null}
@@ -1394,9 +1468,15 @@ export function SeatingChartClient({
         </div>
       </main>
 
-      <DragOverlay dropAnimation={null} modifiers={draggingUnit ? [snapCenterToCursor] : undefined}>
+      <DragOverlay dropAnimation={null} modifiers={draggingUnit || draggingLabel ? [snapCenterToCursor] : undefined}>
         {draggingUnit ? <DraggedPartyChip unit={draggingUnit} /> : null}
+        {draggingLabel ? <LabelChip label={draggingLabel} context="overlay" onOpen={openLabel} className="max-w-64 text-base shadow-xl" /> : null}
       </DragOverlay>
+
+      {dialogLabel ? <LabelDialog key={dialogLabel.id} label={dialogLabel} tables={sortedTables}
+        onClose={() => setDialog(null)} onEdit={(value) => editLabel(dialogLabel.id, value)}
+        onPlace={(placement) => placeLabel(dialogLabel.id, placement)} onDelete={() => deleteLabel(dialogLabel.id)}
+        onLocate={() => { setDialog(null); setMobileView("plan"); window.setTimeout(() => planRef.current?.revealTable(dialogLabel.tableId ?? dialogLabel.id), 60); }} /> : null}
 
       {dialogUnit ? (
         <PartyDialog
@@ -1454,18 +1534,13 @@ export function SeatingChartClient({
       {dialog?.type === "table" && dialogTable ? (
         <TableDialog
           key={`table-${dialogTable.table.id}`}
-          autoFocusLabel={dialog.focusLabel}
-          duplicateNumber={(number) =>
-            tables.some(
-              (table) =>
-                table.id !== dialogTable.table.id && table.number.trim().toLowerCase() === number.toLowerCase(),
-            )
-          }
           onAssignUnit={assignUnit}
           onChangeCapacity={(capacity) => changeRectTableCapacity(dialogTable.table.id, capacity)}
           onClose={() => setDialog(null)}
           onDelete={() => deleteTable(dialogTable.table.id)}
-          onLabel={(number, name) => labelTable(dialogTable.table.id, number, name)}
+          labels={labels}
+          onOpenLabel={openLabel}
+          onAssignLabel={placeLabel}
           onOpenUnit={openUnit}
           onSetSeats={(nextSeats) => setTableSeats(dialogTable.table.id, nextSeats)}
           seats={seatsByTable.get(dialogTable.table.id) ?? []}

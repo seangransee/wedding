@@ -60,6 +60,9 @@ import {
   type TableSummary,
 } from "./seating-ui";
 
+import { LABEL_WIDTH, LABEL_HEIGHT, labelsAtTable, type SeatingLabel } from "@/lib/seating-labels";
+import { LabelChip, LabelWarning } from "./seating-labels";
+
 export const MIN_ZOOM = 0.15;
 export const MAX_ZOOM = 2.5;
 const FIT_MAX_ZOOM = 1.25;
@@ -93,6 +96,9 @@ export function bubbleDropPosition(point: { x: number; y: number }, zoom: number
 type AreaRect = Pick<SeatingArea, "x" | "y" | "width" | "height">;
 
 type FloorPlanProps = {
+  labels: SeatingLabel[];
+  draggingLabelId: string | null;
+  onOpenLabel: (id: string) => void;
   ref?: Ref<FloorPlanHandle>;
   room: SeatingRoom;
   areas: SeatingArea[];
@@ -160,6 +166,9 @@ function capturePointer(element: Element, pointerId: number) {
 }
 
 export function FloorPlan({
+  labels,
+  draggingLabelId,
+  onOpenLabel,
   areas,
   draggingAreaId,
   onOpenArea,
@@ -199,6 +208,7 @@ export function FloorPlan({
   const autoScrollFrameRef = useRef<number | null>(null);
   const panRef = useRef<{ pointerId: number; x: number; y: number; left: number; top: number } | null>(null);
 
+  const floorLabels = useMemo(() => labels.filter((label) => !label.tableId && label.x !== null && label.y !== null), [labels]);
   const tables = useMemo(() => summaries.map((summary) => summary.table), [summaries]);
   const minimumRoom = useMemo(() => minimumRoomSize(tables, areas), [areas, tables]);
   // Never draw the room smaller than its tables, even if the saved size is.
@@ -241,8 +251,17 @@ export function FloorPlan({
       maxY = Math.max(maxY, bucket.y + (size?.height ?? (bucket.bubble ? 40 * units.length : estimatedBucketHeight(units.length))));
     }
 
+    for (const label of floorLabels) {
+      const size = bucketSizes.get(label.id);
+      minX = Math.min(minX, label.x!);
+      minY = Math.min(minY, label.y!);
+      maxX = Math.max(maxX, label.x! + (size?.width ?? LABEL_WIDTH));
+      maxY = Math.max(maxY, label.y! + (size?.height ?? LABEL_HEIGHT));
+    }
+    // Leave room for the draggable labels attached to table tops.
+    if (labels.some((label) => label.tableId)) minY = Math.min(minY, -50);
     return { minX, minY, maxX, maxY, width: maxX - minX, height: maxY - minY };
-  }, [bucketSizes, bucketSummaries, effectiveRoom.height, effectiveRoom.width]);
+  }, [bucketSizes, bucketSummaries, effectiveRoom.height, effectiveRoom.width, floorLabels, labels]);
 
   // origin is where the room's top-left corner (room point 0,0) lands in the scroll area.
   const centeredOrigin = {
@@ -433,6 +452,7 @@ export function FloorPlan({
         const table = tables.find((candidate) => candidate.id === tableId);
         const bucket = bucketSummaries.find((summary) => summary.bucket.id === tableId)?.bucket;
         const area = areas.find((candidate) => candidate.id === tableId);
+        const label = floorLabels.find((candidate) => candidate.id === tableId);
         const place = table
           ? { x: table.x, y: table.y, radius: Math.max(table.width, table.height) / 2 }
           : area
@@ -441,7 +461,9 @@ export function FloorPlan({
             ? bucket.bubble
               ? { x: bucket.x + 60, y: bucket.y + 20, radius: 80 }
               : { x: bucket.x + BUCKET_WIDTH / 2, y: bucket.y + 60, radius: BUCKET_WIDTH / 2 }
-            : null;
+            : label
+              ? { x: label.x! + LABEL_WIDTH / 2, y: label.y! + LABEL_HEIGHT / 2, radius: LABEL_WIDTH / 2 }
+              : null;
 
         if (!viewport || !place || viewport.clientWidth === 0) {
           return;
@@ -484,7 +506,7 @@ export function FloorPlan({
         };
       },
     }),
-    [areas, bucketSummaries, tables],
+    [areas, bucketSummaries, floorLabels, tables],
   );
 
   const computeResize = useCallback((session: ResizeSession) => {
@@ -732,6 +754,9 @@ export function FloorPlan({
             {summaries.map((summary) => (
               <PlanTable
                 key={summary.table.id}
+                labels={labelsAtTable(labels, summary.table.id)}
+                draggingLabelId={draggingLabelId}
+                onOpenLabel={onOpenLabel}
                 detail={detail}
                 draggingUnitId={draggingUnitId}
                 highlighted={highlightedTableId === summary.table.id}
@@ -756,6 +781,7 @@ export function FloorPlan({
             className="absolute left-0 top-0 z-10 size-0 origin-top-left"
             style={{ transform: `translate(${origin.left}px, ${origin.top}px) scale(${zoom})` }}
           >
+            {floorLabels.map((label) => <PlanLooseLabel key={label.id} label={label} onOpen={onOpenLabel} onMeasure={measureBucket} isDragging={draggingLabelId === label.id} zoom={zoom} />)}
             {bucketSummaries.map((summary) => (
               <PlanBucket
                 key={summary.bucket.id}
@@ -976,6 +1002,9 @@ function FullnessLegend({
 }
 
 type PlanTableProps = {
+  labels: SeatingLabel[];
+  draggingLabelId: string | null;
+  onOpenLabel: (id: string) => void;
   detail: boolean;
   draggingUnitId: string | null;
   highlighted: boolean;
@@ -1016,6 +1045,9 @@ function partyChipEm(unit: SeatingUnit, textVersion: number) {
 }
 
 const PlanTable = memo(function PlanTable({
+  labels,
+  draggingLabelId,
+  onOpenLabel,
   detail,
   draggingUnitId,
   highlighted,
@@ -1092,7 +1124,7 @@ const PlanTable = memo(function PlanTable({
   const dimmed = matchingUnitIds !== null && matchCount === 0;
 
   // Text stays readable at any zoom: grow it in room units as the room shrinks.
-  // Unnamed round tables show just their headcount until a number or name is typed.
+  // Unnamed round tables show just their headcount until a number or name is assigned.
   const label = table.number || table.name || (sweetheart ? "Sweetheart table" : "");
   const labelIsNumber = Boolean(table.number);
   const showName = detail && labelIsNumber && Boolean(table.name);
@@ -1307,6 +1339,11 @@ const PlanTable = memo(function PlanTable({
         </span>
       ) : null}
     </div>
+    {labels.length && detail ? <div className="absolute left-1/2 top-0 z-20 flex -translate-x-1/2 -translate-y-[65%] flex-wrap justify-center gap-1" style={{ width: Math.max(size.width, 180) }} data-no-pan>
+      {labels.map((label) => <LabelChip key={label.id} context="table-plan" label={label} onOpen={onOpenLabel} isDragging={draggingLabelId === label.id}
+        style={{ fontSize: Math.max(12, 10 / zoom), maxWidth: "100%" }} />)}
+      <LabelWarning labels={labels} style={{ fontSize: Math.max(12, 10 / zoom) }} />
+    </div> : labels.length ? <LabelWarning compact labels={labels} className="absolute -top-2 right-0 z-20" style={{ fontSize: 11 / zoom }} /> : null}
     {resizable ? (
       <ResizeHandles
         cornerClassName="seating-table-corner"
@@ -1321,6 +1358,28 @@ const PlanTable = memo(function PlanTable({
     </div>
   );
 });
+
+function PlanLooseLabel({ label, onOpen, onMeasure, isDragging, zoom }: {
+  label: SeatingLabel;
+  onOpen: (id: string) => void;
+  onMeasure: (id: string, width: number, height: number) => void;
+  isDragging: boolean;
+  zoom: number;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const node = ref.current;
+    if (!node) return;
+    const measure = () => onMeasure(label.id, node.offsetWidth, node.offsetHeight);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [label.id, onMeasure]);
+  return <div ref={ref} className="absolute" style={{ left: label.x!, top: label.y!, width: Math.max(LABEL_WIDTH, 100 / zoom) }} data-no-pan>
+    <LabelChip label={label} context="floor" onOpen={onOpen} isDragging={isDragging} className="min-h-11 w-full" style={{ fontSize: Math.max(14, 11 / zoom) }} />
+  </div>;
+}
 
 function PlanPartyChip({
   fontSize,
