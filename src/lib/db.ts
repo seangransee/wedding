@@ -1,6 +1,7 @@
 import { tablesWithLabels, type SeatingLabel, type LabelPlacement } from "./seating-labels";
 import { neon } from "@neondatabase/serverless";
 import { Pool, type QueryResultRow } from "pg";
+import { CONFIRMED_ATTENDEES_SQL, type ConfirmedAttendee } from "./attendee-export";
 import type { MailingAddress } from "./mailing-address";
 import {
   DEFAULT_ROOM,
@@ -269,6 +270,10 @@ function sql() {
 
   sqlClient ??= createSqlClient(connectionString);
   return sqlClient;
+}
+
+export async function listConfirmedAttendees(): Promise<ConfirmedAttendee[]> {
+  return sql().query<ConfirmedAttendee>(CONFIRMED_ATTENDEES_SQL);
 }
 
 function toGuest(row: GuestRow): Guest {

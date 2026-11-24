@@ -1,0 +1,5 @@
+friday-check.png is Twemoji's U+2705 (white heavy check mark) emoji.
+Twemoji graphics by Twitter, Inc. and other contributors are licensed under
+CC BY 4.0: https://creativecommons.org/licenses/by/4.0/
+Source: https://github.com/jdecked/twemoji/blob/main/assets/72x72/2705.png
+The full graphics license is in LICENSE-GRAPHICS.

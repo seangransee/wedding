@@ -7,6 +7,7 @@ import {
   type RsvpAttendeeDetails,
 } from "@/lib/db";
 import { formatMailingAddress } from "@/lib/mailing-address";
+import { AttendeeExportButtons } from "./attendee-export-buttons";
 import {
   AddGuestForm,
   AdminCsvExportButton,
@@ -237,7 +238,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
   return (
     <main className="min-h-screen bg-[#f9d8e6] px-3 py-3 text-[#4a1027] sm:px-4">
       <section className="mx-auto max-w-[96rem] border border-[#df7fa3] bg-[#fff1f7] shadow-[0_18px_50px_-38px_rgba(143,36,72,0.8)]">
-        <div className="flex flex-col gap-2 border-b border-[#df7fa3] bg-[#f4bfd2] px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-2 border-b border-[#df7fa3] bg-[#f4bfd2] px-3 py-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
           <div>
             <p
               className="text-xl leading-none text-[#be185d]"
@@ -249,7 +250,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
               RSVP admin
             </h1>
           </div>
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
             <Link
               href="/admin/seating"
               className="inline-flex h-8 items-center justify-center border border-[#7a1239] bg-[#9f1d52] px-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#fff8fb] transition hover:bg-[#bd2867]"
@@ -263,6 +264,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
               Edit photos
             </Link>
             <AdminCsvExportButton auditEvents={auditEvents} guests={sortedGuests} />
+            <AttendeeExportButtons />
             <div className="grid grid-cols-1 overflow-hidden border border-[#df7fa3] bg-[#fff8fb] text-xs sm:grid-cols-4">
               <div className="border-r border-[#efb5c9] px-2 py-1">
                 <span className="text-[#8f5070]">Yes</span>
