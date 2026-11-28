@@ -97,6 +97,7 @@ export default async function GuestPage({ params }: PageProps) {
       showGiard={data.guest.giard}
       scheduleFirst={data.rsvp?.status === "no" || hasCompletedRsvp}
       hasCompletedRsvp={hasCompletedRsvp}
+      guestSlug={slug}
       panel={
         <RsvpForm
           slug={slug}

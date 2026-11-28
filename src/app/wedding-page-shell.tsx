@@ -6,6 +6,7 @@ import { PhotosSection } from "./photos-section";
 import { RegistrySection } from "./registry-section";
 import { ScheduleSection } from "./schedule-section";
 import { WeddingPageLayout } from "./wedding-page-layout";
+import { WeddingPartySection } from "./wedding-party-section";
 
 export { LockedNotice } from "./locked-notice";
 
@@ -21,6 +22,7 @@ type WeddingPageShellProps = {
   showGiard?: boolean;
   scheduleFirst?: boolean;
   hasCompletedRsvp?: boolean;
+  guestSlug?: string;
 };
 
 const defaultPanelClassName =
@@ -94,6 +96,7 @@ export async function WeddingPageShell({
   showGiard = false,
   scheduleFirst = false,
   hasCompletedRsvp = false,
+  guestSlug,
 }: WeddingPageShellProps) {
   const photos = await getWeddingPhotos();
 
@@ -137,6 +140,7 @@ export async function WeddingPageShell({
             lockedBlocks={!showHotelBlocks}
           />
         }
+        weddingParty={<WeddingPartySection guestSlug={guestSlug} />}
         ourStory={<MarkdownContent id="our-story" fileName="our-story.md" styleEmojis />}
         photos={<PhotosSection photos={photos} />}
       />

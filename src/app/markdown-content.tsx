@@ -645,6 +645,46 @@ export function readScheduleDay(fileName: string): ScheduleDay {
   return day;
 }
 
+export type WeddingPartyMember = {
+  name: string;
+  title: string;
+  /** Path under `public/`, from a `![alt](/wedding-party/name.jpg)` line; empty shows a placeholder. */
+  photo: string;
+  /** Alternate photo for the groomsmen's own invitations, from a `![alt](/path "groomsmen")` line. */
+  groomsmenPhoto: string;
+  bio: string[];
+};
+
+const imageLinePattern = /^!\[[^\]]*\]\(([^)\s]+)(?:\s+"([^"]*)")?\)$/;
+
+/**
+ * Reads `wedding-party.md` (`#` section title, then one `###` per person; the
+ * first paragraph under a person is their title, an optional `![alt](/path)` line
+ * is their photo (`![alt](/path "groomsmen")` is the version the groomsmen see),
+ * and other paragraphs are their bio).
+ */
+export function readWeddingParty(fileName: string) {
+  const party = { heading: "", members: [] as WeddingPartyMember[] };
+  let member: WeddingPartyMember | null = null;
+
+  for (const node of parseMarkdown(readContentFile(fileName))) {
+    if (node.type === "heading" && node.level === 1) {
+      party.heading = node.text;
+    } else if (node.type === "heading") {
+      member = { name: node.text, title: "", photo: "", groomsmenPhoto: "", bio: [] };
+      party.members.push(member);
+    } else if (node.type === "paragraph" && member) {
+      const image = node.text.match(imageLinePattern);
+      if (image?.[2] === "groomsmen") member.groomsmenPhoto = image[1];
+      else if (image) member.photo = image[1];
+      else if (member.title) member.bio.push(node.text);
+      else member.title = node.text;
+    }
+  }
+
+  return party;
+}
+
 /** Anchor id for a collapsible FAQ question, e.g. `faq-what-is-the-dress-code`. */
 function faqQuestionId(text: string) {
   return `faq-${slugify(text.replace(/\[([^\]]+)\]\([^)]*\)/g, "$1"))}`;

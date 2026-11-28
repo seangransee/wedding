@@ -16,6 +16,7 @@ type WeddingPageLayoutProps = {
   gifts: ReactNode;
   hotels: ReactNode;
   faqs: ReactNode;
+  weddingParty: ReactNode;
   ourStory: ReactNode;
   photos: ReactNode;
 };
@@ -37,12 +38,13 @@ function PageNav({
 }) {
   const panelItem = { href: `#${panelId}`, label: panelNavLabel };
   const scheduleItem = { href: "#schedule", label: "Schedule" };
+  const weddingPartyItem = { href: "#wedding-party", label: "Wedding Party" };
   const hotelsItem = { href: "#hotel-blocks", label: "Hotels" };
   const leadingItems = hasCompletedRsvp
-    ? [scheduleItem]
+    ? [scheduleItem, weddingPartyItem]
     : scheduleFirst
-      ? [scheduleItem, panelItem]
-      : [panelItem, scheduleItem];
+      ? [scheduleItem, weddingPartyItem, panelItem]
+      : [panelItem, scheduleItem, weddingPartyItem];
   const navItems = [
     ...leadingItems,
     { href: "#registry", label: "Gifts" },
@@ -94,6 +96,7 @@ export function WeddingPageLayout({
   gifts,
   hotels,
   faqs,
+  weddingParty,
   ourStory,
   photos,
 }: WeddingPageLayoutProps) {
@@ -182,9 +185,12 @@ export function WeddingPageLayout({
       </section>
 
       <div className="pb-16">
-        {isRsvpComplete ? null : (
-          <div className={followingBlockClassName}>{isScheduleFirst ? panelBlock : schedule}</div>
-        )}
+        {/* Wedding Party always sits right below Schedule, wherever Schedule lands. */}
+        {isScheduleFirst ? null : <div className={followingBlockClassName}>{schedule}</div>}
+        {weddingParty}
+        {isScheduleFirst && !isRsvpComplete ? (
+          <div className={followingBlockClassName}>{panelBlock}</div>
+        ) : null}
         {gifts}
         {isRsvpComplete ? null : hotels}
         {faqs}

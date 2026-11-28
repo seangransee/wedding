@@ -373,6 +373,87 @@ body {
   }
 }
 
+/* Wedding Party: one card per person, groom's and bride's sides side by side on wide screens. */
+.wedding-party-list {
+  display: grid;
+  gap: 0.85rem;
+  list-style: none;
+  padding: 1.75rem 0 0;
+}
+
+.wedding-party-member {
+  display: grid;
+  align-content: start;
+  justify-items: center;
+  border: 1px solid rgba(255, 214, 228, 0.3);
+  border-radius: 0.75rem;
+  background: linear-gradient(180deg, rgba(255, 246, 250, 0.07), rgba(255, 246, 250, 0.025));
+  padding: 1.5rem 1.1rem 1.4rem;
+  text-align: center;
+}
+
+.wedding-party-photo {
+  display: block;
+  inline-size: min(100%, 17rem);
+  aspect-ratio: 1;
+  border: 1px solid rgba(255, 214, 228, 0.65);
+  border-radius: 0.6rem;
+  box-shadow: 0 0 0 5px rgba(3, 27, 18, 0.55), 0 0 0 6px rgba(255, 214, 228, 0.28);
+  object-fit: cover;
+}
+
+.wedding-party-photo-placeholder {
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(circle at 35% 30%, rgba(255, 214, 228, 0.22), transparent 62%),
+    rgba(3, 27, 18, 0.7);
+  color: var(--blush-pink);
+  font-size: 3.5rem;
+  line-height: 1;
+}
+
+.wedding-party-title {
+  margin-top: 1.25rem;
+  color: var(--blush-pink);
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  line-height: 1.5;
+  text-transform: uppercase;
+}
+
+.wedding-party-name {
+  margin-top: 0.2rem;
+  font-size: 2rem;
+  font-weight: 600;
+  line-height: 1.15;
+}
+
+.wedding-party-bio {
+  max-inline-size: 34rem;
+  margin-top: 0.85rem;
+  font-size: 1.15rem;
+  line-height: 1.6;
+  text-align: left;
+}
+
+@media (min-width: 640px) {
+  .wedding-party-member {
+    padding: 1.75rem 1.5rem 1.6rem;
+  }
+
+  .wedding-party-name {
+    font-size: 2.25rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .wedding-party-list {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
 /* Single-day schedules sit in a narrower centered column. */
 .schedule-days:not(.schedule-days-multi) .schedule-day {
   justify-self: center;
