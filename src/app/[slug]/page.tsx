@@ -33,7 +33,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     : "RSVP for Sean and Lexi's wedding.";
 
   return {
-    title: `${data.guest.name} | Sexi Wedding`,
+    title: "Sexi Wedding",
     description,
     openGraph: {
       title: shareTitle,
