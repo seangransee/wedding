@@ -8,7 +8,7 @@ Best Man
 
 ![Andrew Scola](/wedding-party/andrew-scola-groomsmen.webp "groomsmen")
 
-Andrew is Sean’s oldest friend since early childhood. For the past 30 years, they’ve been together through numerous classes, swim meets, theatrical productions, choir performances, school dances, and weddings. They feed off each other’s stupidity, and their friendship has spawned at least 51 inside jokes over the years. It’s highly likely that their conversations in their old age will be indistinguishable from their conversations now.
+Andrew is Sean’s oldest friend since early childhood. For the past 30 years, they’ve been together through numerous classes, swim meets, theatrical productions, choir performances, school dances, and weddings. They feed off each other’s stupidity, and their friendship has spawned at least 51 inside jokes over the years. It’s highly likely that their conversations in their old age will be indistinguishable from those of today.
 
 ### Melissa Brown
 
